@@ -7,7 +7,10 @@ setup(
 
     # Dependencies on other packages:
     setup_requires   = ['nose>=1.1.2'],
-    install_requires = ['online_learning_computations>=0.25'],
+    install_requires = ['online_learning_computations>=0.25',
+			'pymysql_utils>=0.24',
+			'numpy>=1.8.0'
+			],
     tests_require    = [],
 
     # Unit tests; they are initiated via 'python setup.py test'

@@ -33,7 +33,7 @@ source_dir = [os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")]
 source_dir.extend(sys.path)
 sys.path = source_dir
 
-from mysqldb import MySQLDB
+from pymysql_utils.pymysql_utils import MySQLDB
 
 import tornado;
 from tornado.ioloop import IOLoop;
@@ -531,6 +531,10 @@ if __name__ == '__main__':
     thisFQDN = socket.getfqdn()
     
     sslRoot = '%s/.ssl/%s' % (homeDir, thisFQDN)
+    #*********
+    # For self signed certificate:
+    #sslRoot = '/home/paepcke/.ssl/server'
+    #*********
     
     http_server = tornado.httpserver.HTTPServer(application,ssl_options={
        "certfile": sslRoot + '.crt',
