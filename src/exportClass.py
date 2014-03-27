@@ -65,7 +65,7 @@ class CourseCSVServer(WebSocketHandler):
     # is the name of the course with slashes replaced by underscores:
     DELIVERY_HOME = '/home/dataman/Data/CustomExcerpts'
     
-    def __init__(self, application, request, **kwargs ):
+    def __init__(self, application, request, testing=False ):
         '''
         Invoked when browser accesses this server via ws://...
         Register this handler instance in the handler list.
@@ -76,7 +76,9 @@ class CourseCSVServer(WebSocketHandler):
         @param kwargs: dict of additional parameters for operating this service.
         @type kwargs: dict
         '''
-        super(CourseCSVServer, self).__init__(application, request, **kwargs);
+        if not testing:
+            super(CourseCSVServer, self).__init__(application, request)
+        self.testing = testing
         self.request = request;        
 
         self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
@@ -200,7 +202,8 @@ class CourseCSVServer(WebSocketHandler):
         @type msg: String
         '''
         self.logDebug("Sending err to browser: %s" % msg)
-        self.write_message('{"resp" : "error", "args" : "%s"}' % msg)
+        if not self.testing:
+            self.write_message('{"resp" : "error", "args" : "%s"}' % msg)
 
     def writeResult(self, responseName, args):
         '''
@@ -217,7 +220,8 @@ class CourseCSVServer(WebSocketHandler):
         jsonArgs = json.dumps(args)
         msg = '{"resp" : "%s", "args" : %s}' % (responseName, jsonArgs)
         self.logDebug("Sending result to browser: %s" % msg)
-        self.write_message(msg)
+        if not self.testing:
+            self.write_message(msg)
         
     def exportClass(self, detailDict):
         '''
@@ -460,7 +464,8 @@ class CourseCSVServer(WebSocketHandler):
         Writes a dot to remote browser to indicate liveness.
         Restarts timer for next dot.
         '''
-        self.writeResult('progress', '.')
+        if not self.testing:
+            self.writeResult('progress', '.')
         self.setTimer(CourseCSVServer.PROGRESS_INTERVAL)
      
     def getDeliveryURL(self, courseId):
