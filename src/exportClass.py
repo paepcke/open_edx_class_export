@@ -78,6 +78,9 @@ class CourseCSVServer(WebSocketHandler):
         '''
         if not testing:
             super(CourseCSVServer, self).__init__(application, request)
+            self.defaultDb = 'Edx'
+        else:
+            self.defaultDb = 'unittest'
         self.testing = testing
         self.request = request;        
 
@@ -99,12 +102,12 @@ class CourseCSVServer(WebSocketHandler):
         try:
             with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
                 self.mySQLPwd = fd.readline().strip()
-                self.mysqlDb = MySQLDB(user=self.currUser, passwd=self.mySQLPwd, db='Edx')
+                self.mysqlDb = MySQLDB(user=self.currUser, passwd=self.mySQLPwd, db=self.defaultDb)
         except Exception:
             try:
                 # Try w/o a pwd:
                 self.mySQLPwd = None
-                self.mysqlDb = MySQLDB(user=self.currUser, db='Edx')
+                self.mysqlDb = MySQLDB(user=self.currUser, db=self.defaultDb)
             except Exception as e:
                 # Remember the error msg for later:
                 self.dbError = `e`;
@@ -298,9 +301,16 @@ class CourseCSVServer(WebSocketHandler):
     def exportTimeEngagement(self, detailDict):
         '''
         Export two CSV files: a summary of time effort aggregated over all students,
-        and a per-student-per-week aggregation.
+        and a per-student-per-week aggregation. 
         detailDict provides any necessary info: 
            {courseId : <the courseID>, wipeExisting : <true/false wipe existing class tables files>}
+           
+        Places names of three temp files into
+        instance variables:
+          - self.latestResultSummaryFilename = summaryFile
+          - self.latestResultDetailFilename  = detailFile
+          - self.latestResultWeeklyEffortFilename = weeklyEffortFile
+           
         @param detailDict: Dict with all info necessary to export standard class info. 
         @type detailDict: {String : String, String : Boolean}
         '''
@@ -313,7 +323,7 @@ class CourseCSVServer(WebSocketHandler):
         invokingUser = getpass.getuser()
         NO_YEAR = None
         #*****************
-        self.mysqlDb.close()
+        self.mysqlDb.close() #******8
         #*****************
         engagementComp = EngagementComputer(NO_YEAR,       # No start year limitation 
                                             'localhost',   # MySQL server
@@ -326,6 +336,9 @@ class CourseCSVServer(WebSocketHandler):
                                             courseToProfile=courseId) # Which course to analyze
         engagementComp.run()
         (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
+        self.latestResultSummaryFilename = summaryFile
+        self.latestResultDetailFilename  = detailFile
+        self.latestResultWeeklyEffortFilename = weeklyEffortFile
         #********
         print ("Results in: %s, %s, and %s" % (summaryFile, detailFile, weeklyEffortFile))    
         #********
