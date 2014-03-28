@@ -25,7 +25,7 @@ import time # @UnusedImport
 import getpass
 import json
 import datetime
-from src.engagement import EngagementComputer
+from engagement import EngagementComputer
 
 # Add json_to_relation source dir to $PATH
 # for duration of this execution:
@@ -152,7 +152,7 @@ class CourseCSVServer(WebSocketHandler):
                 startTime = datetime.datetime.now()
                 
                 self.setTimer()
-                self.exportClass(args)
+#*******                self.exportClass(args)
                 self.exportTimeEngagement(args)
                 self.cancelTimer()                
                 endTime = datetime.datetime.now() - startTime
@@ -312,11 +312,15 @@ class CourseCSVServer(WebSocketHandler):
         # Get an engine that will compute the time engagement:
         invokingUser = getpass.getuser()
         NO_YEAR = None
+        #*****************
+        self.mysqlDb.close()
+        #*****************
         engagementComp = EngagementComputer(NO_YEAR,       # No start year limitation 
                                             'localhost',   # MySQL server
-                                            CourseCSVServer.SUPPORT_TABLES_DB, # DB within that server 
+                                            CourseCSVServer.SUPPORT_TABLES_DB if not self.testing else 'unittest', # DB within that server 
                                             'Activities',  # Support table (must have been created earlier via
-                                                           # prepEngagementAnalysis.sql)
+                                                           # prepEngagementAnalysis.sql),
+                                            #*****openMySQLDB=self.mysqlDb,
                                             mySQLUser=invokingUser, 
                                             mySQLPwd=None, # EngagementComputer will figure it out
                                             courseToProfile=courseId) # Which course to analyze
