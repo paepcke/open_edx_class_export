@@ -314,18 +314,28 @@ class CourseCSVServer(WebSocketHandler):
         @param detailDict: Dict with all info necessary to export standard class info. 
         @type detailDict: {String : String, String : Boolean}
         '''
+        # Get the courseID to profile. If that ID is None, 
+        # then profile all courses. The Web UI may allow only
+        # one course to profile at a time, but the capability
+        # to do all is here; just have on_message put None
+        # as the courseId:
         try:
             courseId = detailDict['courseId']
         except KeyError:
             self.logErr('In exportTimeEngagement: course ID was not included; could not compute engagement tables.')
             return
+        try:
+            startYearsArr = detailDict['startYearsArr'] 
+        except KeyError:
+            # no limit on the start year:
+            startYearsArr = None
+
         # Get an engine that will compute the time engagement:
         invokingUser = getpass.getuser()
-        NO_YEAR = None
         #*****************
         self.mysqlDb.close() #******8
         #*****************
-        engagementComp = EngagementComputer(NO_YEAR,       # No start year limitation 
+        engagementComp = EngagementComputer(startYearsArr, # Only profile courses that started in one of the given years.
                                             'localhost',   # MySQL server
                                             CourseCSVServer.SUPPORT_TABLES_DB if not self.testing else 'unittest', # DB within that server 
                                             'Activities',  # Support table (must have been created earlier via
