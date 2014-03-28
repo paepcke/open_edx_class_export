@@ -167,8 +167,8 @@ class ExportClassTest(unittest.TestCase):
             # Read and discard the csv file's header line:
             fd.readline()
             #print(courseWeeklyLine)
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,4,20\n', fd.readline())
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,6,72\n', fd.readline())
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,5,20\n', fd.readline())
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,7,72\n', fd.readline())
 
         os.remove(self.courseServer.latestResultSummaryFilename)
         os.remove(self.courseServer.latestResultDetailFilename)
@@ -199,10 +199,10 @@ class ExportClassTest(unittest.TestCase):
             # Read and discard the csv file's header line:
             fd.readline()
             #print(courseWeeklyLine)
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,4,20\n', fd.readline())
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,6,72\n', fd.readline())
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,def,4,15\n', fd.readline())
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,def,6,15\n', fd.readline())
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,5,20\n', fd.readline())
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,7,72\n', fd.readline())
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,def,5,15\n', fd.readline())
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,def,7,15\n', fd.readline())
 
 
         os.remove(self.courseServer.latestResultSummaryFilename)
@@ -244,10 +244,10 @@ class ExportClassTest(unittest.TestCase):
             #print(courseWeeklyLine)
             allWeeklyLines = fd.readlines()
             allWeeklyLines.sort()
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,4,20\n', allWeeklyLines[0])
-            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,6,72\n', allWeeklyLines[1])
-            self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,0,15\n', allWeeklyLines[2])
-            self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,2,15\n', allWeeklyLines[3])
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,5,20\n', allWeeklyLines[0])
+            self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,7,72\n', allWeeklyLines[1])
+            self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,1,15\n', allWeeklyLines[2])
+            self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,3,15\n', allWeeklyLines[3])
 
 
         os.remove(self.courseServer.latestResultSummaryFilename)
