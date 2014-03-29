@@ -575,15 +575,15 @@ if __name__ == '__main__':
     #sslRoot = '/home/paepcke/.ssl/server'
     #*********
     
-    http_server = tornado.httpserver.HTTPServer(application,ssl_options={
-       "certfile": sslRoot + '.crt',
-       "keyfile":  sslRoot + '.key',
-       })
+    sslArgsDict = {
+     "certfile": sslRoot + '.crt',
+     "keyfile":  sslRoot + '.key',
+     }  
     
-    application.listen(8080, ssl_options={
-                            "certfile": sslRoot + '.crt',
-                            "keyfile":  sslRoot + '.key',
-                            })    
+    http_server = tornado.httpserver.HTTPServer(application,ssl_options=sslArgsDict)
+    
+    application.listen(8080, ssl_options=sslArgsDict)
+        
     tornado.ioloop.IOLoop.instance().start()
     
 #          Timer sending dots for progress not working b/c of
