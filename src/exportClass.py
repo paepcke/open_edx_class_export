@@ -154,10 +154,13 @@ class CourseCSVServer(WebSocketHandler):
             elif requestName == 'getData':
                 startTime = datetime.datetime.now()
                 
-                self.setTimer()
-#*******                self.exportClass(args)
-                self.exportTimeEngagement(args)
-                self.cancelTimer()                
+                if args.get('basicData', False):
+                    self.setTimer()
+                    self.exportClass(args)
+                if args.get('engagementData', False):
+                    self.setTimer()
+                    self.exportTimeEngagement(args)
+                self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
                 # Get a timedelta object with the microsecond
                 # component subtracted to be 0, so that the
@@ -513,6 +516,9 @@ class CourseCSVServer(WebSocketHandler):
         return url
                 
     def setTimer(self, time=None):
+        if self.currTimer is not None:
+            # Timer already running:
+            return
         if time is None:
             time = CourseCSVServer.PROGRESS_INTERVAL
         self.currTimer = Timer(time, self.reportProgress)
@@ -521,6 +527,7 @@ class CourseCSVServer(WebSocketHandler):
     def cancelTimer(self):
         if self.currTimer is not None:
             self.currTimer.cancel()
+            self.currTimer = None
             self.logDebug('Cancelling progress timer')
             
     def logInfo(self, msg):

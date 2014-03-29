@@ -146,7 +146,7 @@ class ExportClassTest(unittest.TestCase):
 
     def testOneStudentOneClass(self):
         self.buildSupportTables(TestSet.ONE_STUDENT_ONE_CLASS)
-        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
         self.courseServer.on_message(jsonMsg)
         with open(self.courseServer.latestResultSummaryFilename, 'r') as fd:
             # Read and discard the csv file's header line:
@@ -176,7 +176,7 @@ class ExportClassTest(unittest.TestCase):
 
     def testTwoStudentsOneClass(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
-        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
         self.courseServer.on_message(jsonMsg)
         with open(self.courseServer.latestResultSummaryFilename, 'r') as fd:
             # Read and discard the csv file's header line:
@@ -211,7 +211,7 @@ class ExportClassTest(unittest.TestCase):
 
     def testTwoStudentsTwoClasses(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_TWO_CLASSES)
-        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "None", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "None", "engagementData" : "True", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
         self.courseServer.on_message(jsonMsg)
         with open(self.courseServer.latestResultSummaryFilename, 'r') as fd:
             # Read and discard the csv file's header line:

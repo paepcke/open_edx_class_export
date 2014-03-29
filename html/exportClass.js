@@ -283,8 +283,19 @@ function ExportClass() {
 	var xmlHttp = null;
 	var fileAction = document.getElementById("fileAction").checked;
 	var inclPII    = document.getElementById("piiPolicy").checked;
+	var basicData  = document.getElementById("basicData").checked;
+	var engagementData = document.getElementById("engagementData").checked;
 
-	var argObj = {"courseId" : resolvedCourseID, "wipeExisting" : fileAction, "inclPII" : inclPII, "cryptoPwd" : encryptionPwd};
+	if (!basicData && 
+	    !engagementData) {
+	    alert("You need to select one or more of the desired-data checkboxes.");
+	    return;
+	}
+
+	var argObj = {"courseId" : resolvedCourseID, 
+		      "wipeExisting" : fileAction, 
+		      "inclPII" : inclPII, 
+		      "cryptoPwd" : encryptionPwd};
 	var req = buildRequest("getData", argObj);
 
 	// Start the progress timer; remember the existing
