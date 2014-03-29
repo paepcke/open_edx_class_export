@@ -89,8 +89,8 @@ class CourseCSVServer(WebSocketHandler):
 
         # Locate the makeCourseCSV.sh script:
         self.thisScriptDir = os.path.dirname(__file__)
-        self.exportCSVScript = os.path.join(self.thisScriptDir, '../../scripts/makeCourseCSVs.sh')
-        self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../../scripts/searchCourseDisplayNames.sh')
+        self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
+        self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
         self.csvFilePaths = []
         
         # A tempfile passed to the makeCourseCSVs.sh script.
