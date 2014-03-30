@@ -13,7 +13,12 @@ data is encrypted into a .zip file. Either way the data is
 deposited in /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv.
 '''
 
+import datetime
+import getpass
+import json
 import os
+import re
+import shutil
 import socket
 import string
 from subprocess import CalledProcessError
@@ -22,10 +27,10 @@ import sys
 import tempfile
 from threading import Timer
 import time # @UnusedImport
-import getpass
-import json
-import datetime
+
 from engagement import EngagementComputer
+from pymysql_utils.pymysql_utils import MySQLDB
+
 
 # Add json_to_relation source dir to $PATH
 # for duration of this execution:
@@ -33,12 +38,17 @@ source_dir = [os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")]
 source_dir.extend(sys.path)
 sys.path = source_dir
 
-from pymysql_utils.pymysql_utils import MySQLDB
 
 import tornado;
 from tornado.ioloop import IOLoop;
 from tornado.websocket import WebSocketHandler;
 from tornado.httpserver import HTTPServer;
+
+# Enum for return whether a directory
+# exists or not:
+class PreExisted:
+    DID_NOT_EXIST = 0
+    EXISTED = 1
 
 class CourseCSVServer(WebSocketHandler):
     
@@ -64,6 +74,11 @@ class CourseCSVServer(WebSocketHandler):
     # The tables are in DELIVERY_HOME/<course_name>, where course_name
     # is the name of the course with slashes replaced by underscores:
     DELIVERY_HOME = '/home/dataman/Data/CustomExcerpts'
+    
+    # Regex to chop the front off a filename like:
+    # '/tmp/tmpvOBuB1_engagement_CME_MedStats_2013-2015_weeklyEffort.csv'
+    # group(0) will contain 'engagement...' to the end: 
+    ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'[^_]*_(.*)')
     
     def __init__(self, application, request, testing=False ):
         '''
@@ -145,10 +160,25 @@ class CourseCSVServer(WebSocketHandler):
         except Exception as e:
             self.writeError("Bad JSON in request received at server: %s" % `e`)
 
+        
         # Get the request name:
         try:
             requestName = requestDict['req']
             args        = requestDict['args']
+
+            # JavaScript at the browser 'helpfully' adds a newline
+            # after course id that is checked by user. If the 
+            # arguments include a 'courseId' key, then strip its
+            # value of any trailing newlines:
+            try:
+                courseId = args['courseId']
+                args['courseId'] = courseId.strip()
+            except (KeyError, TypeError):
+                # Arguments either doesn't have a courseId key
+                # (KeyError), or args isn't a dict in the first
+                # place; both legitimate requests: 
+                pass
+            
             if requestName == 'reqCourseNames':
                 self.handleCourseNamesReq(requestName, args)
             elif requestName == 'getData':
@@ -209,7 +239,8 @@ class CourseCSVServer(WebSocketHandler):
         '''
         self.logDebug("Sending err to browser: %s" % msg)
         if not self.testing:
-            self.write_message('{"resp" : "error", "args" : "%s"}' % msg)
+            errMsg = '{"resp" : "error", "args" : "%s"}' % msg
+            self.write_message(errMsg)
 
     def writeResult(self, responseName, args):
         '''
@@ -316,7 +347,12 @@ class CourseCSVServer(WebSocketHandler):
            
         @param detailDict: Dict with all info necessary to export standard class info. 
         @type detailDict: {String : String, String : Boolean}
-        '''
+        @return: tri-tuple of three filenames: the engagement summary .csv file,
+            the engagement detail file .csv file, and the engagement weekly effort
+            filename.
+        @rtype: (String,String,String)
+        '''        
+        
         # Get the courseID to profile. If that ID is None, 
         # then profile all courses. The Web UI may allow only
         # one course to profile at a time, but the capability
@@ -327,6 +363,20 @@ class CourseCSVServer(WebSocketHandler):
         except KeyError:
             self.logErr('In exportTimeEngagement: course ID was not included; could not compute engagement tables.')
             return
+        
+        # Check whether the target directory where we
+        # will put results already exists. If so, check
+        # whether we are allowed to wipe it:
+        (fullTargetDir, dirExisted) = self.constructDeliveryDir(courseId)
+        if dirExisted:
+            # Are we allowed to wipe the directory?
+            xpungeExisting = detailDict.get("wipeExisting", False)
+            if not xpungeExisting:
+                self.writeError("Tables for course %s already existed, and Remove Previous Exports... was not checked." % courseId)
+                return None
+                
+        # Should we consider only classes that started 
+        # during a particular year?
         try:
             startYearsArr = detailDict['startYearsArr'] 
         except KeyError:
@@ -335,9 +385,7 @@ class CourseCSVServer(WebSocketHandler):
 
         # Get an engine that will compute the time engagement:
         invokingUser = getpass.getuser()
-        #*****************
-        self.mysqlDb.close() #******8
-        #*****************
+        self.mysqlDb.close()
         engagementComp = EngagementComputer(startYearsArr, # Only profile courses that started in one of the given years.
                                             'localhost',   # MySQL server
                                             CourseCSVServer.SUPPORT_TABLES_DB if not self.testing else 'unittest', # DB within that server 
@@ -349,12 +397,62 @@ class CourseCSVServer(WebSocketHandler):
                                             courseToProfile=courseId) # Which course to analyze
         engagementComp.run()
         (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
-        self.latestResultSummaryFilename = summaryFile
-        self.latestResultDetailFilename  = detailFile
-        self.latestResultWeeklyEffortFilename = weeklyEffortFile
-        #********
-        print ("Results in: %s, %s, and %s" % (summaryFile, detailFile, weeklyEffortFile))    
-        #********
+        # The files will be in paths like:
+        #     /tmp/tmpAK5svP_engagement_Engineering_CRYP999_Cryptopgraphy_Repository_summary.csv
+        #     /tmp/tmpxpo4Ng_engagement_CME_MedStats_2013-2015_allData.csv,
+        #     /tmp/tmpvIXpVB_engagement_CME_MedStats_2013-2015_weeklyEffort.csv
+        # That is: /tmp/<tmpfilePrefix>_engagement_<courseName>_<fileContent>.csv
+        # 
+        # Move the files to their delivery directory without the
+        # leading temp prefix. First, see whether the directory exists:
+        
+        # For each of the file names, get the part starting
+        # with 'engagement_...':
+        try:
+            self.latestResultSummaryFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.match(summaryFile).group(0)
+        except Exception as e:
+            errmsg = 'Could not construct target file name for %s: %s' % (summaryFile, `e`) 
+            self.writeResult('progress', errmsg)
+            return
+        try:
+            self.latestResultDetailFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.match(detailFile).group(0)
+        except Exception as e:
+            errmsg = 'Could not construct target file name for %s: %s' % (detailFile, `e`) 
+            self.writeResult('progress', errmsg)
+            return
+        try:
+            self.latestResultWeeklyEffortFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.match(detailFile).group(0)
+        except Exception as e:
+            errmsg = 'Could not construct target file name for %s: %s' % (weeklyEffortFile, `e`) 
+            self.writeResult('progress', errmsg)
+            return
+        
+        # Move all three files to their final resting place.
+        shutil.move(summaryFile, os.path.join(fullTargetDir, self.latestResultSummaryFilename))
+        shutil.move(detailFile, os.path.join(fullTargetDir, self.latestResultDetailFilename))
+        shutil.move(weeklyEffortFile, os.path.join(fullTargetDir, self.latestResultWeeklyEffortFilename))
+        return (self.latestResultSummaryFilename, self.latestResultDetailFilename, self.latestResultWeeklyEffortFilename)
+    
+    def constructDeliveryDir(self, courseName):
+        '''
+        Given a course name, construct a directory name where result
+        files for that course will be stored to be visible on the 
+        Web. The parent dir is expected in CourseCSVServer.DELIVERY_HOME.
+        The leaf dir is constructed as DELIVERY_HOME/courseName
+        @param courseName: course name for which results will be deposited in the dir
+        @type courseName: String
+        @return: Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if 
+                 the directory already existed. Method does nothing in this case. 
+                 If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
+                 are returned. Creation includes all intermediate subdirectories.
+        @rtype: (String, PreExisting)
+        '''
+        fullTargetDir = os.path.join(CourseCSVServer.DELIVERY_HOME, courseName)
+        if os.path.isdir(fullTargetDir):
+            return (fullTargetDir, PreExisted.EXISTED)
+        else:
+            os.makedirs(fullTargetDir)
+            return (fullTargetDir, PreExisted.DID_NOT_EXIST)
     
     def printClassTableInfo(self, inclPII):
         '''
@@ -584,7 +682,10 @@ if __name__ == '__main__':
     
     application.listen(8080, ssl_options=sslArgsDict)
         
-    tornado.ioloop.IOLoop.instance().start()
+    try:
+        tornado.ioloop.IOLoop.instance().start()
+    except Exception as e:
+        print("Error inside Tornado ioloop; continuing: %s" % `e`)
     
 #          Timer sending dots for progress not working b/c of
 #          buffering:

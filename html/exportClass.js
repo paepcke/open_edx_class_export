@@ -30,11 +30,12 @@ function ExportClass() {
 	    // Internalize the JSON
 	    // e.g. "{resp : "courseList", "args" : ['course1','course2']"
 	    try {
-		var argsObj = JSON.parse(evt.data);
+		var oneLineData = evt.data.replace(/(\r\n|\n|\r)/gm," ");
+		var argsObj = JSON.parse(oneLineData);
 		var response  = argsObj.resp;
 		var args    = argsObj.args;
 	    } catch(err) {
-		alert('Bad response from server (' + evt.data + '): ' + err );
+		alert('Bad response from server (' + oneLineData + '): ' + err );
 		return
 	    }
 	    handleResponse(response, args);
@@ -295,7 +296,10 @@ function ExportClass() {
 	var argObj = {"courseId" : resolvedCourseID, 
 		      "wipeExisting" : fileAction, 
 		      "inclPII" : inclPII, 
-		      "cryptoPwd" : encryptionPwd};
+		      "cryptoPwd" : encryptionPwd,
+		      "basicData" : basicData,
+		      "engagementData" : engagementData
+		     };
 	var req = buildRequest("getData", argObj);
 
 	// Start the progress timer; remember the existing
