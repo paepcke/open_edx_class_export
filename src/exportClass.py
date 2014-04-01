@@ -78,7 +78,8 @@ class CourseCSVServer(WebSocketHandler):
     # Regex to chop the front off a filename like:
     # '/tmp/tmpvOBuB1_engagement_CME_MedStats_2013-2015_weeklyEffort.csv'
     # group(0) will contain 'engagement...' to the end: 
-    ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'[^_]*_(.*)')
+    #ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'[^_]*_(.*)')
+    ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'(engage.*)')
     
     def __init__(self, application, request, testing=False ):
         '''
@@ -106,7 +107,6 @@ class CourseCSVServer(WebSocketHandler):
         self.thisScriptDir = os.path.dirname(__file__)
         self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
         self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
-        self.csvFilePaths = []
         
         # A tempfile passed to the makeCourseCSVs.sh script.
         # That script will place file paths to all created 
@@ -173,25 +173,90 @@ class CourseCSVServer(WebSocketHandler):
             try:
                 courseId = args['courseId']
                 args['courseId'] = courseId.strip()
+                courseIdWasPresent = True
             except (KeyError, TypeError):
                 # Arguments either doesn't have a courseId key
                 # (KeyError), or args isn't a dict in the first
-                # place; both legitimate requests: 
+                # place; both legitimate requests:
+                courseIdWasPresent = False 
                 pass
             
+            # Convert wipeExisting and inclPII from 
+            # strings to booleans, if args is a dict:
+            try:
+                if args.get('wipeExisting', False) == 'True':
+                    args['wipeExisting'] = True
+                elif args.get('wipeExisting', False) == 'False':
+                    args['wipeExisting'] = False
+                    
+                if args.get('inclPII', False) == 'True':
+                    args['inclPII'] = True
+                elif args.get('inclPII', False) == 'False':
+                    args['inclPII'] = False
+            except AttributeError:
+                # args wasn't a dict; propably a reqCourseNames request.
+                pass
+
+            # Check whether the target directory where we
+            # will put results already exists. If so,
+            # and if the directory contains files, then check
+            # whether we are allowed to wipe the files. All
+            # this only if the request will touch that directory.
+            # That in turn is signaled by courseId being non-None:
+            if courseIdWasPresent:
+                (self.fullTargetDir, dirExisted) = self.constructDeliveryDir(courseId)
+                filesInTargetDir = os.listdir(self.fullTargetDir)
+                if dirExisted and len(filesInTargetDir) > 0:
+                    # Are we allowed to wipe the directory?
+                    xpungeExisting = args.get("wipeExisting", False)
+                    if not xpungeExisting or xpungeExisting == 'False':
+                        self.writeError("Tables for course %s already existed, and Remove Previous Exports... was not checked." % courseId)
+                        return None
+                    for oneFile in filesInTargetDir:
+                        try:
+                            os.remove(os.path.join(self.fullTargetDir, oneFile))
+                        except:
+                            # Best effort:
+                            pass
+            
+            # Make an array of result csv file paths,
+            # which gets filled by the handlers called
+            # in the conditional below:
+            self.csvFilePaths = []
+            courseList = None
+
             if requestName == 'reqCourseNames':
                 self.handleCourseNamesReq(requestName, args)
             elif requestName == 'getData':
                 startTime = datetime.datetime.now()
+                if courseIdWasPresent and (courseId == 'None' or courseId is None):
+                    # Need list of all courses, b/c we'll do
+                    # engagement analysis for all; use MySQL wildcard:
+                    courseList = self.queryCourseNameList('%')
                 
                 if args.get('basicData', False):
                     self.setTimer()
-                    self.exportClass(args)
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportClass(args)
+                    else:
+                        self.exportClass(args)
                 if args.get('engagementData', False):
                     self.setTimer()
-                    self.exportTimeEngagement(args)
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportTimeEngagement(args)
+                    else:
+                        self.exportTimeEngagement(args)
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
+
+                # Send table row samples to browser:
+                inclPII = args.get("inclPII", False)
+                self.printClassTableInfo(args.get("inclPII", False))
+                
                 # Get a timedelta object with the microsecond
                 # component subtracted to be 0, so that the
                 # microseconds won't get printed:        
@@ -199,7 +264,6 @@ class CourseCSVServer(WebSocketHandler):
                 self.writeResult('progress', "<br>Runtime: %s<br>" % str(duration))
                                 
                 # Add an example client letter:
-                inclPII = args.get("inclPII", False)
                 self.addClientInstructions(inclPII)
 
             else:
@@ -276,8 +340,6 @@ class CourseCSVServer(WebSocketHandler):
         xpungeExisting = detailDict.get("wipeExisting", False)
         inclPII = detailDict.get("inclPII", False)
         cryptoPWD = detailDict.get("cryptoPwd", '')
-        if cryptoPWD is None:
-            cryptoPWD = ''
             
         # Build the CL command for script makeCourseCSV.sh
         scriptCmd = [self.exportCSVScript,'-u',self.currUser]
@@ -321,15 +383,12 @@ class CourseCSVServer(WebSocketHandler):
         # the file to zero:
         
         if os.path.getsize(self.infoTmpFile.name) > 0:
-            # Make an array of csv file paths:
-            self.csvFilePaths = []
             self.infoTmpFile.seek(0)
+            # Add each file name to self.csvFilePaths
+            # for the caller to work with:
             for csvFilePath in self.infoTmpFile:
                 self.csvFilePaths.append(csvFilePath.strip())        
                 
-            # Send table row samples to browser:
-            self.printClassTableInfo(inclPII)
-            
         return True
     
     def exportTimeEngagement(self, detailDict):
@@ -364,16 +423,8 @@ class CourseCSVServer(WebSocketHandler):
             self.logErr('In exportTimeEngagement: course ID was not included; could not compute engagement tables.')
             return
         
-        # Check whether the target directory where we
-        # will put results already exists. If so, check
-        # whether we are allowed to wipe it:
-        (fullTargetDir, dirExisted) = self.constructDeliveryDir(courseId)
-        if dirExisted:
-            # Are we allowed to wipe the directory?
-            xpungeExisting = detailDict.get("wipeExisting", False)
-            if not xpungeExisting:
-                self.writeError("Tables for course %s already existed, and Remove Previous Exports... was not checked." % courseId)
-                return None
+        inclPII = detailDict.get("inclPII", False)
+        cryptoPWD = detailDict.get("cryptoPwd", '')
                 
         # Should we consider only classes that started 
         # during a particular year?
@@ -409,29 +460,88 @@ class CourseCSVServer(WebSocketHandler):
         # For each of the file names, get the part starting
         # with 'engagement_...':
         try:
-            self.latestResultSummaryFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.match(summaryFile).group(0)
+            self.latestResultSummaryFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.search(summaryFile).group(0)
         except Exception as e:
             errmsg = 'Could not construct target file name for %s: %s' % (summaryFile, `e`) 
             self.writeResult('progress', errmsg)
             return
         try:
-            self.latestResultDetailFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.match(detailFile).group(0)
+            self.latestResultDetailFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.search(detailFile).group(0)
         except Exception as e:
             errmsg = 'Could not construct target file name for %s: %s' % (detailFile, `e`) 
             self.writeResult('progress', errmsg)
             return
         try:
-            self.latestResultWeeklyEffortFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.match(detailFile).group(0)
+            self.latestResultWeeklyEffortFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.search(weeklyEffortFile).group(0)
         except Exception as e:
             errmsg = 'Could not construct target file name for %s: %s' % (weeklyEffortFile, `e`) 
             self.writeResult('progress', errmsg)
             return
         
+        fullSummaryFile = os.path.join(self.fullTargetDir, self.latestResultSummaryFilename)
+        fullDetailFile = os.path.join(self.fullTargetDir, self.latestResultDetailFilename)
+        fullWeeklyFile  = os.path.join(self.fullTargetDir, self.latestResultWeeklyEffortFilename)
+        
         # Move all three files to their final resting place.
-        shutil.move(summaryFile, os.path.join(fullTargetDir, self.latestResultSummaryFilename))
-        shutil.move(detailFile, os.path.join(fullTargetDir, self.latestResultDetailFilename))
-        shutil.move(weeklyEffortFile, os.path.join(fullTargetDir, self.latestResultWeeklyEffortFilename))
+        shutil.move(summaryFile, fullSummaryFile)
+        shutil.move(detailFile, fullDetailFile)
+        shutil.move(weeklyEffortFile, fullWeeklyFile)
+        
+        self.latestResultSummaryFilename = fullSummaryFile
+        self.latestResultDetailFilename  = fullDetailFile
+        self.latestResultWeeklyEffortFilename = fullWeeklyFile
+        
+        if inclPII:
+            targetZipFileBasename = courseId.replace('/','_')
+            targetZipFile = os.path.join(self.fullTargetDir,
+                                         targetZipFileBasename + '_' + 'engagement_report.zip') 
+            self.zipFiles(targetZipFile,
+                          cryptoPWD,
+                          [fullSummaryFile,
+                           fullDetailFile,
+                           fullWeeklyFile]
+                          )
+            self.csvFilePaths.append(targetZipFile)
+            # Remove the clear-text originals:
+            try:
+                os.remove(fullSummaryFile)
+            except:
+                pass
+            try:
+                os.remove(fullDetailFile)
+            except:
+                pass
+            try:
+                os.remove(fullWeeklyFile)
+            except:
+                pass
+        else:
+            self.csvFilePaths.extend([fullSummaryFile, fullDetailFile, fullWeeklyFile])
+
         return (self.latestResultSummaryFilename, self.latestResultDetailFilename, self.latestResultWeeklyEffortFilename)
+    
+    def zipFiles(self, destZipFileName, cryptoPwd, filePathsToZip):
+        '''
+        Creates an encrypted zip file.
+        @param destZipFileName: full path of the final zip file
+        @type destZipFileName: String
+        @param cryptoPwd: password to which zip file will be encrypted
+        @type cryptoPwd: String
+        @param filePathsToZip: array of full file paths to zip
+        @type filePathsToZip: [String]
+        '''
+        # The --junk-paths below avoids having all file
+        # names in the zip be full paths. Instead they 
+        # will only be the basenames:
+        zipCmd = ['zip',
+                  '--junk-paths',
+                  '--password',
+                  cryptoPwd,
+                  destZipFileName
+                  ]
+        # Add all the file names to be zipped to the command:
+        zipCmd.extend(filePathsToZip)
+        subprocess.call(zipCmd)
     
     def constructDeliveryDir(self, courseName):
         '''
@@ -447,12 +557,16 @@ class CourseCSVServer(WebSocketHandler):
                  are returned. Creation includes all intermediate subdirectories.
         @rtype: (String, PreExisting)
         '''
-        fullTargetDir = os.path.join(CourseCSVServer.DELIVERY_HOME, courseName)
-        if os.path.isdir(fullTargetDir):
-            return (fullTargetDir, PreExisted.EXISTED)
+        # Ensure there are no forward slashes in the
+        # coursename (there usually are); replace them
+        # with underscores:
+        courseName = courseName.replace('/','_')
+        self.fullTargetDir = os.path.join(CourseCSVServer.DELIVERY_HOME, courseName).strip()
+        if os.path.isdir(self.fullTargetDir):
+            return (self.fullTargetDir, PreExisted.EXISTED)
         else:
-            os.makedirs(fullTargetDir)
-            return (fullTargetDir, PreExisted.DID_NOT_EXIST)
+            os.makedirs(self.fullTargetDir)
+            return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
     
     def printClassTableInfo(self, inclPII):
         '''
@@ -476,7 +590,7 @@ class CourseCSVServer(WebSocketHandler):
             # Get the line count:
             lineCnt = 'unknown'
             try:
-                # Get a string: '23 fileName\n', where 23 is an ex. for the line count:
+                # Get a string like: '23 fileName\n', where 23 is an ex. for the line count:
                 lineCntAndFilename = subprocess.check_output(['wc', '-l', csvFilePath])
                 # Isolate the line count:
                 lineCnt = lineCntAndFilename.split(' ')[0]
@@ -490,6 +604,12 @@ class CourseCSVServer(WebSocketHandler):
                 tblName = 'VideoInteraction'
             elif csvFilePath.find('ActivityGrade') > -1:
                 tblName = 'ActivityGrade'
+            elif re.match(r'.*(engagement).*(allData).csv', csvFilePath):
+                tblName = 'EngagementDetails'
+            elif re.match(r'.*(engagement).*(summary).csv', csvFilePath):
+                tblName = 'EngagementSummary'
+            elif re.match(r'.*(engagement).*(weeklyEffort).csv', csvFilePath):
+                tblName = 'EngagementWeeklyEffort'
             else:
                 tblName = 'unknown table name'
             

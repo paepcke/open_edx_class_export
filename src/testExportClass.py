@@ -11,12 +11,15 @@ from tornado.httpserver import HTTPServer;
 
 from collections import OrderedDict
 import os
+import tempfile
 import time
 import unittest
+import zipfile
 
 from pymysql_utils.pymysql_utils import MySQLDB
 
 from exportClass import CourseCSVServer
+
 
 class TestSet:
     ONE_STUDENT_ONE_CLASS = 0
@@ -146,7 +149,7 @@ class ExportClassTest(unittest.TestCase):
 
     def testOneStudentOneClass(self):
         self.buildSupportTables(TestSet.ONE_STUDENT_ONE_CLASS)
-        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
         self.courseServer.on_message(jsonMsg)
         with open(self.courseServer.latestResultSummaryFilename, 'r') as fd:
             # Read and discard the csv file's header line:
@@ -176,7 +179,7 @@ class ExportClassTest(unittest.TestCase):
 
     def testTwoStudentsOneClass(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
-        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
         self.courseServer.on_message(jsonMsg)
         with open(self.courseServer.latestResultSummaryFilename, 'r') as fd:
             # Read and discard the csv file's header line:
@@ -211,7 +214,7 @@ class ExportClassTest(unittest.TestCase):
 
     def testTwoStudentsTwoClasses(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_TWO_CLASSES)
-        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "None", "engagementData" : "True", "wipeExisting" : "False", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "None", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
         self.courseServer.on_message(jsonMsg)
         with open(self.courseServer.latestResultSummaryFilename, 'r') as fd:
             # Read and discard the csv file's header line:
@@ -224,7 +227,7 @@ class ExportClassTest(unittest.TestCase):
             allSummaryLines.sort()
             self.assertEqual('OpenEdX,CME/MedStats/2013-2015,5,92,2,0,0\n', allSummaryLines[0])
             self.assertEqual('OpenEdX,My/RealCourse/2013-2015,2,30,2,0,0\n', allSummaryLines[1])
-    
+     
         with open(self.courseServer.latestResultDetailFilename, 'r') as fd:
             # Read and discard the csv file's header line:
             fd.readline()
@@ -237,7 +240,7 @@ class ExportClassTest(unittest.TestCase):
             self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,2013-09-15,04:36:54,15\n', allDetailLines[4])
             self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,2013-09-01,04:10:00,15\n', allDetailLines[5])
             self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,2013-09-16,04:10:00,15\n', allDetailLines[6])
-
+ 
         with open(self.courseServer.latestResultWeeklyEffortFilename, 'r') as fd:
             # Read and discard the csv file's header line:
             fd.readline()
@@ -248,16 +251,26 @@ class ExportClassTest(unittest.TestCase):
             self.assertEqual('OpenEdX,CME/MedStats/2013-2015,abc,7,72\n', allWeeklyLines[1])
             self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,1,15\n', allWeeklyLines[2])
             self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,3,15\n', allWeeklyLines[3])
-
-
+ 
+ 
         os.remove(self.courseServer.latestResultSummaryFilename)
         os.remove(self.courseServer.latestResultDetailFilename)
         os.remove(self.courseServer.latestResultWeeklyEffortFilename)
 
 
-
-
-
+    def testZipFiles(self):
+        file1 = tempfile.NamedTemporaryFile()
+        file2 = tempfile.NamedTemporaryFile()
+        file1.write('foo')
+        file2.write('bar')
+        file1.flush()
+        file2.flush()
+        self.courseServer.zipFiles('/tmp/zipFileUnittest.zip',
+                                   'foobar',
+                                   [file1.name, file2.name]
+                                   )
+        # Read it all back:
+        zipfile.ZipFile('/tmp/zipFileUnittest.zip').extractall(pwd='foobar')
 
     def buildSupportTables(self, testSetToLoad):
         # Activities table:

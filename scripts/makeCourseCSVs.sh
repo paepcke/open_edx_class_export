@@ -165,20 +165,19 @@ COURSE_SUBSTR=$1
 
 # ----------------------------- Determine Directory Path for CSV Tables -------------
 
-# Create a prefix for the table file name
-# names. The same name will also be used as
+# Create a prefix for the table file names.
+# The same prefix will also be used as
 # the directory subname under ~dataman/Data/CustomExcerpts.
 # Strategy: if the COURSE_SUBSTR is a full, clean
-#   course triplet part1/part2/part3, we use part2_part3,
-#   b/c the course number (part 2) is supposed to be unique.
+#   course triplet part1/part2/part3, we use part1_part2_part3.
 #   If we cannot create this part2_part3 name, b/c
 #   $COURSE_SUBSTR is of a non-standard form, then 
 #   we use all of $COURSE_SUBSTR.
 #   Finally, in either case, All MySQL regex '%' chars
 #   are replaced by '_any'.
 # Ex:
-#   Engineering/CS106A/Fall2013 => CS106A_Fall2013
-#   Chemistry/CH%/Summer => CH_any_Summer
+#   Engineering/CS106A/Fall2013 => Engineering_CS106A_Fall2013
+#   Chemistry/CH%/Summer => Chemistry_CH_any_Summer
 
 # The following SED expression has three repetitions
 # of \([^/]*\)\/, which means all letters that are
@@ -189,7 +188,7 @@ COURSE_SUBSTR=$1
 # which we then recall later, in the substitution
 # part with \2 and \3 (the '/\2_\3/' part):
 
-DIR_LEAF=`echo $COURSE_SUBSTR | sed -n "s/\([^/]*\)\/\([^/]*\)\/\(.*\)/\2_\3/p"`
+DIR_LEAF=`echo $COURSE_SUBSTR | sed -n "s/\([^/]*\)\/\([^/]*\)\/\(.*\)/\1_\2_\3/p"`
 
 #******************
 #echo "DEST_LEAF after first xform: '$DIR_LEAF'<br>"
@@ -207,8 +206,8 @@ else
 fi
 
 #******************
-#echo "DEST_LEAF after second xform: '$DIR_LEAF'<br>"
-#echo "DEST_LEAF after second xform: '$DIR_LEAF'" > /tmp/trash.log
+echo "DEST_LEAF after second xform: '$DIR_LEAF'<br>"
+echo "DEST_LEAF after second xform: '$DIR_LEAF'" > /tmp/trash.log
 #******************
 
 # Last step: remove all remaining '/' chars,
@@ -417,6 +416,8 @@ fi
 # echo "Contents ActivityGrade header file:"
 # cat $ActivityGrade_HEADER_FILE
 # exit 0
+echo "Dirleaf: $DIR_LEAF"
+
 #*******************
 
 # ----------------------------- Create a full path for each of the tables -------------
