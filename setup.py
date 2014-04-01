@@ -9,7 +9,6 @@ setup(
     setup_requires   = ['nose>=1.1.2'],
     install_requires = ['online_learning_computations>=0.25',
 			'pymysql_utils>=0.24',
-			'numpy>=1.8.0'
 			],
     tests_require    = [],
 
