@@ -486,6 +486,9 @@ class CourseCSVServer(WebSocketHandler):
         shutil.move(summaryFile, fullSummaryFile)
         shutil.move(detailFile, fullDetailFile)
         shutil.move(weeklyEffortFile, fullWeeklyFile)
+        os.chmod(fullSummaryFile, 0644)
+        os.chmod(fullDetailFile, 0644)
+        os.chmod(fullWeeklyFile, 0644)
         
         self.latestResultSummaryFilename = fullSummaryFile
         self.latestResultDetailFilename  = fullDetailFile
