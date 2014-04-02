@@ -206,8 +206,8 @@ else
 fi
 
 #******************
-echo "DEST_LEAF after second xform: '$DIR_LEAF'<br>"
-echo "DEST_LEAF after second xform: '$DIR_LEAF'" > /tmp/trash.log
+#echo "DEST_LEAF after second xform: '$DIR_LEAF'<br>"
+#echo "DEST_LEAF after second xform: '$DIR_LEAF'" > /tmp/trash.log
 #******************
 
 # Last step: remove all remaining '/' chars,
@@ -416,8 +416,7 @@ fi
 # echo "Contents ActivityGrade header file:"
 # cat $ActivityGrade_HEADER_FILE
 # exit 0
-echo "Dirleaf: $DIR_LEAF"
-
+#echo "Dirleaf: $DIR_LEAF"
 #*******************
 
 # ----------------------------- Create a full path for each of the tables -------------
