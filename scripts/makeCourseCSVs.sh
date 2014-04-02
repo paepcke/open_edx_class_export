@@ -425,7 +425,7 @@ echo "Dirleaf: $DIR_LEAF"
 EVENT_EXTRACT_FNAME=$DEST_DIR/${DIR_LEAF}_EventXtract.csv
 ACTIVITY_GRADE_FNAME=$DEST_DIR/${DIR_LEAF}_ActivityGrade.csv
 VIDEO_FNAME=$DEST_DIR/${DIR_LEAF}_VideoInteraction.csv
-ZIP_FNAME=$DEST_DIR/${DIR_LEAF}_report.zip
+ZIP_FNAME=$DEST_DIR/${DIR_LEAF}_basic_report.zip
 
 # ----------------------------- If requested on CL: Punt if tables exist -------------
 

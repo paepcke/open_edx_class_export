@@ -2,13 +2,13 @@ import multiprocessing
 from setuptools import setup, find_packages
 setup(
     name = "open_edx_class_export",
-    version = "0.1",
+    version = "0.20",
     packages = find_packages(),
 
     # Dependencies on other packages:
     setup_requires   = ['nose>=1.1.2'],
     install_requires = ['online_learning_computations>=0.27',
-			'pymysql_utils>=0.24',
+			'pymysql_utils>=0.25',
 			],
     tests_require    = [],
 

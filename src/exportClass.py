@@ -80,6 +80,14 @@ class CourseCSVServer(WebSocketHandler):
     # group(0) will contain 'engagement...' to the end: 
     #ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'[^_]*_(.*)')
     ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'(engage.*)')
+
+    # Bogus course name elimination pattern. This pattern is
+    # to find course names that are just for demos or trials:
+    # Sandbox, sandbox, /demo, and /Demo... The '?:' just 
+    # causes the parenthesized expression to not be captured.
+    # Would be no harm to let the parens be a capture group
+    # as well, by elminiating the ?:.
+    BOGUS_COURSE_NAME_PATTERN = re.compile(r'(?:[sS]andbox|/[dD]emo)')
     
     def __init__(self, application, request, testing=False ):
         '''
@@ -181,22 +189,6 @@ class CourseCSVServer(WebSocketHandler):
                 courseIdWasPresent = False 
                 pass
             
-            # Convert wipeExisting and inclPII from 
-            # strings to booleans, if args is a dict:
-            try:
-                if args.get('wipeExisting', False) == 'True':
-                    args['wipeExisting'] = True
-                elif args.get('wipeExisting', False) == 'False':
-                    args['wipeExisting'] = False
-                    
-                if args.get('inclPII', False) == 'True':
-                    args['inclPII'] = True
-                elif args.get('inclPII', False) == 'False':
-                    args['inclPII'] = False
-            except AttributeError:
-                # args wasn't a dict; propably a reqCourseNames request.
-                pass
-
             # Check whether the target directory where we
             # will put results already exists. If so,
             # and if the directory contains files, then check
@@ -291,7 +283,13 @@ class CourseCSVServer(WebSocketHandler):
         except Exception as e:
             self.writeError(`e`)
             return
-        self.writeResult('courseList', matchingCourseNames)
+        
+        # Remove the most obvious bogus courses.
+        # We use list comprehension: keep all names
+        # that do not match the BOGUS_COURSE_NAME_PATTERN:
+        finalCourseList = [courseName for courseName in matchingCourseNames if CourseCSVServer.BOGUS_COURSE_NAME_PATTERN.search(courseName) is None]
+        
+        self.writeResult('courseList', finalCourseList)
         
     def writeError(self, msg):
         '''
@@ -518,6 +516,7 @@ class CourseCSVServer(WebSocketHandler):
                 os.remove(fullWeeklyFile)
             except:
                 pass
+            os.chmod(targetZipFile, 0644)
         else:
             self.csvFilePaths.extend([fullSummaryFile, fullDetailFile, fullWeeklyFile])
 
@@ -737,9 +736,7 @@ class CourseCSVServer(WebSocketHandler):
         return url
                 
     def setTimer(self, time=None):
-        if self.currTimer is not None:
-            # Timer already running:
-            return
+        self.cancelTimer()
         if time is None:
             time = CourseCSVServer.PROGRESS_INTERVAL
         self.currTimer = Timer(time, self.reportProgress)
