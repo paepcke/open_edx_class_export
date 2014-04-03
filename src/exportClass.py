@@ -746,7 +746,7 @@ class CourseCSVServer(WebSocketHandler):
         if self.currTimer is not None:
             self.currTimer.cancel()
             self.currTimer = None
-            self.logDebug('Cancelling progress timer')
+            #self.logDebug('Cancelling progress timer')
             
     def logInfo(self, msg):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_INFO:
