@@ -1,0 +1,631 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>src Package &mdash; open_edx_class_export 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="open_edx_class_export 0.2 documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">open_edx_class_export 0.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="src-package">
+<h1>src Package<a class="headerlink" href="#src-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-src.exportClass">
+<span id="exportclass-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">exportClass</span></tt> Module<a class="headerlink" href="#module-src.exportClass" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jan 14, 2014</p>
+<p>&#64;author: paepcke</p>
+<p>Web service partner to exportClass.html. Uses Tornado to listen to
+port 8080 under SSL protocol. Accepts requests for exporting
+the data of one class. Can export just anonymized part of the
+class info, or more, i.e. data that includes potentially 
+personally identifiable information (PII). If PII is involved,
+data is encrypted into a .zip file. Either way the data is
+deposited in /home/dataman/Data/CustomExcerpts/CourseSubdir/&lt;tables&gt;.csv.</p>
+<dl class="class">
+<dt id="src.exportClass.CourseCSVServer">
+<em class="property">class </em><tt class="descclassname">src.exportClass.</tt><tt class="descname">CourseCSVServer</tt><big>(</big><em>application</em>, <em>request</em>, <em>testing=False</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="src.tornado.html#src.tornado.websocket.WebSocketHandler" title="src.tornado.websocket.WebSocketHandler"><tt class="xref py py-class docutils literal"><span class="pre">src.tornado.websocket.WebSocketHandler</span></tt></a></p>
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.BOGUS_COURSE_NAME_PATTERN">
+<tt class="descname">BOGUS_COURSE_NAME_PATTERN</tt><em class="property"> = &lt;_sre.SRE_Pattern object at 0x31d8100&gt;</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.BOGUS_COURSE_NAME_PATTERN" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.DELIVERY_HOME">
+<tt class="descname">DELIVERY_HOME</tt><em class="property"> = '/home/dataman/Data/CustomExcerpts'</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.DELIVERY_HOME" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN">
+<tt class="descname">ENGAGEMENT_FILE_CHOPPER_PATTERN</tt><em class="property"> = &lt;_sre.SRE_Pattern object at 0x4b40540&gt;</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.LOG_LEVEL_DEBUG">
+<tt class="descname">LOG_LEVEL_DEBUG</tt><em class="property"> = 3</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.LOG_LEVEL_DEBUG" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.LOG_LEVEL_ERR">
+<tt class="descname">LOG_LEVEL_ERR</tt><em class="property"> = 1</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.LOG_LEVEL_ERR" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.LOG_LEVEL_INFO">
+<tt class="descname">LOG_LEVEL_INFO</tt><em class="property"> = 2</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.LOG_LEVEL_INFO" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.LOG_LEVEL_NONE">
+<tt class="descname">LOG_LEVEL_NONE</tt><em class="property"> = 0</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.LOG_LEVEL_NONE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES">
+<tt class="descname">NUM_OF_TABLE_SAMPLE_LINES</tt><em class="property"> = 5</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.PROGRESS_INTERVAL">
+<tt class="descname">PROGRESS_INTERVAL</tt><em class="property"> = 3</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.PROGRESS_INTERVAL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.CourseCSVServer.SUPPORT_TABLES_DB">
+<tt class="descname">SUPPORT_TABLES_DB</tt><em class="property"> = 'Misc'</em><a class="headerlink" href="#src.exportClass.CourseCSVServer.SUPPORT_TABLES_DB" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.addClientInstructions">
+<tt class="descname">addClientInstructions</tt><big>(</big><em>inclPII</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.addClientInstructions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send the draft of an email message for the client
+back to the browsser. The message will contain the
+URL to where the client can pick up the result. If
+personally identifiable information was requested,
+the draft will include instructions for opening the
+zip file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>inclPII</strong> (<em>Boolean</em>) &#8211; whether or not PII was requested</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.allow_draft76">
+<tt class="descname">allow_draft76</tt><big>(</big><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.allow_draft76" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow WebSocket connections via the old Draft-76 protocol. It has some
+security issues, and was replaced. However, Safari (i.e. e.g. iPad)
+don&#8217;t implement the new protocols yet. Overriding this method, and
+returning True will allow those connections.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.cancelTimer">
+<tt class="descname">cancelTimer</tt><big>(</big><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.cancelTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.constructDeliveryDir">
+<tt class="descname">constructDeliveryDir</tt><big>(</big><em>courseName</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.constructDeliveryDir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a course name, construct a directory name where result
+files for that course will be stored to be visible on the 
+Web. The parent dir is expected in CourseCSVServer.DELIVERY_HOME.
+The leaf dir is constructed as DELIVERY_HOME/courseName</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>courseName</strong> (<em>String</em>) &#8211; course name for which results will be deposited in the dir</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if 
+the directory already existed. Method does nothing in this case. 
+If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
+are returned. Creation includes all intermediate subdirectories.</td>
+</tr>
+</tbody>
+</table>
+<p>&#64;rtype: (String, PreExisting)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.echoParms">
+<tt class="descname">echoParms</tt><big>(</big><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.echoParms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.exportClass">
+<tt class="descname">exportClass</tt><big>(</big><em>detailDict</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.exportClass" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export basic info about one class: EventXtract, VideoInteraction, and ActivityGrade.
+{courseId : &lt;the courseID&gt;, wipeExisting : &lt;true/false wipe existing class tables files&gt;}</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>detailDict</strong> (<em>{String : String, String : Boolean}</em>) &#8211; Dict with all info necessary to export standard class info.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.exportTimeEngagement">
+<tt class="descname">exportTimeEngagement</tt><big>(</big><em>detailDict</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.exportTimeEngagement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export two CSV files: a summary of time effort aggregated over all students,
+and a per-student-per-week aggregation. 
+detailDict provides any necessary info:</p>
+<blockquote>
+<div>{courseId : &lt;the courseID&gt;, wipeExisting : &lt;true/false wipe existing class tables files&gt;}</div></blockquote>
+<p>Places names of three temp files into
+instance variables:</p>
+<blockquote>
+<div><ul class="simple">
+<li>self.latestResultSummaryFilename = summaryFile</li>
+<li>self.latestResultDetailFilename  = detailFile</li>
+<li>self.latestResultWeeklyEffortFilename = weeklyEffortFile</li>
+</ul>
+</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>detailDict</strong> (<em>{String : String, String : Boolean}</em>) &#8211; Dict with all info necessary to export standard class info.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">tri-tuple of three filenames: the engagement summary .csv file,
+the engagement detail file .csv file, and the engagement weekly effort
+filename.</td>
+</tr>
+</tbody>
+</table>
+<p>&#64;rtype: (String,String,String)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.getDeliveryURL">
+<tt class="descname">getDeliveryURL</tt><big>(</big><em>courseId</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.getDeliveryURL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a course ID string, return a URL from which
+completed course tables can be picked up:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>courseId</strong> (<em>String</em>) &#8211; course identifier, e.g.: /networking/EE120/Fall</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">URL at which tables computed for a class are visible.</td>
+</tr>
+</tbody>
+</table>
+<p>&#64;rtype: String</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.handleCourseNamesReq">
+<tt class="descname">handleCourseNamesReq</tt><big>(</big><em>requestName</em>, <em>args</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.handleCourseNamesReq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.logDebug">
+<tt class="descname">logDebug</tt><big>(</big><em>msg</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.logDebug" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.logErr">
+<tt class="descname">logErr</tt><big>(</big><em>msg</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.logErr" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.logInfo">
+<tt class="descname">logInfo</tt><big>(</big><em>msg</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.logInfo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.on_message">
+<tt class="descname">on_message</tt><big>(</big><em>message</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.on_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connected browser requests action: &#8220;&lt;actionType&gt;:&lt;actionArg(s)&gt;,
+where actionArgs is a single string or an array of items.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>message</strong> (<a class="reference external" href="http://docs.python.org/library/string.html#string" title="(in Python v2.7)"><em>string</em></a>) &#8211; message arriving from the browser</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.open">
+<tt class="descname">open</tt><big>(</big><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.open" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called by WebSocket/tornado when a client connects. Method must
+be named &#8216;open&#8217;</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.printClassTableInfo">
+<tt class="descname">printClassTableInfo</tt><big>(</big><em>inclPII</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.printClassTableInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes html to browser that shows result table
+file names and sizes. Also sends a few lines
+from each table as samples.
+In case of PII-including reports, only one file
+exists, and it is zipped and encrypted.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>inclPII</strong> (<em>Boolean</em>) &#8211; whether or not the report includes PII</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.queryCourseNameList">
+<tt class="descname">queryCourseNameList</tt><big>(</big><em>courseID</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.queryCourseNameList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a MySQL regexp courseID string, return a list
+of matchine course_display_name in the db. If self.mysql
+is None, indicating that the __init__() method was unable
+to log into the db, then return None.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>courseID</strong> (<em>String</em>) &#8211; Course name regular expression in MySQL syntax.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">An array of matching course_display_name, which may
+be empty. None if _init__() was unable to log into db.</td>
+</tr>
+</tbody>
+</table>
+<p>&#64;rtype: {[String] | None}</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.reportProgress">
+<tt class="descname">reportProgress</tt><big>(</big><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.reportProgress" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes a dot to remote browser to indicate liveness.
+Restarts timer for next dot.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.setTimer">
+<tt class="descname">setTimer</tt><big>(</big><em>time=None</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.setTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.writeError">
+<tt class="descname">writeError</tt><big>(</big><em>msg</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.writeError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes a response to the JS running in the browser
+that indicates an error. Result action is &#8220;error&#8221;,
+and &#8220;args&#8221; is the error message string:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>msg</strong> (<em>String</em>) &#8211; error message to send to browser</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.writeResult">
+<tt class="descname">writeResult</tt><big>(</big><em>responseName</em>, <em>args</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.writeResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a JSON formatted result back to the browser.
+Format will be {&#8220;resp&#8221; : &#8220;&lt;respName&gt;&#8221;, &#8220;args&#8221; : &#8220;&lt;jsonizedArgs&gt;&#8221;},
+That is, the args will be turned into JSON that is the
+in the response&#8217;s &#8220;args&#8221; value:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>responseName</strong> (<em>String</em>) &#8211; name of result that is recognized by the JS in the browser</li>
+<li><strong>args</strong> (<em>{int | String | [String] | ...}</em>) &#8211; any Python datastructure that can be turned into JSON</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.exportClass.CourseCSVServer.zipFiles">
+<tt class="descname">zipFiles</tt><big>(</big><em>destZipFileName</em>, <em>cryptoPwd</em>, <em>filePathsToZip</em><big>)</big><a class="headerlink" href="#src.exportClass.CourseCSVServer.zipFiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an encrypted zip file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>destZipFileName</strong> (<em>String</em>) &#8211; full path of the final zip file</li>
+<li><strong>cryptoPwd</strong> (<em>String</em>) &#8211; password to which zip file will be encrypted</li>
+<li><strong>filePathsToZip</strong> (<em>[String]</em>) &#8211; array of full file paths to zip</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="src.exportClass.PreExisted">
+<em class="property">class </em><tt class="descclassname">src.exportClass.</tt><tt class="descname">PreExisted</tt><a class="headerlink" href="#src.exportClass.PreExisted" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="src.exportClass.PreExisted.DID_NOT_EXIST">
+<tt class="descname">DID_NOT_EXIST</tt><em class="property"> = 0</em><a class="headerlink" href="#src.exportClass.PreExisted.DID_NOT_EXIST" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.exportClass.PreExisted.EXISTED">
+<tt class="descname">EXISTED</tt><em class="property"> = 1</em><a class="headerlink" href="#src.exportClass.PreExisted.EXISTED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-src.testExportClass">
+<span id="testexportclass-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">testExportClass</span></tt> Module<a class="headerlink" href="#module-src.testExportClass" title="Permalink to this headline">¶</a></h2>
+<p>Created on Mar 26, 2014</p>
+<p>&#64;author: paepcke</p>
+<dl class="class">
+<dt id="src.testExportClass.ExportClassTest">
+<em class="property">class </em><tt class="descclassname">src.testExportClass.</tt><tt class="descname">ExportClassTest</tt><big>(</big><em>methodName='runTest'</em><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">unittest.case.TestCase</span></tt></p>
+<dl class="method">
+<dt id="src.testExportClass.ExportClassTest.buildSupportTables">
+<tt class="descname">buildSupportTables</tt><big>(</big><em>testSetToLoad</em><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest.buildSupportTables" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.testExportClass.ExportClassTest.courseRuntimesData">
+<tt class="descname">courseRuntimesData</tt><em class="property"> = [('CME/MedStats/2013-2015', '2013-07-30 03:27:00', '2013-10-30 03:27:00'), ('My/RealCourse/2013-2015', '2013-09-01 03:27:00', '2013-10-30 03:27:00')]</em><a class="headerlink" href="#src.testExportClass.ExportClassTest.courseRuntimesData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.testExportClass.ExportClassTest.oneStudentTestData">
+<tt class="descname">oneStudentTestData</tt><em class="property"> = [('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-08-30 03:27:00', 0), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-08-30 03:27:20', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-08-30 03:37:00', 0), ('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-08-30 04:10:00', 0), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-09-14 03:27:24', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 03:27:25', 0), ('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-09-15 03:30:35', 0), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-09-15 03:59:00', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 04:05:00', 0), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 04:36:54', 1)]</em><a class="headerlink" href="#src.testExportClass.ExportClassTest.oneStudentTestData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.testExportClass.ExportClassTest.setUp">
+<tt class="descname">setUp</tt><big>(</big><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest.setUp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.testExportClass.ExportClassTest.tearDown">
+<tt class="descname">tearDown</tt><big>(</big><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest.tearDown" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.testExportClass.ExportClassTest.testOneStudentOneClass">
+<tt class="descname">testOneStudentOneClass</tt><big>(</big><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest.testOneStudentOneClass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.testExportClass.ExportClassTest.testTwoStudentsOneClass">
+<tt class="descname">testTwoStudentsOneClass</tt><big>(</big><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest.testTwoStudentsOneClass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.testExportClass.ExportClassTest.testTwoStudentsTwoClasses">
+<tt class="descname">testTwoStudentsTwoClasses</tt><big>(</big><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest.testTwoStudentsTwoClasses" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.testExportClass.ExportClassTest.testZipFiles">
+<tt class="descname">testZipFiles</tt><big>(</big><big>)</big><a class="headerlink" href="#src.testExportClass.ExportClassTest.testZipFiles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.testExportClass.ExportClassTest.twoStudentsOneClassTestData">
+<tt class="descname">twoStudentsOneClassTestData</tt><em class="property"> = [('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-08-30 03:27:00', 0), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-08-30 03:27:20', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-08-30 03:37:00', 0), ('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-08-30 04:10:00', 0), ('CME/MedStats/2013-2015', 'def', 'page_close', '2013-08-30 04:10:00', 1), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-09-14 03:27:24', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 03:27:25', 0), ('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-09-15 03:30:35', 0), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-09-15 03:59:00', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 04:05:00', 0), ('CME/MedStats/2013-2015', 'def', 'page_close', '2013-09-16 04:10:00', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 04:36:54', 1)]</em><a class="headerlink" href="#src.testExportClass.ExportClassTest.twoStudentsOneClassTestData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.testExportClass.ExportClassTest.twoStudentsTwoClassesTestData">
+<tt class="descname">twoStudentsTwoClassesTestData</tt><em class="property"> = [('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-08-30 03:27:00', 0), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-08-30 03:27:20', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-08-30 03:37:00', 0), ('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-08-30 04:10:00', 0), ('My/RealCourse/2013-2015', 'def', 'page_close', '2013-09-01 04:10:00', 1), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-09-14 03:27:24', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 03:27:25', 0), ('CME/MedStats/2013-2015', 'abc', 'page_close', '2013-09-15 03:30:35', 0), ('CME/MedStats/2013-2015', 'abc', 'load_video', '2013-09-15 03:59:00', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 04:05:00', 0), ('My/RealCourse/2013-2015', 'def', 'page_close', '2013-09-16 04:10:00', 1), ('CME/MedStats/2013-2015', 'abc', 'seq_goto', '2013-09-15 04:36:54', 1)]</em><a class="headerlink" href="#src.testExportClass.ExportClassTest.twoStudentsTwoClassesTestData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="src.testExportClass.TestSet">
+<em class="property">class </em><tt class="descclassname">src.testExportClass.</tt><tt class="descname">TestSet</tt><a class="headerlink" href="#src.testExportClass.TestSet" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="src.testExportClass.TestSet.ONE_STUDENT_ONE_CLASS">
+<tt class="descname">ONE_STUDENT_ONE_CLASS</tt><em class="property"> = 0</em><a class="headerlink" href="#src.testExportClass.TestSet.ONE_STUDENT_ONE_CLASS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.testExportClass.TestSet.TWO_STUDENTS_ONE_CLASS">
+<tt class="descname">TWO_STUDENTS_ONE_CLASS</tt><em class="property"> = 1</em><a class="headerlink" href="#src.testExportClass.TestSet.TWO_STUDENTS_ONE_CLASS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="src.testExportClass.TestSet.TWO_STUDENTS_TWO_CLASSES">
+<tt class="descname">TWO_STUDENTS_TWO_CLASSES</tt><em class="property"> = 2</em><a class="headerlink" href="#src.testExportClass.TestSet.TWO_STUDENTS_TWO_CLASSES" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="src.tornado.html">tornado Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#id1"><tt class="docutils literal"><span class="pre">tornado</span></tt> Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.auth"><tt class="docutils literal"><span class="pre">auth</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.autoreload"><tt class="docutils literal"><span class="pre">autoreload</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.curl_httpclient"><tt class="docutils literal"><span class="pre">curl_httpclient</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.database"><tt class="docutils literal"><span class="pre">database</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.escape"><tt class="docutils literal"><span class="pre">escape</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.gen"><tt class="docutils literal"><span class="pre">gen</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.httpclient"><tt class="docutils literal"><span class="pre">httpclient</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.httpserver"><tt class="docutils literal"><span class="pre">httpserver</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.httputil"><tt class="docutils literal"><span class="pre">httputil</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.ioloop"><tt class="docutils literal"><span class="pre">ioloop</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.iostream"><tt class="docutils literal"><span class="pre">iostream</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.locale"><tt class="docutils literal"><span class="pre">locale</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.netutil"><tt class="docutils literal"><span class="pre">netutil</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.options"><tt class="docutils literal"><span class="pre">options</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.process"><tt class="docutils literal"><span class="pre">process</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.simple_httpclient"><tt class="docutils literal"><span class="pre">simple_httpclient</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.stack_context"><tt class="docutils literal"><span class="pre">stack_context</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.template"><tt class="docutils literal"><span class="pre">template</span></tt> Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.tornado.html#syntax-reference">Syntax Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.testing"><tt class="docutils literal"><span class="pre">testing</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.util"><tt class="docutils literal"><span class="pre">util</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.web"><tt class="docutils literal"><span class="pre">web</span></tt> Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.tornado.html#thread-safety-notes">Thread-safety notes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.websocket"><tt class="docutils literal"><span class="pre">websocket</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#module-src.tornado.wsgi"><tt class="docutils literal"><span class="pre">wsgi</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.tornado.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.tornado.platform.html">platform Package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.platform.html#module-src.tornado.platform.auto"><tt class="docutils literal"><span class="pre">auto</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.platform.html#module-src.tornado.platform.common"><tt class="docutils literal"><span class="pre">common</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.platform.html#module-src.tornado.platform.interface"><tt class="docutils literal"><span class="pre">interface</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.platform.html#module-src.tornado.platform.posix"><tt class="docutils literal"><span class="pre">posix</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.platform.html#module-src.tornado.platform.twisted"><tt class="docutils literal"><span class="pre">twisted</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.platform.html#windows-module"><tt class="docutils literal"><span class="pre">windows</span></tt> Module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.tornado.test.html">test Package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.auth_test"><tt class="docutils literal"><span class="pre">auth_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.curl_httpclient_test"><tt class="docutils literal"><span class="pre">curl_httpclient_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.escape_test"><tt class="docutils literal"><span class="pre">escape_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.gen_test"><tt class="docutils literal"><span class="pre">gen_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.httpclient_test"><tt class="docutils literal"><span class="pre">httpclient_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.httpserver_test"><tt class="docutils literal"><span class="pre">httpserver_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.httputil_test"><tt class="docutils literal"><span class="pre">httputil_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.import_test"><tt class="docutils literal"><span class="pre">import_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.ioloop_test"><tt class="docutils literal"><span class="pre">ioloop_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.iostream_test"><tt class="docutils literal"><span class="pre">iostream_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.options_test"><tt class="docutils literal"><span class="pre">options_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.process_test"><tt class="docutils literal"><span class="pre">process_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.run_pyversion_tests"><tt class="docutils literal"><span class="pre">run_pyversion_tests</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.runtests"><tt class="docutils literal"><span class="pre">runtests</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.simple_httpclient_test"><tt class="docutils literal"><span class="pre">simple_httpclient_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.stack_context_test"><tt class="docutils literal"><span class="pre">stack_context_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.template_test"><tt class="docutils literal"><span class="pre">template_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.testing_test"><tt class="docutils literal"><span class="pre">testing_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.twisted_test"><tt class="docutils literal"><span class="pre">twisted_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.util_test"><tt class="docutils literal"><span class="pre">util_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.web_test"><tt class="docutils literal"><span class="pre">web_test</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tornado.test.html#module-src.tornado.test.wsgi_test"><tt class="docutils literal"><span class="pre">wsgi_test</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">src Package</a><ul>
+<li><a class="reference internal" href="#module-src.exportClass"><tt class="docutils literal"><span class="pre">exportClass</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-src.testExportClass"><tt class="docutils literal"><span class="pre">testExportClass</span></tt> Module</a></li>
+<li><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/src.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">open_edx_class_export 0.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Andreas Paepcke.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
