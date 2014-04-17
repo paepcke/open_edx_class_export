@@ -310,7 +310,10 @@ class CourseCSVServer(WebSocketHandler):
     def writeResult(self, responseName, args):
         '''
         Write a JSON formatted result back to the browser.
-        Format will be {"resp" : "<respName>", "args" : "<jsonizedArgs>"},
+        Format will be::
+        
+        {"resp" : "<respName>", "args" : "<jsonizedArgs>"}
+        
         That is, the args will be turned into JSON that is the
         in the response's "args" value:
 
@@ -412,7 +415,8 @@ class CourseCSVServer(WebSocketHandler):
         :return: tri-tuple of three filenames: the engagement summary .csv file,
             the engagement detail file .csv file, and the engagement weekly effort
             filename.
-        @rtype: (String,String,String)
+
+        :rtype: (String,String,String)
         '''        
         
         # Get the courseID to profile. If that ID is None, 
@@ -564,7 +568,8 @@ class CourseCSVServer(WebSocketHandler):
                  the directory already existed. Method does nothing in this case. 
                  If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
                  are returned. Creation includes all intermediate subdirectories.
-        @rtype: (String, PreExisting)
+
+        :rtype: (String, PreExisting)
         '''
         # Ensure there are no forward slashes in the
         # coursename (there usually are); replace them
@@ -700,7 +705,8 @@ class CourseCSVServer(WebSocketHandler):
         :type courseID: String
         :return: An array of matching course_display_name, which may
                  be empty. None if _init__() was unable to log into db.
-        @rtype: {[String] | None}
+
+        :rtype: {[String] | None}
         '''
         courseNames = []
         mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser]
@@ -736,7 +742,8 @@ class CourseCSVServer(WebSocketHandler):
         :param courseId: course identifier, e.g.: /networking/EE120/Fall
         :type courseId: String
         :return: URL at which tables computed for a class are visible.
-        @rtype: String 
+
+        :rtype: String 
         '''
         # FQDN of machine on which this service is running:
         thisFullyQualDomainName = socket.getfqdn()
