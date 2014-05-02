@@ -1,0 +1,411 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>platform Package &mdash; open_edx_class_export 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="open_edx_class_export 0.2 documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">open_edx_class_export 0.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="platform-package">
+<h1>platform Package<a class="headerlink" href="#platform-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-src.tornado.platform.auto">
+<span id="auto-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">auto</span></tt> Module<a class="headerlink" href="#module-src.tornado.platform.auto" title="Permalink to this headline">¶</a></h2>
+<p>Implementation of platform-specific functionality.</p>
+<p>For each function or class described in <cite>tornado.platform.interface</cite>,
+the appropriate platform-specific implementation exists in this module.
+Most code that needs access to this functionality should do e.g.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">tornado.platform.auto</span> <span class="kn">import</span> <span class="n">set_close_exec</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="module-src.tornado.platform.common">
+<span id="common-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">common</span></tt> Module<a class="headerlink" href="#module-src.tornado.platform.common" title="Permalink to this headline">¶</a></h2>
+<p>Lowest-common-denominator implementations of platform functionality.</p>
+<dl class="class">
+<dt id="src.tornado.platform.common.Waker">
+<em class="property">class </em><tt class="descclassname">src.tornado.platform.common.</tt><tt class="descname">Waker</tt><a class="headerlink" href="#src.tornado.platform.common.Waker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">tornado.platform.interface.Waker</span></tt></p>
+<p>Create an OS independent asynchronous pipe.</p>
+<p>For use on platforms that don&#8217;t have os.pipe() (or where pipes cannot
+be passed to select()), but do have sockets.  This includes Windows
+and Jython.</p>
+<dl class="method">
+<dt id="src.tornado.platform.common.Waker.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.common.Waker.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.common.Waker.consume">
+<tt class="descname">consume</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.common.Waker.consume" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.common.Waker.fileno">
+<tt class="descname">fileno</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.common.Waker.fileno" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.common.Waker.wake">
+<tt class="descname">wake</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.common.Waker.wake" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-src.tornado.platform.interface">
+<span id="interface-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">interface</span></tt> Module<a class="headerlink" href="#module-src.tornado.platform.interface" title="Permalink to this headline">¶</a></h2>
+<p>Interfaces for platform-specific functionality.</p>
+<p>This module exists primarily for documentation purposes and as base classes
+for other tornado.platform modules.  Most code should import the appropriate
+implementation from <cite>tornado.platform.auto</cite>.</p>
+<dl class="class">
+<dt id="src.tornado.platform.interface.Waker">
+<em class="property">class </em><tt class="descclassname">src.tornado.platform.interface.</tt><tt class="descname">Waker</tt><a class="headerlink" href="#src.tornado.platform.interface.Waker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A socket-like object that can wake another thread from <tt class="docutils literal"><span class="pre">select()</span></tt>.</p>
+<p>The <cite>~tornado.ioloop.IOLoop</cite> will add the Waker&#8217;s <cite>fileno()</cite> to
+its <tt class="docutils literal"><span class="pre">select</span></tt> (or <tt class="docutils literal"><span class="pre">epoll</span></tt> or <tt class="docutils literal"><span class="pre">kqueue</span></tt>) calls.  When another
+thread wants to wake up the loop, it calls <cite>wake</cite>.  Once it has woken
+up, it will call <cite>consume</cite> to do any necessary per-wake cleanup.  When
+the <tt class="docutils literal"><span class="pre">IOLoop</span></tt> is closed, it closes its waker too.</p>
+<dl class="method">
+<dt id="src.tornado.platform.interface.Waker.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.interface.Waker.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes the waker&#8217;s file descriptor(s).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.interface.Waker.consume">
+<tt class="descname">consume</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.interface.Waker.consume" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called after the listen has woken up to do any necessary cleanup.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.interface.Waker.fileno">
+<tt class="descname">fileno</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.interface.Waker.fileno" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a file descriptor for this waker.</p>
+<p>Must be suitable for use with <tt class="docutils literal"><span class="pre">select()</span></tt> or equivalent on the
+local platform.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.interface.Waker.wake">
+<tt class="descname">wake</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.interface.Waker.wake" title="Permalink to this definition">¶</a></dt>
+<dd><p>Triggers activity on the waker&#8217;s file descriptor.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="src.tornado.platform.interface.set_close_exec">
+<tt class="descclassname">src.tornado.platform.interface.</tt><tt class="descname">set_close_exec</tt><big>(</big><em>fd</em><big>)</big><a class="headerlink" href="#src.tornado.platform.interface.set_close_exec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the close-on-exec bit (<tt class="docutils literal"><span class="pre">FD_CLOEXEC</span></tt>)for a file descriptor.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-src.tornado.platform.posix">
+<span id="posix-module"></span><h2><a class="reference external" href="http://docs.python.org/library/posix.html#posix" title="(in Python v2.7)"><tt class="xref py py-mod docutils literal"><span class="pre">posix</span></tt></a> Module<a class="headerlink" href="#module-src.tornado.platform.posix" title="Permalink to this headline">¶</a></h2>
+<p>Posix implementations of platform-specific functionality.</p>
+<dl class="class">
+<dt id="src.tornado.platform.posix.Waker">
+<em class="property">class </em><tt class="descclassname">src.tornado.platform.posix.</tt><tt class="descname">Waker</tt><a class="headerlink" href="#src.tornado.platform.posix.Waker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">tornado.platform.interface.Waker</span></tt></p>
+<dl class="method">
+<dt id="src.tornado.platform.posix.Waker.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.posix.Waker.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.posix.Waker.consume">
+<tt class="descname">consume</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.posix.Waker.consume" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.posix.Waker.fileno">
+<tt class="descname">fileno</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.posix.Waker.fileno" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.posix.Waker.wake">
+<tt class="descname">wake</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.posix.Waker.wake" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="src.tornado.platform.posix.set_close_exec">
+<tt class="descclassname">src.tornado.platform.posix.</tt><tt class="descname">set_close_exec</tt><big>(</big><em>fd</em><big>)</big><a class="headerlink" href="#src.tornado.platform.posix.set_close_exec" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-src.tornado.platform.twisted">
+<span id="twisted-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">twisted</span></tt> Module<a class="headerlink" href="#module-src.tornado.platform.twisted" title="Permalink to this headline">¶</a></h2>
+<p>A Twisted reactor built on the Tornado IOLoop.</p>
+<p>This module lets you run applications and libraries written for
+Twisted in a Tornado application.  To use it, simply call <cite>install</cite> at
+the beginning of the application:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">tornado.platform.twisted</span>
+<span class="n">tornado</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">twisted</span><span class="o">.</span><span class="n">install</span><span class="p">()</span>
+<span class="kn">from</span> <span class="nn">twisted.internet</span> <span class="kn">import</span> <span class="n">reactor</span>
+</pre></div>
+</div>
+<p>When the app is ready to start, call <cite>IOLoop.instance().start()</cite>
+instead of <cite>reactor.run()</cite>.  This will allow you to use a mixture of
+Twisted and Tornado code in the same process.</p>
+<p>It is also possible to create a non-global reactor by calling
+<cite>tornado.platform.twisted.TornadoReactor(io_loop)</cite>.  However, if
+the <cite>IOLoop</cite> and reactor are to be short-lived (such as those used in
+unit tests), additional cleanup may be required.  Specifically, it is
+recommended to call:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">reactor</span><span class="o">.</span><span class="n">fireSystemEvent</span><span class="p">(</span><span class="s">&#39;shutdown&#39;</span><span class="p">)</span>
+<span class="n">reactor</span><span class="o">.</span><span class="n">disconnectAll</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>before closing the <cite>IOLoop</cite>.</p>
+<p>This module has been tested with Twisted versions 11.0.0, 11.1.0, and 12.0.0</p>
+<dl class="class">
+<dt id="src.tornado.platform.twisted.TornadoDelayedCall">
+<em class="property">class </em><tt class="descclassname">src.tornado.platform.twisted.</tt><tt class="descname">TornadoDelayedCall</tt><big>(</big><em>reactor</em>, <em>seconds</em>, <em>f</em>, <em>*args</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoDelayedCall" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>DelayedCall object for Tornado.</p>
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoDelayedCall.active">
+<tt class="descname">active</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoDelayedCall.active" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoDelayedCall.cancel">
+<tt class="descname">cancel</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoDelayedCall.cancel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoDelayedCall.delay">
+<tt class="descname">delay</tt><big>(</big><em>seconds</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoDelayedCall.delay" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoDelayedCall.getTime">
+<tt class="descname">getTime</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoDelayedCall.getTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoDelayedCall.reset">
+<tt class="descname">reset</tt><big>(</big><em>seconds</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoDelayedCall.reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="src.tornado.platform.twisted.TornadoReactor">
+<em class="property">class </em><tt class="descclassname">src.tornado.platform.twisted.</tt><tt class="descname">TornadoReactor</tt><big>(</big><em>io_loop=None</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">twisted.internet.posixbase.PosixReactorBase</span></tt></p>
+<p>Twisted reactor built on the Tornado IOLoop.</p>
+<p>Since it is intented to be used in applications where the top-level
+event loop is <tt class="docutils literal"><span class="pre">io_loop.start()</span></tt> rather than <tt class="docutils literal"><span class="pre">reactor.run()</span></tt>,
+it is implemented a little differently than other Twisted reactors.
+We override <cite>mainLoop</cite> instead of <cite>doIteration</cite> and must implement
+timed call functionality on top of <cite>IOLoop.add_timeout</cite> rather than
+using the implementation in <cite>PosixReactorBase</cite>.</p>
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.addReader">
+<tt class="descname">addReader</tt><big>(</big><em>reader</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.addReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a FileDescriptor for notification of data available to read.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.addWriter">
+<tt class="descname">addWriter</tt><big>(</big><em>writer</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.addWriter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a FileDescriptor for notification of data available to write.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.callFromThread">
+<tt class="descname">callFromThread</tt><big>(</big><em>f</em>, <em>*args</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.callFromThread" title="Permalink to this definition">¶</a></dt>
+<dd><p>See <cite>twisted.internet.interfaces.IReactorThreads.callFromThread</cite></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.callLater">
+<tt class="descname">callLater</tt><big>(</big><em>seconds</em>, <em>f</em>, <em>*args</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.callLater" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.crash">
+<tt class="descname">crash</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.crash" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.doIteration">
+<tt class="descname">doIteration</tt><big>(</big><em>delay</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.doIteration" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.getDelayedCalls">
+<tt class="descname">getDelayedCalls</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.getDelayedCalls" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.getReaders">
+<tt class="descname">getReaders</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.getReaders" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.getWriters">
+<tt class="descname">getWriters</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.getWriters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.installWaker">
+<tt class="descname">installWaker</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.installWaker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.mainLoop">
+<tt class="descname">mainLoop</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.mainLoop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.removeAll">
+<tt class="descname">removeAll</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.removeAll" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.removeReader">
+<tt class="descname">removeReader</tt><big>(</big><em>reader</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.removeReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a Selectable for notification of data available to read.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.removeWriter">
+<tt class="descname">removeWriter</tt><big>(</big><em>writer</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.removeWriter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a Selectable for notification of data available to write.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.seconds">
+<tt class="descname">seconds</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.seconds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.stop">
+<tt class="descname">stop</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="src.tornado.platform.twisted.TornadoReactor.wakeUp">
+<tt class="descname">wakeUp</tt><big>(</big><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.TornadoReactor.wakeUp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="src.tornado.platform.twisted.install">
+<tt class="descclassname">src.tornado.platform.twisted.</tt><tt class="descname">install</tt><big>(</big><em>io_loop=None</em><big>)</big><a class="headerlink" href="#src.tornado.platform.twisted.install" title="Permalink to this definition">¶</a></dt>
+<dd><p>Install this package as the default Twisted reactor.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="windows-module">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">windows</span></tt> Module<a class="headerlink" href="#windows-module" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">platform Package</a><ul>
+<li><a class="reference internal" href="#module-src.tornado.platform.auto"><tt class="docutils literal"><span class="pre">auto</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-src.tornado.platform.common"><tt class="docutils literal"><span class="pre">common</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-src.tornado.platform.interface"><tt class="docutils literal"><span class="pre">interface</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-src.tornado.platform.posix"><tt class="docutils literal"><span class="pre">posix</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-src.tornado.platform.twisted"><tt class="docutils literal"><span class="pre">twisted</span></tt> Module</a></li>
+<li><a class="reference internal" href="#windows-module"><tt class="docutils literal"><span class="pre">windows</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/src.tornado.platform.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">open_edx_class_export 0.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Andreas Paepcke.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -93,12 +93,13 @@ class CourseCSVServer(WebSocketHandler):
         '''
         Invoked when browser accesses this server via ws://...
         Register this handler instance in the handler list.
-        @param application: Application object that defines the collection of handlers.
-        @type application: tornado.web.Application
-        @param request: a request object holding details of the incoming request
-        @type request:HTTPRequest.HTTPRequest
-        @param kwargs: dict of additional parameters for operating this service.
-        @type kwargs: dict
+
+        :param application: Application object that defines the collection of handlers.
+        :type application: tornado.web.Application
+        :param request: a request object holding details of the incoming request
+        :type request:HTTPRequest.HTTPRequest
+        :param kwargs: dict of additional parameters for operating this service.
+        :type kwargs: dict
         '''
         if not testing:
             super(CourseCSVServer, self).__init__(application, request)
@@ -158,8 +159,9 @@ class CourseCSVServer(WebSocketHandler):
         '''
         Connected browser requests action: "<actionType>:<actionArg(s)>,
         where actionArgs is a single string or an array of items.
-        @param message: message arriving from the browser
-        @type message: string
+
+        :param message: message arriving from the browser
+        :type message: string
         '''
         #print message
         try:
@@ -296,8 +298,9 @@ class CourseCSVServer(WebSocketHandler):
         Writes a response to the JS running in the browser
         that indicates an error. Result action is "error",
         and "args" is the error message string:
-        @param msg: error message to send to browser
-        @type msg: String
+
+        :param msg: error message to send to browser
+        :type msg: String
         '''
         self.logDebug("Sending err to browser: %s" % msg)
         if not self.testing:
@@ -307,13 +310,17 @@ class CourseCSVServer(WebSocketHandler):
     def writeResult(self, responseName, args):
         '''
         Write a JSON formatted result back to the browser.
-        Format will be {"resp" : "<respName>", "args" : "<jsonizedArgs>"},
+        Format will be::
+        
+        {"resp" : "<respName>", "args" : "<jsonizedArgs>"}
+        
         That is, the args will be turned into JSON that is the
         in the response's "args" value:
-        @param responseName: name of result that is recognized by the JS in the browser
-        @type responseName: String
-        @param args: any Python datastructure that can be turned into JSON
-        @type args: {int | String | [String] | ...}
+
+        :param responseName: name of result that is recognized by the JS in the browser
+        :type responseName: String
+        :param args: any Python datastructure that can be turned into JSON
+        :type args: {int | String | [String] | ...}
         '''
         self.logDebug("Prep to send result to browser: %s" % responseName + ':' +  str(args))
         jsonArgs = json.dumps(args)
@@ -326,8 +333,9 @@ class CourseCSVServer(WebSocketHandler):
         '''
         Export basic info about one class: EventXtract, VideoInteraction, and ActivityGrade.
         {courseId : <the courseID>, wipeExisting : <true/false wipe existing class tables files>}
-        @param detailDict: Dict with all info necessary to export standard class info. 
-        @type detailDict: {String : String, String : Boolean}
+
+        :param detailDict: Dict with all info necessary to export standard class info. 
+        :type detailDict: {String : String, String : Boolean}
         '''
         theCourseID = detailDict.get('courseId', '').strip()
         if len(theCourseID) == 0:     
@@ -402,12 +410,13 @@ class CourseCSVServer(WebSocketHandler):
           - self.latestResultDetailFilename  = detailFile
           - self.latestResultWeeklyEffortFilename = weeklyEffortFile
            
-        @param detailDict: Dict with all info necessary to export standard class info. 
-        @type detailDict: {String : String, String : Boolean}
-        @return: tri-tuple of three filenames: the engagement summary .csv file,
+        :param detailDict: Dict with all info necessary to export standard class info. 
+        :type detailDict: {String : String, String : Boolean}
+        :return: tri-tuple of three filenames: the engagement summary .csv file,
             the engagement detail file .csv file, and the engagement weekly effort
             filename.
-        @rtype: (String,String,String)
+
+        :rtype: (String,String,String)
         '''        
         
         # Get the courseID to profile. If that ID is None, 
@@ -525,12 +534,13 @@ class CourseCSVServer(WebSocketHandler):
     def zipFiles(self, destZipFileName, cryptoPwd, filePathsToZip):
         '''
         Creates an encrypted zip file.
-        @param destZipFileName: full path of the final zip file
-        @type destZipFileName: String
-        @param cryptoPwd: password to which zip file will be encrypted
-        @type cryptoPwd: String
-        @param filePathsToZip: array of full file paths to zip
-        @type filePathsToZip: [String]
+
+        :param destZipFileName: full path of the final zip file
+        :type destZipFileName: String
+        :param cryptoPwd: password to which zip file will be encrypted
+        :type cryptoPwd: String
+        :param filePathsToZip: array of full file paths to zip
+        :type filePathsToZip: [String]
         '''
         # The --junk-paths below avoids having all file
         # names in the zip be full paths. Instead they 
@@ -551,13 +561,15 @@ class CourseCSVServer(WebSocketHandler):
         files for that course will be stored to be visible on the 
         Web. The parent dir is expected in CourseCSVServer.DELIVERY_HOME.
         The leaf dir is constructed as DELIVERY_HOME/courseName
-        @param courseName: course name for which results will be deposited in the dir
-        @type courseName: String
-        @return: Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if 
+
+        :param courseName: course name for which results will be deposited in the dir
+        :type courseName: String
+        :return: Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if 
                  the directory already existed. Method does nothing in this case. 
                  If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
                  are returned. Creation includes all intermediate subdirectories.
-        @rtype: (String, PreExisting)
+
+        :rtype: (String, PreExisting)
         '''
         # Ensure there are no forward slashes in the
         # coursename (there usually are); replace them
@@ -577,8 +589,9 @@ class CourseCSVServer(WebSocketHandler):
         from each table as samples.
         In case of PII-including reports, only one file
         exists, and it is zipped and encrypted.
-        @param inclPII: whether or not the report includes PII
-        @type inclPII: Boolean 
+
+        :param inclPII: whether or not the report includes PII
+        :type inclPII: Boolean 
         '''
         
         if inclPII:
@@ -646,8 +659,9 @@ class CourseCSVServer(WebSocketHandler):
         personally identifiable information was requested,
         the draft will include instructions for opening the
         zip file.
-        @param inclPII: whether or not PII was requested
-        @type inclPII: Boolean
+
+        :param inclPII: whether or not PII was requested
+        :type inclPII: Boolean
         '''
         # Get just the first table path, we just
         # need its subdirectory name to build the
@@ -686,11 +700,13 @@ class CourseCSVServer(WebSocketHandler):
         of matchine course_display_name in the db. If self.mysql
         is None, indicating that the __init__() method was unable
         to log into the db, then return None.
-        @param courseID: Course name regular expression in MySQL syntax.
-        @type courseID: String
-        @return: An array of matching course_display_name, which may
+
+        :param courseID: Course name regular expression in MySQL syntax.
+        :type courseID: String
+        :return: An array of matching course_display_name, which may
                  be empty. None if _init__() was unable to log into db.
-        @rtype: {[String] | None}
+
+        :rtype: {[String] | None}
         '''
         courseNames = []
         mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser]
@@ -722,10 +738,12 @@ class CourseCSVServer(WebSocketHandler):
         '''
         Given a course ID string, return a URL from which
         completed course tables can be picked up:
-        @param courseId: course identifier, e.g.: /networking/EE120/Fall
-        @type courseId: String
-        @return: URL at which tables computed for a class are visible.
-        @rtype: String 
+
+        :param courseId: course identifier, e.g.: /networking/EE120/Fall
+        :type courseId: String
+        :return: URL at which tables computed for a class are visible.
+
+        :rtype: String 
         '''
         # FQDN of machine on which this service is running:
         thisFullyQualDomainName = socket.getfqdn()
