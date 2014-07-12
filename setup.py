@@ -8,7 +8,7 @@ setup(
     # Dependencies on other packages:
     setup_requires   = ['nose>=1.1.2'],
     install_requires = ['online_learning_computations>=0.27',
-			'pymysql_utils>=0.27',
+			'pymysql_utils>=0.30',
 			],
     tests_require    = [],
 
