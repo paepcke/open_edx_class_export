@@ -21,7 +21,7 @@ destDirGiven=false
 DEST_DIR='/home/dataman/Data/CustomExcerpts'
 INFO_DEST=''
 pii=false
-ENCRYPT_PWD=''
+ENCRYPT_PWD='myClass'
 RELATABLE=false
 
 # Execute getopt
@@ -307,7 +307,7 @@ echo "$FORUM_HEADER" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | ca
 
 # Get column names without quotes around them,
 # which the have in the col header row:
-COL_NAMES=`cat /tmp/colNames.txt | sed s/\'//g`
+COL_NAMES=`cat $Forum_HEADER_FILE | sed s/\'//g`
 
 
 #*******************
@@ -371,10 +371,11 @@ fi
 
 EXPORT_Forum_CMD=" \
  USE EdxForum; \
- SELECT "$COLS_TO_PULL" FROM contents \
+ SELECT "$COLS_TO_PULL" \
  INTO OUTFILE '"$Forum_VALUES"' \
   FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
   LINES TERMINATED BY '\r\n' \
+ FROM contents \
  WHERE course_display_name LIKE '"$COURSE_SUBSTR"';"
 
 #********************
@@ -393,6 +394,14 @@ cat $Forum_HEADER_FILE $Forum_VALUES > $FORUM_FNAME
 echo "Done exporting Forum for class $COURSE_SUBSTR to CSV<br>"
 
 # ----------------------- Zip and Encrypt -------------
+
+#***********
+# echo "ENCRYPT_PWD: '"$ENCRYPT_PWD"'"
+# echo "ZIP_FNAME: '"$ZIP_FNAME"'"
+# echo "FORUM_FNAME: '"$FORUM_FNAME"'"
+# echo "Zip command: zip --junk-paths --password "$ENCRYPT_PWD $ZIP_FNAME $FORUM_FNAME
+# exit 0
+#***********
 
 echo "Encrypting Forum report...<br>"
 # The --junk-paths puts just the files into
