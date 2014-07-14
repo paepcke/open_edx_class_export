@@ -11,6 +11,7 @@ from tornado.httpserver import HTTPServer;
 
 from collections import OrderedDict
 import os
+import subprocess
 import tempfile
 import time
 import unittest
@@ -20,6 +21,8 @@ from pymysql_utils.pymysql_utils import MySQLDB
 
 from exportClass import CourseCSVServer
 
+
+TEST_ALL = False
 
 class TestSet:
     ONE_STUDENT_ONE_CLASS = 0
@@ -147,6 +150,7 @@ class ExportClassTest(unittest.TestCase):
         except:
             pass
 
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testOneStudentOneClass(self):
         self.buildSupportTables(TestSet.ONE_STUDENT_ONE_CLASS)
         jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
@@ -177,6 +181,7 @@ class ExportClassTest(unittest.TestCase):
         os.remove(self.courseServer.latestResultDetailFilename)
         os.remove(self.courseServer.latestResultWeeklyEffortFilename)
 
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testTwoStudentsOneClass(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
         jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
@@ -212,6 +217,7 @@ class ExportClassTest(unittest.TestCase):
         os.remove(self.courseServer.latestResultDetailFilename)
         os.remove(self.courseServer.latestResultWeeklyEffortFilename)
 
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testTwoStudentsTwoClasses(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_TWO_CLASSES)
         jsonMsg = '{"req" : "getData", "args" : {"courseId" : "None", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
@@ -257,7 +263,37 @@ class ExportClassTest(unittest.TestCase):
         os.remove(self.courseServer.latestResultDetailFilename)
         os.remove(self.courseServer.latestResultWeeklyEffortFilename)
 
+    #*****@unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    def testForumIsolated(self):
+        self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "MITx/6.002x/2012_Fall", "forumData" : "True", "wipeExisting" : "True", "relatable" : "False", "cryptoPwd" : "foobar"}}'
+        self.courseServer.on_message(jsonMsg)
+        zipObj = zipfile.ZipFile(self.courseServer.latestForumFilename, 'r')
+        forumFd = zipObj.open('MITx_6.002x_2012_Fall_Forum.csv', 'r', 'foobar')
+        forumExportHeader = "'forum_post_id','anon_screen_name','type','anonymous'," +\
+                            "'anonymous_to_peers','at_position_list','forum_int_id','body'," +\
+                            "'course_display_name','created_at','votes','count','down_count'," +\
+                            "'up_count','up','down','comment_thread_id','parent_id','parent_ids'," +\
+                            "'sk','confusion','happiness'\n"
+        forum1stLine = '"519461545924670200000001","<anon_screen_name_redacted>","CommentThread","False","False","[]",11,"First forum entry.","MITx/6.002x/2012_Fall","2013-05-16 04:32:20","{\'count\': 10, \'point\': -6, \'down_count\': 8, \'up\': [\'2\', \'10\'], \'down\': [\'1\', \'3\', \'4\', \'5\', \'6\', \'7\', \'8\', \'9\'], \'up_count\': 2}",10,8,2,"[\'2\', \'10\']","[\'1\', \'3\', \'4\', \'5\', \'6\', \'7\', \'8\', \'9\']","None","None","None","None","none","none"'
+        forum2ndLine = '"519461545924670200000005","<anon_screen_name_redacted>","Comment","False","False","[]",7,"Second forum entry.","MITx/6.002x/2012_Fall","2013-05-16 04:32:20","{\'count\': 10, \'point\': 4, \'down_count\': 3, \'up\': [\'1\', \'2\', \'5\', \'6\', \'7\', \'8\', \'9\'], \'down\': [\'3\', \'4\', \'10\'], \'up_count\': 7}",10,3,7,"[\'1\', \'2\', \'5\', \'6\', \'7\', \'8\', \'9\']","[\'3\', \'4\', \'10\']","519461545924670200000001","None","[]","519461545924670200000005","none","none"'
+        
+        header = forumFd.readline();
+        self.assertEqual(forumExportHeader, header)
+        
+        self.assertEqual(forum1stLine, forumFd.readline().strip())
+        self.assertEqual(forum2ndLine, forumFd.readline().strip())
+        
 
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    def testForumIsolatedCourseNotInForum(self):
+        self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "Course/Not/Exists", "forumData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
+        self.courseServer.on_message(jsonMsg)
+        os.path.exists(self.courseServer.latestForumFilename)
+
+
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testZipFiles(self):
         file1 = tempfile.NamedTemporaryFile()
         file2 = tempfile.NamedTemporaryFile()
@@ -303,6 +339,16 @@ class ExportClassTest(unittest.TestCase):
         colNames = ['course_display_name','course_start_date','course_end_date']
         colValues = ExportClassTest.courseRuntimesData
         self.mysqldb.bulkInsert('CourseRuntimes', colNames, colValues)
+        
+        # Forum table:
+        # This tables gets loaded via a .sql file imported into mysql.
+        # That file drops any existing unittest.contents, so we
+        # don't do that here: 
+        mysqlCmdFile = 'test/data/forumTests.sql'
+        mysqlLoadCmd = ['mysql', '-u', 'unittest']
+        with open(mysqlCmdFile, 'r') as theStdin:
+            # Drop table unittest.contents, and load a fresh copy:
+            subprocess.call(mysqlLoadCmd, stdin=theStdin)
         
         
 if __name__ == "__main__":

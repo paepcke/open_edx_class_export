@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-d destDirPath][-x xpunge][-i infoDest][-r relatable] courseNamePattern"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-c cryptoPwd][-d destDirPath][-x xpunge][-i infoDest][-r relatable][-t testing] courseNamePattern"
 
 
 # ----------------------------- Process CLI Parameters -------------
@@ -23,9 +23,10 @@ INFO_DEST=''
 pii=false
 ENCRYPT_PWD='myClass'
 RELATABLE=false
+FORUM_DB='EdxForum'
 
 # Execute getopt
-ARGS=`getopt -o "u:pw:xd:i:r:" -l "user:,password,mysqlpwd:,xpunge,destDir:infoDest:relatable:" \
+ARGS=`getopt -o "u:pw:c:xd:i:rt" -l "user:,password,mysqlpwd:,cryptoPwd:,xpunge,destDir:,infoDest:,relatable,testing" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -71,6 +72,17 @@ do
 	exit 1
       fi;;
 
+    -c|--cryptoPwd)
+      shift
+      # Grab the option value:
+      if [ -n "$1" ]
+      then
+        ENCRYPT_PWD=$1
+        shift
+      else
+	echo $USAGE
+	exit 1
+      fi;;
     -d|--destDir)
       shift
       # Grab the option value:
@@ -99,6 +111,9 @@ do
       fi;;
     -r|--relatable)
       RELATABLE=true
+      shift;;
+    -t|--testing)
+      FORUM_DB='unittest'
       shift;;
     --)
       shift
@@ -294,7 +309,7 @@ fi
 FORUM_HEADER=`mysql --batch $MYSQL_AUTH -e "
               SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
 	      FROM information_schema.COLUMNS 
-	      WHERE TABLE_SCHEMA = 'EdxForum' 
+	      WHERE TABLE_SCHEMA = '$FORUM_DB' 
 	         AND TABLE_NAME = 'contents' 
 	      ORDER BY ORDINAL_POSITION\G"`
 # In the following the first 'sed' call removes the
@@ -318,7 +333,7 @@ COL_NAMES=`cat $Forum_HEADER_FILE | sed s/\'//g`
 # echo "Dirleaf: $DIR_LEAF"
 #*******************
 
-# ----------------------------- Create a full path for each of the forum table -------------
+# ----------------------------- Create a full path for the forum table -------------
 
 FORUM_FNAME=$DEST_DIR/${DIR_LEAF}_Forum.csv
 ZIP_FNAME=$DEST_DIR/${DIR_LEAF}_forum.csv.zip
@@ -353,24 +368,33 @@ fi
 # will write the table values. Two variants:
 # with or without anon_screen_name filled in:
 
-# Start by constructing the fields to export;
-# The following construct creates something like:
-# 'forum_post_id','EdxPrivate.idForum2Anon(forum_int_id)','type','anonymous',...
-# with the ellipses being the rest of the forum columns.
-# The function call converts the uid scheme used in the forum
-# table to anon_screen_name. If the forum output is
-# to remain non-relatable to the rest of the data,
-# then don't apply the function:
+# Start by constructing the fields to export; first for relatable:
+# The first IF branch creates something like:
+# 'forum_post_id','EdxPrivate.idForum2Anon(forum_int_id)','type','anonymous',...,0,body,...
+# with the second ellipses being the rest of the forum columns.
+# The first sed expression replaces anon_screen_name
+# with EdxPrivate.idForum2Anon(forum_int_id). That MySQL function
+# call converts the uid scheme used in the forum
+# table to an equivalent anon_screen_name value.
+#
+# The second sed expression causes MySQL to output the constant 0 
+# instead of the stored forum_int_id. In the resulting table
+# only the anon_screen_name is then usable as an identifier.
+#
+# If the forum output is to remain non-relatable to the rest 
+# of the data, then don't use sed, but retain the existing
+# column names as the col names to output.
 
 if $RELATABLE
 then 
-    COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/EdxPrivate.idForum2Anon\(forum_int_id\)/`
+    COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/EdxPrivate.idForum2Anon\(forum_int_id\)/ \
+	| sed s/[^\(]forum_int_id/,0/`
 else
     COLS_TO_PULL=$COL_NAMES
 fi
 
 EXPORT_Forum_CMD=" \
- USE EdxForum; \
+ USE "$FORUM_DB"; \
  SELECT "$COLS_TO_PULL" \
  INTO OUTFILE '"$Forum_VALUES"' \
   FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
@@ -385,6 +409,12 @@ EXPORT_Forum_CMD=" \
 #********************
 
 # ----------------------------- Execute the Main MySQL Command -------------
+
+#********************
+# echo "MYSQL_AUTH: $MYSQL_AUTH"
+# echo "EXPORT_Forum_CMD: $EXPORT_Forum_CMD"
+# exit 0
+#********************
 
 echo "Creating Forum extract ...<br>"
 echo "$EXPORT_Forum_CMD" | mysql $MYSQL_AUTH
@@ -409,6 +439,7 @@ echo "Encrypting Forum report...<br>"
 # path from root to leaf:
 zip --junk-paths --password $ENCRYPT_PWD $ZIP_FNAME $FORUM_FNAME
 rm $FORUM_FNAME
+chmod 644 $ZIP_FNAME
 # Write path to the encrypted zip file to 
 # path the caller provided:
 if [ ! -z $INFO_DEST ]

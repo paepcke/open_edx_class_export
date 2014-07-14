@@ -27,6 +27,7 @@ import sys
 import tempfile
 from threading import Timer
 import time # @UnusedImport
+import zipfile
 
 from engagement import EngagementComputer
 from pymysql_utils.pymysql_utils import MySQLDB
@@ -89,6 +90,11 @@ class CourseCSVServer(WebSocketHandler):
     # as well, by elminiating the ?:.
     BOGUS_COURSE_NAME_PATTERN = re.compile(r'(?:[sS]andbox|/[dD]emo)')
     
+    # Regex to chop the front off a filename like:
+    # '/tmp/tmpvOBuB1_forum_CME_MedStats_2013-2015.csv'
+    # group(0) will contain 'forum...' to the end: 
+    FORUM_FILE_CHOPPER_PATTERN = re.compile(r'(forum.*)')
+    
     def __init__(self, application, request, testing=False ):
         '''
         Invoked when browser accesses this server via ws://...
@@ -116,13 +122,17 @@ class CourseCSVServer(WebSocketHandler):
         self.thisScriptDir = os.path.dirname(__file__)
         self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
         self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
+        self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')        
         
         # A tempfile passed to the makeCourseCSVs.sh script.
         # That script will place file paths to all created 
         # tables into that file:
         self.infoTmpFile = tempfile.NamedTemporaryFile()
         self.dbError = 'no error'
-        self.currUser = getpass.getuser()
+        if testing:
+            self.currUser = 'unittest'
+        else:
+            self.currUser = getpass.getuser()
         try:
             with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
                 self.mySQLPwd = fd.readline().strip()
@@ -202,8 +212,8 @@ class CourseCSVServer(WebSocketHandler):
                 filesInTargetDir = os.listdir(self.fullTargetDir)
                 if dirExisted and len(filesInTargetDir) > 0:
                     # Are we allowed to wipe the directory?
-                    xpungeExisting = args.get("wipeExisting", False)
-                    if not xpungeExisting or xpungeExisting == 'False':
+                    xpungeExisting = self.str2bool(args.get("wipeExisting", False))
+                    if not xpungeExisting:
                         self.writeError("Tables for course %s already existed, and Remove Previous Exports... was not checked." % courseId)
                         return None
                     for oneFile in filesInTargetDir:
@@ -219,6 +229,7 @@ class CourseCSVServer(WebSocketHandler):
             self.csvFilePaths = []
             courseList = None
 
+            # Caller wants list of course names?
             if requestName == 'reqCourseNames':
                 self.handleCourseNamesReq(requestName, args)
             elif requestName == 'getData':
@@ -244,12 +255,22 @@ class CourseCSVServer(WebSocketHandler):
                             self.exportTimeEngagement(args)
                     else:
                         self.exportTimeEngagement(args)
+                        
+                if args.get('forumData', False):
+                    self.setTimer()
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportForum(args)
+                    else:
+                        self.exportForum(args)
+                        
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
 
                 # Send table row samples to browser:
                 inclPII = args.get("inclPII", False)
-                self.printClassTableInfo(args.get("inclPII", False))
+                self.printTableInfo(args.get("inclPII", False), args.get('cryptoPwd', None))
                 
                 # Get a timedelta object with the microsecond
                 # component subtracted to be 0, so that the
@@ -343,8 +364,8 @@ class CourseCSVServer(WebSocketHandler):
             return False
         # Check whether we are to delete any already existing
         # csv files for this class:
-        xpungeExisting = detailDict.get("wipeExisting", False)
-        inclPII = detailDict.get("inclPII", False)
+        xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
+        inclPII = self.str2bool(detailDict.get("inclPII", False))
         cryptoPWD = detailDict.get("cryptoPwd", '')
             
         # Build the CL command for script makeCourseCSV.sh
@@ -430,7 +451,7 @@ class CourseCSVServer(WebSocketHandler):
             self.logErr('In exportTimeEngagement: course ID was not included; could not compute engagement tables.')
             return
         
-        inclPII = detailDict.get("inclPII", False)
+        inclPII = self.str2bool(detailDict.get("inclPII", False))
         cryptoPWD = detailDict.get("cryptoPwd", '')
                 
         # Should we consider only classes that started 
@@ -530,6 +551,130 @@ class CourseCSVServer(WebSocketHandler):
             self.csvFilePaths.extend([fullSummaryFile, fullDetailFile, fullWeeklyFile])
 
         return (self.latestResultSummaryFilename, self.latestResultDetailFilename, self.latestResultWeeklyEffortFilename)
+
+    def exportForum(self, detailDict):
+        '''
+        Export one CSV file: the forum data for the given course.
+        Two cases: Web client asked for relatable data, or they asked
+        for isolated data. Relatable data gets anon_screen_name filled
+        in with the uid that is also used in the rest of the data archive.
+        The forum_int_id is then set to -1 for all rows.
+        
+        If Web client instead asked for isolated forum data, the data
+        are delivered as they are stored in the database: anon_screen_name
+        is redacted, and forum_int_id is some integer. Each integer refers
+        to one particular course participant, and can therefore be used for
+        forum network analysis, post frequency, etc. But relating that data
+        to, for instance, video usage data is not possible.
+        
+        In either case, the post bodies in the database are anonymized as best 
+        we can: emails, phone numbers, zip codes, poster's name are all redacted.     
+        
+        detailDict provides any necessary info: 
+           {courseDisplayName : <the courseID>, 
+            relatable : <true/false>,
+            cryptoPwd : <pwd to use for zip file encryption>}
+           
+        :param detailDict: Dict with all info necessary to export standard class info. 
+        :type detailDict: {String : String, String : Boolean}
+        :return: the encrypted zip filename that contains the result. 
+        :rtype: String
+        '''        
+        
+        # Get the courseID to profile. If that ID is None, 
+        # then export all class' forum. The Web UI may allow only
+        # one course to profile at a time, but the capability
+        # to do all is here; just have on_message put None
+        # as the courseDisplayName:
+        try:
+            courseDisplayName = detailDict['courseId']
+        except KeyError:
+            self.logErr('In exportForum: course ID was not included; could not export forum data.')
+            return
+        
+        if len(courseDisplayName) == 0:     
+            self.writeError('Please fill in the course ID field.')
+            return False
+
+        # Check whether we are to delete any already existing
+        # csv files for this class:
+        xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
+        makeRelatable = self.str2bool(detailDict.get("relatable", False))
+        cryptoPwd = detailDict.get("cryptoPwd", '')
+            
+        # Build the CL command for script makeForumCSV.sh
+        # script name plus options:
+        scriptCmd = [self.exportForumScript,'-u',self.currUser]
+        
+        if self.mySQLPwd is not None:
+            scriptCmd.extend(['-w',self.mySQLPwd])
+            
+        if xpungeExisting:
+            scriptCmd.append('--xpunge')
+            
+        # Tell script where to report names of tmp files
+        # where it deposited results:
+        scriptCmd.extend(['--infoDest',self.infoTmpFile.name])
+        
+        # Tell script whether it is to make the exported Forum
+        # excerpt relatable:
+        if makeRelatable:
+            scriptCmd.extend(['--relatable'])
+            
+        # Provide the script with a pwd with which to encrypt the 
+        # .csv.zip file:
+        if len(cryptoPwd) == 0:
+            self.logErr("Forum export needs to be encrypted, and therefore needs a crypto pwd to use.")
+            return;
+        scriptCmd.extend(['--cryptoPwd', cryptoPwd])
+        
+        # If unittesting, tell the script, so that it looks
+        # for the 'contents' table in db unittest, rather 
+        # than db EdxForum:
+        scriptCmd.extend(['--testing'])
+        
+        # The argument:
+        scriptCmd.append(courseDisplayName)
+        
+        #************
+        self.logDebug("Script cmd is: %s" % str(scriptCmd))
+        #************
+
+        # Call makeForumCSV.sh to export:
+        try:
+            pipeFromScript = subprocess.Popen(scriptCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            while pipeFromScript.poll() is None:
+                (msgFromScript,errmsg) = pipeFromScript.communicate()
+                if len(errmsg) > 0:
+                    self.writeResult('progress', errmsg)
+                else:
+                    self.writeResult('progress', msgFromScript)
+                    
+            #**********8            
+            #for msgFromScript in pipeFromScript:
+            #    self.writeResult('progress', msgFromScript)
+            #**********8                            
+        except Exception as e:
+            self.writeError(`e`)
+        
+        # The bash script will have placed the name of the
+        # output file it has created into self.infoTmpFile.
+        # If the script aborted b/c it did not wish to overwrite
+        # existing files, then the script truncated 
+        # the file to zero:
+        
+        if os.path.getsize(self.infoTmpFile.name) > 0:
+            self.infoTmpFile.seek(0)
+            # Add the file name to self.csvFilePaths
+            # for the caller to work with (since Forum
+            # output only creates a single out file, the
+            # following loop will just run once. Leaving
+            # it a loop to match parallel methods:
+            for csvFilePath in self.infoTmpFile:
+                self.csvFilePaths.append(csvFilePath.strip())
+                self.latestForumFilename = csvFilePath.strip()        
+        return self.latestForumFilename
+
     
     def zipFiles(self, destZipFileName, cryptoPwd, filePathsToZip):
         '''
@@ -582,7 +727,7 @@ class CourseCSVServer(WebSocketHandler):
             os.makedirs(self.fullTargetDir)
             return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
     
-    def printClassTableInfo(self, inclPII):
+    def printTableInfo(self, inclPII, cryptoPwd):
         '''
         Writes html to browser that shows result table
         file names and sizes. Also sends a few lines
@@ -601,54 +746,95 @@ class CourseCSVServer(WebSocketHandler):
         self.logDebug('Getting table names from %s' % str(self.csvFilePaths))
         
         for csvFilePath in self.csvFilePaths:
-            tblFileSize = os.path.getsize(csvFilePath)
-            # Get the line count:
-            lineCnt = 'unknown'
-            try:
-                # Get a string like: '23 fileName\n', where 23 is an ex. for the line count:
-                lineCntAndFilename = subprocess.check_output(['wc', '-l', csvFilePath])
-                # Isolate the line count:
-                lineCnt = lineCntAndFilename.split(' ')[0]
-            except (CalledProcessError, IndexError):
-                pass
-            
-            # Get the table name from the table file name:
-            if csvFilePath.find('EventXtract') > -1:
-                tblName = 'EventXtract'
-            elif csvFilePath.find('VideoInteraction') > -1:
-                tblName = 'VideoInteraction'
-            elif csvFilePath.find('ActivityGrade') > -1:
-                tblName = 'ActivityGrade'
-            elif re.match(r'.*(engagement).*(allData).csv', csvFilePath):
-                tblName = 'EngagementDetails'
-            elif re.match(r'.*(engagement).*(summary).csv', csvFilePath):
-                tblName = 'EngagementSummary'
-            elif re.match(r'.*(engagement).*(weeklyEffort).csv', csvFilePath):
-                tblName = 'EngagementWeeklyEffort'
+            if csvFilePath.endswith('.zip'):
+                isZipCSV = True
+                zipObj = zipfile.ZipFile(csvFilePath, 'r')
+                zipOrNotFilenames = zipObj.namelist()
             else:
-                tblName = 'unknown table name'
+                isZipCSV = False
+                zipOrNotFilenames = [csvFilePath]
             
-            # Only output size and sample rows if table
-            # wasn't empty. Line count of an empty
-            # table will be 1, b/c the col header will
-            # have been placed in it. So tblFileSize == 0
-            # won't happen, unless we change that:
-            if tblFileSize == 0 or lineCnt == '1':
-                self.writeResult('printTblInfo', '<br><b>Table %s</b> is empty.' % tblName)
-                continue
-            
-            self.writeResult('printTblInfo', 
-                             '<br><b>Table %s</b></br>' % tblName +\
-                             '(file %s size: %d bytes, %s line(s))<br>' % (csvFilePath, tblFileSize, lineCnt) +\
-                             'Sample rows:<br>')
-            if tblFileSize > 0:
-                lineCounter = 0
-                with open(csvFilePath) as infoFd:
-                    while lineCounter < CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        tableRow = infoFd.readline()
-                        if len(tableRow) > 0:
-                            self.writeResult('printTblInfo', tableRow + '<br>')
-                        lineCounter += 1
+            for thisCsvPath in zipOrNotFilenames:    
+                if isZipCSV:
+                    try:
+                        zipInfoObj = zipObj.getinfo(thisCsvPath)
+                        tblFileSize = zipInfoObj.file_size
+                    except KeyError:
+                        continue
+                else:
+                    try:
+                        tblFileSize = os.path.getsize(thisCsvPath)
+                    except OSError:
+                        self.logErr('File %s was promised to exist, but did not.' % thisCsvPath)
+                        continue
+    
+                # Get the line count:
+                lineCnt = 'unknown'
+                # Get line count. If the output file is a zip file,
+                # use a different method than a clear file:
+                if isZipCSV:
+                    try:
+                        zipFd = zipObj.open(thisCsvPath, 'r', cryptoPwd)
+                        lineCnt = len([line for line in zipFd])
+                        zipFd.close()
+                    except Exception as e:
+                        self.logErr("Could not determine number of lines in %s within %s: %s" % (thisCsvPath, csvFilePath, `e`))
+                else:
+                    try:
+                        # Get a string like: '23 fileName\n', where 23 is an ex. for the line count:
+                        lineCntAndFilename = subprocess.check_output(['wc', '-l', thisCsvPath])
+                        # Isolate the line count:
+                        lineCnt = lineCntAndFilename.split(' ')[0]
+                    except (CalledProcessError, IndexError):
+                        pass
+                
+                # Get the table name from the table file name:
+                if thisCsvPath.find('EventXtract') > -1:
+                    tblName = 'EventXtract'
+                elif thisCsvPath.find('VideoInteraction') > -1:
+                    tblName = 'VideoInteraction'
+                elif thisCsvPath.find('ActivityGrade') > -1:
+                    tblName = 'ActivityGrade'
+                elif re.match(r'.*(engagement).*(allData).csv', thisCsvPath):
+                    tblName = 'EngagementDetails'
+                elif re.match(r'.*(engagement).*(summary).csv', thisCsvPath):
+                    tblName = 'EngagementSummary'
+                elif re.match(r'.*(engagement).*(weeklyEffort).csv', thisCsvPath):
+                    tblName = 'EngagementWeeklyEffort'
+                elif thisCsvPath.find('Forum') > -1:
+                    tblName = 'Forum'
+    
+                else:
+                    tblName = 'unknown table name'
+                
+                # Only output size and sample rows if table
+                # wasn't empty. Line count of an empty
+                # table will be 1, b/c the col header will
+                # have been placed in it. So tblFileSize == 0
+                # won't happen, unless we change that:
+                if tblFileSize == 0 or lineCnt == '1':
+                    self.writeResult('printTblInfo', '<br><b>Table %s</b> is empty.' % tblName)
+                    continue
+                
+                self.writeResult('printTblInfo', 
+                                 '<br><b>Table %s</b></br>' % tblName +\
+                                 '(file %s size: %d bytes, %s line(s))<br>' % (thisCsvPath, tblFileSize, lineCnt) +\
+                                 'Sample rows:<br>')
+                if tblFileSize > 0:
+                    lineCounter = 0
+                    try:
+                        if isZipCSV:
+                            infoFd = zipObj.open(thisCsvPath, 'r', cryptoPwd)
+                        else:
+                            infoFd = open(thisCsvPath, 'r') 
+                        while lineCounter < CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                            tableRow = infoFd.readline()
+                            if len(tableRow) > 0:
+                                self.writeResult('printTblInfo', tableRow + '<br>')
+                            lineCounter += 1
+                    finally:
+                        infoFd.close()
+                    
         #****self.writeResult('<br>')
      
     def addClientInstructions(self, inclPII):
@@ -765,6 +951,23 @@ class CourseCSVServer(WebSocketHandler):
             self.currTimer.cancel()
             self.currTimer = None
             #self.logDebug('Cancelling progress timer')
+        
+    def str2bool(self, val):
+        '''
+        Given a string value that likely indicates
+        'False', return the boolean False. In all
+        other cases, return the boolean True. Used
+        to canonicalize values read off the wire.
+        
+        :param val: value to convert
+        :type val: String
+        :return: boolean equivalent
+        :rtype: Bool
+        '''
+        if val in ['false', 'False', '', 'no', 'none', 'None']:
+            return False
+        else:
+            return True
             
     def logInfo(self, msg):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_INFO:
