@@ -217,7 +217,7 @@ class ExportClassTest(unittest.TestCase):
         os.remove(self.courseServer.latestResultDetailFilename)
         os.remove(self.courseServer.latestResultWeeklyEffortFilename)
 
-    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    #***@unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testTwoStudentsTwoClasses(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_TWO_CLASSES)
         jsonMsg = '{"req" : "getData", "args" : {"courseId" : "None", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
@@ -285,7 +285,7 @@ class ExportClassTest(unittest.TestCase):
         self.assertEqual(forum2ndLine, forumFd.readline().strip())
 
 
-    #*****@unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testForumRelatable(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
         jsonMsg = '{"req" : "getData", "args" : {"courseId" : "MITx/6.002x/2012_Fall", "forumData" : "True", "wipeExisting" : "True", "relatable" : "True", "cryptoPwd" : "foobar"}}'
@@ -297,8 +297,8 @@ class ExportClassTest(unittest.TestCase):
                             "'course_display_name','created_at','votes','count','down_count'," +\
                             "'up_count','up','down','comment_thread_id','parent_id','parent_ids'," +\
                             "'sk','confusion','happiness'\n"
-        forum1stLine = '"519461545924670200000001","<anon_screen_name_redacted>","CommentThread","False","False","[]",11,"First forum entry.","MITx/6.002x/2012_Fall","2013-05-16 04:32:20","{\'count\': 10, \'point\': -6, \'down_count\': 8, \'up\': [\'2\', \'10\'], \'down\': [\'1\', \'3\', \'4\', \'5\', \'6\', \'7\', \'8\', \'9\'], \'up_count\': 2}",10,8,2,"[\'2\', \'10\']","[\'1\', \'3\', \'4\', \'5\', \'6\', \'7\', \'8\', \'9\']","None","None","None","None","none","none"'
-        forum2ndLine = '"519461545924670200000005","<anon_screen_name_redacted>","Comment","False","False","[]",7,"Second forum entry.","MITx/6.002x/2012_Fall","2013-05-16 04:32:20","{\'count\': 10, \'point\': 4, \'down_count\': 3, \'up\': [\'1\', \'2\', \'5\', \'6\', \'7\', \'8\', \'9\'], \'down\': [\'3\', \'4\', \'10\'], \'up_count\': 7}",10,3,7,"[\'1\', \'2\', \'5\', \'6\', \'7\', \'8\', \'9\']","[\'3\', \'4\', \'10\']","519461545924670200000001","None","[]","519461545924670200000005","none","none"'
+        forum1stLine = '"519461545924670200000001","e07a3da71f0330452a6aa650ed598e2911301491","CommentThread","False","False","[]",0,"First forum entry.","MITx/6.002x/2012_Fall","2013-05-16 04:32:20","{\'count\': 10, \'point\': -6, \'down_count\': 8, \'up\': [\'2\', \'10\'], \'down\': [\'1\', \'3\', \'4\', \'5\', \'6\', \'7\', \'8\', \'9\'], \'up_count\': 2}",10,8,2,"[\'2\', \'10\']","[\'1\', \'3\', \'4\', \'5\', \'6\', \'7\', \'8\', \'9\']","None","None","None","None","none","none"'
+        forum2ndLine = '"519461545924670200000005","e07a3da71f0330452a6aa650ed598e2911301491","Comment","False","False","[]",0,"Second forum entry.","MITx/6.002x/2012_Fall","2013-05-16 04:32:20","{\'count\': 10, \'point\': 4, \'down_count\': 3, \'up\': [\'1\', \'2\', \'5\', \'6\', \'7\', \'8\', \'9\'], \'down\': [\'3\', \'4\', \'10\'], \'up_count\': 7}",10,3,7,"[\'1\', \'2\', \'5\', \'6\', \'7\', \'8\', \'9\']","[\'3\', \'4\', \'10\']","519461545924670200000001","None","[]","519461545924670200000005","none","none"'
         
         header = forumFd.readline();
         self.assertEqual(forumExportHeader, header)
@@ -366,7 +366,7 @@ class ExportClassTest(unittest.TestCase):
         # This tables gets loaded via a .sql file imported into mysql.
         # That file drops any existing unittest.contents, so we
         # don't do that here: 
-        mysqlCmdFile = 'test/data/forumTests.sql'
+        mysqlCmdFile = 'data/forumTests.sql'
         mysqlLoadCmd = ['mysql', '-u', 'unittest']
         with open(mysqlCmdFile, 'r') as theStdin:
             # Drop table unittest.contents, and load a fresh copy:

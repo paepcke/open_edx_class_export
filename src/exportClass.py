@@ -647,6 +647,9 @@ class CourseCSVServer(WebSocketHandler):
                 (msgFromScript,errmsg) = pipeFromScript.communicate()
                 if len(errmsg) > 0:
                     self.writeResult('progress', errmsg)
+                    if self.testing:
+                        raise IOError('Error in makeForumCSV.sh: %s.' % errmsg)
+                    return
                 else:
                     self.writeResult('progress', msgFromScript)
                     
@@ -656,6 +659,8 @@ class CourseCSVServer(WebSocketHandler):
             #**********8                            
         except Exception as e:
             self.writeError(`e`)
+            if self.testing:
+                raise
         
         # The bash script will have placed the name of the
         # output file it has created into self.infoTmpFile.
@@ -907,6 +912,7 @@ class CourseCSVServer(WebSocketHandler):
             self.writeError('Error while searching for course names: %s' % `e`)
             return courseNames
         for courseName in pipeFromMySQL:
+            courseName = courseName.strip()
             if len(courseName) > 0:
                 courseNames.append(courseName)
         return courseNames

@@ -24,6 +24,7 @@ pii=false
 ENCRYPT_PWD='myClass'
 RELATABLE=false
 FORUM_DB='EdxForum'
+TESTING=false
 
 # Execute getopt
 ARGS=`getopt -o "u:pw:c:xd:i:rt" -l "user:,password,mysqlpwd:,cryptoPwd:,xpunge,destDir:,infoDest:,relatable,testing" \
@@ -114,6 +115,7 @@ do
       shift;;
     -t|--testing)
       FORUM_DB='unittest'
+      TESTING=true
       shift;;
     --)
       shift
@@ -387,8 +389,14 @@ fi
 
 if $RELATABLE
 then 
-    COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/EdxPrivate.idForum2Anon\(forum_int_id\)/ \
-	| sed s/[^\(]forum_int_id/,0/`
+    if $TESTING
+    then
+	COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/unittest.idForum2Anon\(forum_int_id\)/ \
+	    | sed s/[^\(]forum_int_id/,0/`
+    else
+	COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/EdxPrivate.idForum2Anon\(forum_int_id\)/ \
+	    | sed s/[^\(]forum_int_id/,0/`
+    fi
 else
     COLS_TO_PULL=$COL_NAMES
 fi
@@ -417,7 +425,10 @@ EXPORT_Forum_CMD=" \
 #********************
 
 echo "Creating Forum extract ...<br>"
+set -o pipefail
+set -e
 echo "$EXPORT_Forum_CMD" | mysql $MYSQL_AUTH
+
 # Concatenate the col name header and the table:
 cat $Forum_HEADER_FILE $Forum_VALUES > $FORUM_FNAME
 

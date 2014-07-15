@@ -286,6 +286,8 @@ function ExportClass() {
 	var inclPII    = document.getElementById("piiPolicy").checked;
 	var basicData  = document.getElementById("basicData").checked;
 	var engagementData = document.getElementById("engagementData").checked;
+	var forumIsolatedData = document.getElementById("forumIsolatedData").checked;
+	var forumRelatableData = document.getElementById("forumRelatableData").checked;
 
 	if (!basicData && 
 	    !engagementData) {
