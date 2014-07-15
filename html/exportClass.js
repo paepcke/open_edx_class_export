@@ -286,11 +286,16 @@ function ExportClass() {
 	var inclPII    = document.getElementById("piiPolicy").checked;
 	var basicData  = document.getElementById("basicData").checked;
 	var engagementData = document.getElementById("engagementData").checked;
-	var forumIsolatedData = document.getElementById("forumIsolatedData").checked;
-	var forumRelatableData = document.getElementById("forumRelatableData").checked;
+	var forumData = document.getElementById("forumIsolatedData").checked;
+	var piazzaData = document.getElementById("forumRelatableData").checked;
+	var forumRelatable  = document.getElementById("relatable").checked;
+	var piazzaRelatable = document.getElementById("piazzaRelatable").checked;
 
 	if (!basicData && 
-	    !engagementData) {
+	    !engagementData &&
+	    !forumData &&
+	    !piazzaData
+	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
 	}
@@ -300,7 +305,11 @@ function ExportClass() {
 		      "inclPII" : inclPII, 
 		      "cryptoPwd" : encryptionPwd,
 		      "basicData" : basicData,
-		      "engagementData" : engagementData
+		      "engagementData" : engagementData,
+		      "forumData" : forumData,
+		      "piazzaData" : piazzaData,
+		      "relatable"  : forumRelatable,
+		      "piazzaRelatable" : piazzaRelatable
 		     };
 	var req = buildRequest("getData", argObj);
 

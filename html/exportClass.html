@@ -75,21 +75,34 @@
 	    Prepare time on task data
 	  </label>
 	  <br>
-	  <input type="checkbox" id="forumIsolatedData" value="forumIsolatedData">
-	  <label class="long" for="forumIsolatedData">
-	    Forum data (isolated)
+
+	  <input type="checkbox" id="forumData" value="forumData">
+	  <label class="long" for="forumData">
+	    Forum data:
 	  </label>
+	  <input type="radio" id="isolated"  name="protection" value="isolated" checked style="position: relative; margin-left:-320px;">
+	  <label for="isolated"><i>Isolated</i></label>
+	  <input type="radio" id="relatable" name="protection" value="relatable">
+	  <label for="relatable"><i>Relatable</i></label>
 	  <br>
-	  <input type="checkbox" id="forumRelatableData" value="forumRelatableData">
-	  <label class="long" for="forumRelatableData">
-	    Forum data (relatable)
+
+	  <input type="checkbox" id="piazzaData" value="piazzaData">
+	  <label class="long" for="piazzaData">
+	    Piazza data:
 	  </label>
+	  <input type="radio" id="piazzaIsolated"  name="piazzaProtection" value="piazzaIsolated" 
+		 checked style="position: relative; margin-left:-320px;">
+	  <label for="piazzaIsolated"><i>Isolated</i></label>
+	  <input type="radio" id="piazzaRelatable" name="piazzaProtection" value="piazzaRelatable">
+	  <label for="piazzaRelatable"><i>Relatable</i></label>
 	  <br>
+
 	  <div id="pwdSolicitationDiv">
 	    <label class="short" for="pwdFld1">Crypto passwd:</label> <input id="pwdFld1" type="password"><br>
 	    <label class="short" for="pwdFld2">Please retype:</label> <input id="pwdFld2" type="password"><br>
 	    <label class="short" for="pwdOK"></label>        <input id="pwdOK" type="button" value="Set Password">
 	  </div>
+
     </form>
 	     
     <p>
