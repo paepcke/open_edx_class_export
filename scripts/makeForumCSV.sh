@@ -1,8 +1,28 @@
 #!/bin/bash
 
+# Exports one online class' Forum entries to an encrypted zip file.
+# Usage:
+#   o -u/--user           : MySQL user to use for query
+#   o -p/--password       : Prompt for MySQL password
+#   o -w/--mysqlpwd       : Provide MySQL pwd on command line
+#   o -c/--cryptoPwd      : The password to use when encrypting .zip file
+#   o -d/--destDir        : Destination directory for zip file
+#   o -x/--xpunge         : If destination zip file exists, delete it. If not provided, refuse to overwrite
+#   o -r/--relatable      : Provide the anon_screen_name column so that correlations between log data and forum can be explored
+#   o -t/--testing        : If provided, uses db unittest.contents, instead of EdxForum.contents
+#  courseNamePattern      : MySQL style pattern name of course whose Forum entries to export.
+#
+# The directory path and zip file name are determined as per 
+# section 'Determine Directory Path for CSV Tables'.
+#
+# The infoDest, if provided will hold in its first line 
+# the absolute path of the .zip file. The second line will
+# hold the number of bytes in the (uncompressed) Forum file.
+# Five following lines contain the first five lines of the forum file.
+# Those lines can be used by callers to provide a few sample entries
+# to users.
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-c cryptoPwd][-d destDirPath][-x xpunge][-i infoDest][-r relatable][-t testing] courseNamePattern"
-
+USAGE="Usage: "`basename $0`" [-u user][-p password][-w mysqlpwd][-c cryptoPwd][-d destDir][-x xpunge][-i infoDest][-r relatable][-t testing] courseNamePattern"
 
 # ----------------------------- Process CLI Parameters -------------
 
@@ -193,9 +213,7 @@ DIR_LEAF=`echo $DIR_LEAF | sed -E s/^[_]*\|[/]//g`
 
 # If destination directory was not explicitly 
 # provided, add a leaf directory to the
-# standard directory to hold the three .csv
-# files we'll put there as siblings to the
-# ones we put there in the past:
+# standard directory to hold the result file:
 if ! $destDirGiven
 then
     DEST_DIR=$DEST_DIR/$DIR_LEAF
@@ -434,6 +452,22 @@ cat $Forum_HEADER_FILE $Forum_VALUES > $FORUM_FNAME
 
 echo "Done exporting Forum for class $COURSE_SUBSTR to CSV<br>"
 
+# ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
+
+# Write path to the encrypted zip file to 
+# path the caller provided:
+if [ ! -z $INFO_DEST ]
+then
+	echo $ZIP_FNAME > $INFO_DEST
+	echo "Appending number of lines to $INFO_DEST"
+	wc -l $FORUM_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+	# To get number of byest in human-readable form instead, use
+        # the following:
+	#    ls -sh $FORUM_FNAME | sed -n "s/\([^\s]*\)\s.*/\1/p" >> $INFO_DEST 
+	echo "Appending five sample lines to $INFO_DEST"
+	head -5 $FORUM_FNAME >> $INFO_DEST
+fi
+
 # ----------------------- Zip and Encrypt -------------
 
 #***********
@@ -451,10 +485,4 @@ echo "Encrypting Forum report...<br>"
 zip --junk-paths --password $ENCRYPT_PWD $ZIP_FNAME $FORUM_FNAME
 rm $FORUM_FNAME
 chmod 644 $ZIP_FNAME
-# Write path to the encrypted zip file to 
-# path the caller provided:
-if [ ! -z $INFO_DEST ]
-then
-	echo $ZIP_FNAME > $INFO_DEST
-fi
 exit 0

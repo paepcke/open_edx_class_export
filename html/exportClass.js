@@ -202,6 +202,19 @@ function ExportClass() {
 	}
     }
 
+    this.evtAnyForumClicked = function() {
+	// If any forum data is requested, PII crypto protection is required:
+	piiCheckbox = document.getElementById('piiPolicy');
+	if (piiCheckbox.checked) {
+	    // Pii checkbox already checked. So the pwd box already exposed:
+	    return
+	}
+	piiCheckbox.checked = true;
+	// Ensure that crypto pwd solicitation is shown:
+	classExporter.evtPIIPolicyClicked();
+    }
+
+
     var evtCarriageReturnListMatchesTrigger = function(e) {
 	if (e.keyCode == 13) {
 	    document.getElementById("listClassesBtn").click();
@@ -286,18 +299,27 @@ function ExportClass() {
 	var inclPII    = document.getElementById("piiPolicy").checked;
 	var basicData  = document.getElementById("basicData").checked;
 	var engagementData = document.getElementById("engagementData").checked;
-	var forumData = document.getElementById("forumIsolatedData").checked;
-	var piazzaData = document.getElementById("forumRelatableData").checked;
-	var forumRelatable  = document.getElementById("relatable").checked;
-	var piazzaRelatable = document.getElementById("piazzaRelatable").checked;
+	var edxForum = document.getElementById("edxForum").checked;
+	var edxForumIsolated   = edxForum && document.getElementById("edxForumIsolated").checked;
+	var edxForumRelatable  = edxForum && document.getElementById("edxForumRelatable").checked;
+	var piazzaForum = document.getElementById("piazzaForum").checked;
+	var piazzaIsolated = piazzaForum && document.getElementById("piazzaIsolated").checked;
+	var piazzaRelatable = piazzaForum && document.getElementById("piazzaRelatable").checked;
 
 	if (!basicData && 
 	    !engagementData &&
-	    !forumData &&
-	    !piazzaData
+	    !edxForum &&
+	    !piazzaForum
 	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
+	}
+
+	// Forum data must be encrypted:
+	if ((edxForum || piazzaForum) &&
+	    !inclPII) {
+		alert('Forum data must be encrypted; please supply a password for the .zip file encryption.');
+		return;
 	}
 
 	var argObj = {"courseId" : resolvedCourseID, 
@@ -306,10 +328,10 @@ function ExportClass() {
 		      "cryptoPwd" : encryptionPwd,
 		      "basicData" : basicData,
 		      "engagementData" : engagementData,
-		      "forumData" : forumData,
-		      "piazzaData" : piazzaData,
-		      "relatable"  : forumRelatable,
-		      "piazzaRelatable" : piazzaRelatable
+		      "edxForumRelatable"  : edxForumRelatable,
+		      "edxForumIsolated"  : edxForumIsolated,
+		      "piazzaRelatable" : piazzaRelatable,
+		      "piazzaIsolated" : piazzaRelatable
 		     };
 	var req = buildRequest("getData", argObj);
 
@@ -472,6 +494,9 @@ document.getElementById('clrProgressBtn').addEventListener('click', classExporte
 document.getElementById('cancelBtn').addEventListener('click', classExporter.evtCancelProcess);
 document.getElementById('piiPolicy').addEventListener('change', classExporter.evtPIIPolicyClicked);
 document.getElementById('pwdOK').addEventListener('click', classExporter.evtCryptoPwdSubmit);
+document.getElementById('edxForum').addEventListener('click', classExporter.evtAnyForumClicked);
+document.getElementById('piazzaForum').addEventListener('click', classExporter.evtAnyForumClicked);
+
 // The following is intended to make CR in 
 // course ID text field click the Get Course List
 // button, but the assigned func is never talled:

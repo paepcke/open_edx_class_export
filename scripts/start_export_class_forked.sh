@@ -9,8 +9,8 @@ currScriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $currScriptsDir/..
 ME=`whoami`
 
-export PYTHONPATH=/home/$ME/.virtualenvs/online_learning_computations/lib/python2.7/site-packages/online_learning_computations-0.27-py2.7.egg/src:$PYTHONPATH
-export PYTHONPATH=/home/$ME/.virtualenvs/open_edx_class_export/lib/python2.7/site-packages/pymysql_utils-0.30-py2.7.egg:$PYTHONPATH
+export PYTHONPATH=/home/$ME/.virtualenvs/open_edx_class_export/lib/python2.7/site-packages/online_learning_computations-0.31-py2.7.egg/src:$PYTHONPATH
+export PYTHONPATH=/home/$ME/.virtualenvs/open_edx_class_export/lib/python2.7/site-packages/pymysql_utils-0.49-py2.7.egg:$PYTHONPATH
 
 if [ ! -f $LOG_FILE ]
 then

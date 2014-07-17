@@ -256,7 +256,7 @@ class CourseCSVServer(WebSocketHandler):
                     else:
                         self.exportTimeEngagement(args)
                         
-                if args.get('forumData', False):
+                if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
                     self.setTimer()
                     if courseList is not None:
                         for courseName in courseList:
@@ -378,7 +378,7 @@ class CourseCSVServer(WebSocketHandler):
         # where it deposited results:
         scriptCmd.extend(['-i',self.infoTmpFile.name])
         if inclPII:
-            scriptCmd.extend(['-n',cryptoPWD])
+            scriptCmd.extend(['-c',cryptoPWD])
         scriptCmd.append(theCourseID)
         
         #************
@@ -599,7 +599,7 @@ class CourseCSVServer(WebSocketHandler):
         # Check whether we are to delete any already existing
         # csv files for this class:
         xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
-        makeRelatable = self.str2bool(detailDict.get("relatable", False))
+        makeRelatable = self.str2bool(detailDict.get("edxForumRelatable", False))
         cryptoPwd = detailDict.get("cryptoPwd", '')
             
         # Build the CL command for script makeForumCSV.sh
@@ -623,7 +623,7 @@ class CourseCSVServer(WebSocketHandler):
             
         # Provide the script with a pwd with which to encrypt the 
         # .csv.zip file:
-        if len(cryptoPwd) == 0:
+        if cryptoPwd is None or len(cryptoPwd) == 0:
             self.logErr("Forum export needs to be encrypted, and therefore needs a crypto pwd to use.")
             return;
         scriptCmd.extend(['--cryptoPwd', cryptoPwd])
@@ -631,7 +631,8 @@ class CourseCSVServer(WebSocketHandler):
         # If unittesting, tell the script, so that it looks
         # for the 'contents' table in db unittest, rather 
         # than db EdxForum:
-        scriptCmd.extend(['--testing'])
+        if self.testing:
+            scriptCmd.extend(['--testing'])
         
         # The argument:
         scriptCmd.append(courseDisplayName)
@@ -738,14 +739,33 @@ class CourseCSVServer(WebSocketHandler):
         file names and sizes. Also sends a few lines
         from each table as samples.
         In case of PII-including reports, only one file
-        exists, and it is zipped and encrypted.
+        exists, and it is zipped and encrypted. But in that
+        case, self.infoTmpFile will contain in separate lines: 
+        the zip file name, the number of bytes, and up to five
+        lines of the first table.
 
         :param inclPII: whether or not the report includes PII
         :type inclPII: Boolean 
         '''
         
         if inclPII:
-            self.writeResult('printTblInfo', '<br><b>Tables are zipped and encrypted</b></br>')
+            try:
+                #self.writeResult('printTblInfo', '<br><b>Tables are zipped and encrypted</b></br>')
+                with open(self.infoTmpFile, 'r') as infoFd:
+                    try:
+                        zipFilePath = infoFd.readline()
+                        numLines    = infoFd.readline()
+                    except Exception as e:
+                        self.logErr('Expected zip file path and table length in file %s, but got %s.' % (self.infoTmpFile, `e`))
+                        return
+                    self.writeResult('printTblInfo', 
+                                     '<br><b>Table %s</b></br>' % os.path.basename(zipFilePath) +\
+                                     '(number of line(s): %d)<br>' % numLines +\
+                                     'Sample rows:<br>')
+                    for line in infoFd:
+                        self.writeResult('printTblInfo', "%s<br>" % line)
+            except Exception as e:
+                self.logErr("Error while trying to obtain information about zip file: %s" % `e`)
             return
         
         self.logDebug('Getting table names from %s' % str(self.csvFilePaths))
@@ -922,6 +942,9 @@ class CourseCSVServer(WebSocketHandler):
         Writes a dot to remote browser to indicate liveness.
         Restarts timer for next dot.
         '''
+        #*******************
+        return
+        #*******************
         if not self.testing:
             self.writeResult('progress', '.')
         self.setTimer(CourseCSVServer.PROGRESS_INTERVAL)
@@ -970,7 +993,7 @@ class CourseCSVServer(WebSocketHandler):
         :return: boolean equivalent
         :rtype: Bool
         '''
-        if val in ['false', 'False', '', 'no', 'none', 'None']:
+        if val in [False, 'false', 'False', '', 'no', 'none', 'None']:
             return False
         else:
             return True

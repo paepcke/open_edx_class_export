@@ -35,11 +35,25 @@
 # exist. If the option is present, then existing files will be overwritten,
 # else execution is aborted if any one of the files exists.
 #
-# The -n option, if provided, must specify a password. That pwd will
+# The infoDest, if provided will hold in its first line 
+# the absolute path of the .zip file. If PII is requested, then
+# the The second line will hold the number of bytes in the (uncompressed) 
+# Forum file. 
+#
+# Five following lines contain the first five lines of the forum file.
+# Those lines can be used by callers to provide a few sample entries
+# to users. 
+#
+# If no PII is requested and infoDest is provided, then
+# that file will contain in the first line the EventXtract's file name,
+# in the second line the ActivityGrade's file name, and in the third line
+# the VideoInteraction's file name
+#
+# The -c option, if provided, must specify a password. That pwd will
 # be used to encrypt the output table files into a single .zip file.
 
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-d destDirPath][-x xpunge][-i infoDest][-n encryptionPwd] courseNamePattern"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-d destDirPath][-x xpunge][-i infoDest][-c cryptoPwd] courseNamePattern"
 
 # ----------------------------- Process CLI Parameters -------------
 
@@ -61,7 +75,7 @@ pii=false
 ENCRYPT_PWD=''
 
 # Execute getopt
-ARGS=`getopt -o "u:pw:xd:i:n:" -l "user:,password,mysqlpwd:,xpunge,destDir:infoDest:names:" \
+ARGS=`getopt -o "u:pw:xd:i:c:n" -l "user:,password,mysqlpwd:,xpunge,destDir:infoDest:,cryptoPwd:" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -133,7 +147,7 @@ do
 	echo $USAGE
 	exit 1
       fi;;
-    -n|--names)
+    -c|--cryptoPwd)
       pii=true
       shift
       # Grab the encryption pwd:
@@ -631,18 +645,22 @@ echo "Done exporting class $COURSE_SUBSTR to CSV<br>"
 
 if $pii
 then
+    # Write path to the encrypted zip file to 
+    # path the caller provided:
+    if [ ! -z $INFO_DEST ]
+    then
+	echo $ZIP_FNAME > $INFO_DEST
+	echo "Appending file size to $INFO_DEST"
+	ls -sh $FORUM_FNAME | sed -n "s/\([^\s]*\)\s.*/\1/p" >> $INFO_DEST 
+	echo "Appending five sample lines to $INFO_DEST"
+	head -5 $FORUM_FNAME >> $INFO_DEST
+    fi
     echo "Encrypting report...<br>"
     # The --junk-paths puts just the files into
     # the zip, not all the directories on their
     # path from root to leaf:
     zip --junk-paths --password $ENCRYPT_PWD $ZIP_FNAME $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
     rm $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
-    # Write path to the encrypted zip file to 
-    # path the caller provided:
-    if [ ! -z $INFO_DEST ]
-    then
-	echo $ZIP_FNAME > $INFO_DEST
-    fi
     exit 0
 fi
 
