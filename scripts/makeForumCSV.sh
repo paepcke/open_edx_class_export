@@ -459,12 +459,15 @@ echo "Done exporting Forum for class $COURSE_SUBSTR to CSV<br>"
 if [ ! -z $INFO_DEST ]
 then
 	echo $ZIP_FNAME > $INFO_DEST
-	echo "Appending number of lines to $INFO_DEST"
+	echo "Appending number of lines to $INFO_DEST<br>"
 	wc -l $FORUM_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
-	# To get number of byest in human-readable form instead, use
-        # the following:
-	#    ls -sh $FORUM_FNAME | sed -n "s/\([^\s]*\)\s.*/\1/p" >> $INFO_DEST 
-	echo "Appending five sample lines to $INFO_DEST"
+	echo "Appending sample lines to $INFO_DEST<br>"
+	# Separator between the above table info and the
+	# start of the sample lines. That division could
+	# be made based on knowing that forum only consists
+	# of one table; but that is not true of other exports.
+	# so the separator is required everywhere:
+	echo 'herrgottzemenschnochamal!' >> $INFO_DEST
 	head -5 $FORUM_FNAME >> $INFO_DEST
 fi
 

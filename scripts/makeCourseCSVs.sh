@@ -643,18 +643,28 @@ echo "Done exporting class $COURSE_SUBSTR to CSV<br>"
 
 # ----------------------- If PII then Zip and Encrypt -------------
 
+# Write table names and sizes to $INFO_DEST if desired:
+if [ ! -z $INFO_DEST ]
+then
+    echo ${EVENT_EXTRACT_FNAME}    >  $INFO_DEST
+    wc -l $EVENT_EXTRACT_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+    echo ${ACTIVITY_GRADE_FNAME}   >> $INFO_DEST
+    wc -l $ACTIVITY_GRADE_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+    echo ${VIDEO_FNAME}            >> $INFO_DEST
+    wc -l $VIDEO_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+    echo "Adding sample lines for three basic tables..."
+    # Separate all sample lines from the above table names/sizes,
+    # and from each other, using a constant token:
+    echo 'herrgottzemenschnochamal!' >> $INFO_DEST
+    head -5 ${EVENT_EXTRACT_FNAME} >> $INFO_DEST
+    echo 'herrgottzemenschnochamal!' >> $INFO_DEST
+    head -5 ${ACTIVITY_GRADE_FNAME} >> $INFO_DEST
+    echo 'herrgottzemenschnochamal!' >> $INFO_DEST
+    head -5 echo ${VIDEO_FNAME} >> $INFO_DEST
+fi
+
 if $pii
 then
-    # Write path to the encrypted zip file to 
-    # path the caller provided:
-    if [ ! -z $INFO_DEST ]
-    then
-	echo $ZIP_FNAME > $INFO_DEST
-	echo "Appending file size to $INFO_DEST"
-	ls -sh $FORUM_FNAME | sed -n "s/\([^\s]*\)\s.*/\1/p" >> $INFO_DEST 
-	echo "Appending five sample lines to $INFO_DEST"
-	head -5 $FORUM_FNAME >> $INFO_DEST
-    fi
     echo "Encrypting report...<br>"
     # The --junk-paths puts just the files into
     # the zip, not all the directories on their
@@ -662,17 +672,6 @@ then
     zip --junk-paths --password $ENCRYPT_PWD $ZIP_FNAME $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
     rm $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
     exit 0
-fi
-
-# ----------------------- Write table paths to a file -------------
-
-# For unencrypted files:
-
-if [ ! -z $INFO_DEST ]
-then
-    echo ${EVENT_EXTRACT_FNAME}    >  $INFO_DEST
-    echo ${ACTIVITY_GRADE_FNAME}   >> $INFO_DEST
-    echo ${VIDEO_FNAME}            >> $INFO_DEST
 fi
 
 exit 0

@@ -13,6 +13,7 @@ data is encrypted into a .zip file. Either way the data is
 deposited in /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv.
 '''
 
+from collections import OrderedDict
 import datetime
 import getpass
 import json
@@ -30,6 +31,7 @@ import time # @UnusedImport
 import zipfile
 
 from engagement import EngagementComputer
+
 from pymysql_utils.pymysql_utils import MySQLDB
 
 
@@ -124,10 +126,11 @@ class CourseCSVServer(WebSocketHandler):
         self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
         self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')        
         
-        # A tempfile passed to the makeCourseCSVs.sh script.
-        # That script will place file paths to all created 
-        # tables into that file:
-        self.infoTmpFile = tempfile.NamedTemporaryFile()
+        # A dict into which the various exporting methods
+        # below will place instances of tempfile.NamedTemporaryFile().
+        # Those are used as comm buffers between shell scripts
+        # and this Python code: 
+        self.infoTmpFiles = {}
         self.dbError = 'no error'
         if testing:
             self.currUser = 'unittest'
@@ -223,10 +226,6 @@ class CourseCSVServer(WebSocketHandler):
                             # Best effort:
                             pass
             
-            # Make an array of result csv file paths,
-            # which gets filled by the handlers called
-            # in the conditional below:
-            self.csvFilePaths = []
             courseList = None
 
             # Caller wants list of course names?
@@ -268,9 +267,7 @@ class CourseCSVServer(WebSocketHandler):
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
 
-                # Send table row samples to browser:
-                inclPII = args.get("inclPII", False)
-                self.printTableInfo(args.get("inclPII", False), args.get('cryptoPwd', None))
+                deliveryUrl = self.printTableInfo()
                 
                 # Get a timedelta object with the microsecond
                 # component subtracted to be 0, so that the
@@ -279,7 +276,7 @@ class CourseCSVServer(WebSocketHandler):
                 self.writeResult('progress', "<br>Runtime: %s<br>" % str(duration))
                                 
                 # Add an example client letter:
-                self.addClientInstructions(inclPII)
+                self.addClientInstructions(args, deliveryUrl)
 
             else:
                 self.writeError("Unknown request name: %s" % requestName)
@@ -367,6 +364,9 @@ class CourseCSVServer(WebSocketHandler):
         xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
         inclPII = self.str2bool(detailDict.get("inclPII", False))
         cryptoPWD = detailDict.get("cryptoPwd", '')
+        
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportClass'] = infoXchangeFile
             
         # Build the CL command for script makeCourseCSV.sh
         scriptCmd = [self.exportCSVScript,'-u',self.currUser]
@@ -376,7 +376,7 @@ class CourseCSVServer(WebSocketHandler):
             scriptCmd.append('-x')
         # Tell script where to report names of tmp files
         # where it deposited results:
-        scriptCmd.extend(['-i',self.infoTmpFile.name])
+        scriptCmd.extend(['-i', infoXchangeFile.name])
         if inclPII:
             scriptCmd.extend(['-c',cryptoPWD])
         scriptCmd.append(theCourseID)
@@ -385,7 +385,14 @@ class CourseCSVServer(WebSocketHandler):
         self.logDebug("Script cmd is: %s" % str(scriptCmd))
         #************
         
-        # Call makeClassCSV.sh to export:
+        # Call makeClassCSV.sh to export 
+        # The  script will place a list of three
+        # alternating file names and file sizes (in lines)
+        # into infoXchangeFile. The files are csv file paths
+        # of export results. After these six lines will 
+        # be up to five sample lines from each file. The
+        # sample batches will be separated by the string
+        # "herrgottzemenschnochamal!" 
         try:
             #pipeFromScript = subprocess.Popen(scriptCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE).stdout
             pipeFromScript = subprocess.Popen(scriptCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -403,19 +410,6 @@ class CourseCSVServer(WebSocketHandler):
         except Exception as e:
             self.writeError(`e`)
         
-        # The bash script will have placed a list of
-        # output files it has created into self.infoTmpFile.
-        # If the script aborted b/c it did not wish to overwrite
-        # existing files, then the script truncated 
-        # the file to zero:
-        
-        if os.path.getsize(self.infoTmpFile.name) > 0:
-            self.infoTmpFile.seek(0)
-            # Add each file name to self.csvFilePaths
-            # for the caller to work with:
-            for csvFilePath in self.infoTmpFile:
-                self.csvFilePaths.append(csvFilePath.strip())        
-                
         return True
     
     def exportTimeEngagement(self, detailDict):
@@ -522,6 +516,19 @@ class CourseCSVServer(WebSocketHandler):
         self.latestResultDetailFilename  = fullDetailFile
         self.latestResultWeeklyEffortFilename = fullWeeklyFile
         
+        # Save information for printTableInfo() method to fine:
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportEngagement'] = infoXchangeFile
+
+        infoXchangeFile.writeline(fullSummaryFile)
+        infoXchangeFile.writeline(self.getNumFileLines(fullSummaryFile))
+        
+        infoXchangeFile.writeline(fullDetailFile)
+        infoXchangeFile.writeline(self.getNumFileLines(fullDetailFile))
+
+        infoXchangeFile.writeline(fullWeeklyFile)
+        infoXchangeFile.writeline(self.getNumFileLines(fullWeeklyFile))
+                                  
         if inclPII:
             targetZipFileBasename = courseId.replace('/','_')
             targetZipFile = os.path.join(self.fullTargetDir,
@@ -532,7 +539,7 @@ class CourseCSVServer(WebSocketHandler):
                            fullDetailFile,
                            fullWeeklyFile]
                           )
-            self.csvFilePaths.append(targetZipFile)
+            
             # Remove the clear-text originals:
             try:
                 os.remove(fullSummaryFile)
@@ -547,8 +554,6 @@ class CourseCSVServer(WebSocketHandler):
             except:
                 pass
             os.chmod(targetZipFile, 0644)
-        else:
-            self.csvFilePaths.extend([fullSummaryFile, fullDetailFile, fullWeeklyFile])
 
         return (self.latestResultSummaryFilename, self.latestResultDetailFilename, self.latestResultWeeklyEffortFilename)
 
@@ -601,7 +606,10 @@ class CourseCSVServer(WebSocketHandler):
         xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
         makeRelatable = self.str2bool(detailDict.get("edxForumRelatable", False))
         cryptoPwd = detailDict.get("cryptoPwd", '')
-            
+
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportForum'] = infoXchangeFile
+
         # Build the CL command for script makeForumCSV.sh
         # script name plus options:
         scriptCmd = [self.exportForumScript,'-u',self.currUser]
@@ -614,7 +622,7 @@ class CourseCSVServer(WebSocketHandler):
             
         # Tell script where to report names of tmp files
         # where it deposited results:
-        scriptCmd.extend(['--infoDest',self.infoTmpFile.name])
+        scriptCmd.extend(['--infoDest',infoXchangeFile.name])
         
         # Tell script whether it is to make the exported Forum
         # excerpt relatable:
@@ -642,6 +650,11 @@ class CourseCSVServer(WebSocketHandler):
         #************
 
         # Call makeForumCSV.sh to export:
+        # The  script will place a file name and a file size (in lines)
+        # into infoXchangeFile. The file is the csv file path
+        # of export results. The third line to EOF will be 
+        # five sample rows from the forum to be sent to the
+        # browser for QA:
         try:
             pipeFromScript = subprocess.Popen(scriptCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             while pipeFromScript.poll() is None:
@@ -654,33 +667,26 @@ class CourseCSVServer(WebSocketHandler):
                 else:
                     self.writeResult('progress', msgFromScript)
                     
-            #**********8            
+            #**********            
             #for msgFromScript in pipeFromScript:
             #    self.writeResult('progress', msgFromScript)
-            #**********8                            
+            #**********                            
         except Exception as e:
             self.writeError(`e`)
             if self.testing:
                 raise
-        
-        # The bash script will have placed the name of the
-        # output file it has created into self.infoTmpFile.
-        # If the script aborted b/c it did not wish to overwrite
-        # existing files, then the script truncated 
-        # the file to zero:
-        
-        if os.path.getsize(self.infoTmpFile.name) > 0:
-            self.infoTmpFile.seek(0)
-            # Add the file name to self.csvFilePaths
-            # for the caller to work with (since Forum
-            # output only creates a single out file, the
-            # following loop will just run once. Leaving
-            # it a loop to match parallel methods:
-            for csvFilePath in self.infoTmpFile:
-                self.csvFilePaths.append(csvFilePath.strip())
-                self.latestForumFilename = csvFilePath.strip()        
-        return self.latestForumFilename
 
+    def getNumFileLines(self, fileFdOrPath):
+        '''
+        Given either a file descriptor or a file path string,
+        return the number of lines in the file.
+        :param fileFdOrPath:
+        :type fileFdOrPath:
+        '''
+        if type(fileFdOrPath) == file:
+            return sum(1 for line in fileFdOrPath) #@UnusedVariable
+        else:
+            return sum(1 for line in open(fileFdOrPath)) #@UnusedVariable
     
     def zipFiles(self, destZipFileName, cryptoPwd, filePathsToZip):
         '''
@@ -733,174 +739,155 @@ class CourseCSVServer(WebSocketHandler):
             os.makedirs(self.fullTargetDir)
             return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
     
-    def printTableInfo(self, inclPII, cryptoPwd):
+    def printTableInfo(self):
         '''
         Writes html to browser that shows result table
         file names and sizes. Also sends a few lines
         from each table as samples.
-        In case of PII-including reports, only one file
-        exists, and it is zipped and encrypted. But in that
-        case, self.infoTmpFile will contain in separate lines: 
-        the zip file name, the number of bytes, and up to five
-        lines of the first table.
 
-        :param inclPII: whether or not the report includes PII
-        :type inclPII: Boolean 
+        The information is in dict self.infoTmpFiles.
+        Each exporting method above has its own entry 
+        in the dict: exportClass, exportForum, and 
+        exportEngagement. Each value is the name of an
+        open tmp file that contains alternating: file name,
+        file size in lines for as many tables as were output.
+        
+        After that information come batches of up to five
+        sample lines for each table. The batches are separated
+        by the token "herrgottzemenschnochamal!"
+        
+        :return: full path of the last table file that was deposited in the Web pickup area.
+             This info is used later to construct 
+
         '''
         
-        if inclPII:
+        for exportFileKey in self.infoTmpFiles.keys():
             try:
-                #self.writeResult('printTblInfo', '<br><b>Tables are zipped and encrypted</b></br>')
-                with open(self.infoTmpFile, 'r') as infoFd:
-                    try:
-                        zipFilePath = infoFd.readline()
-                        numLines    = infoFd.readline()
-                    except Exception as e:
-                        self.logErr('Expected zip file path and table length in file %s, but got %s.' % (self.infoTmpFile, `e`))
-                        return
-                    self.writeResult('printTblInfo', 
-                                     '<br><b>Table %s</b></br>' % os.path.basename(zipFilePath) +\
-                                     '(number of line(s): %d)<br>' % numLines +\
-                                     'Sample rows:<br>')
-                    for line in infoFd:
-                        self.writeResult('printTblInfo', "%s<br>" % line)
-            except Exception as e:
-                self.logErr("Error while trying to obtain information about zip file: %s" % `e`)
-            return
-        
-        self.logDebug('Getting table names from %s' % str(self.csvFilePaths))
-        
-        for csvFilePath in self.csvFilePaths:
-            if csvFilePath.endswith('.zip'):
-                isZipCSV = True
-                zipObj = zipfile.ZipFile(csvFilePath, 'r')
-                zipOrNotFilenames = zipObj.namelist()
-            else:
-                isZipCSV = False
-                zipOrNotFilenames = [csvFilePath]
-            
-            for thisCsvPath in zipOrNotFilenames:    
-                if isZipCSV:
-                    try:
-                        zipInfoObj = zipObj.getinfo(thisCsvPath)
-                        tblFileSize = zipInfoObj.file_size
-                    except KeyError:
-                        continue
-                else:
-                    try:
-                        tblFileSize = os.path.getsize(thisCsvPath)
-                    except OSError:
-                        self.logErr('File %s was promised to exist, but did not.' % thisCsvPath)
-                        continue
-    
-                # Get the line count:
-                lineCnt = 'unknown'
-                # Get line count. If the output file is a zip file,
-                # use a different method than a clear file:
-                if isZipCSV:
-                    try:
-                        zipFd = zipObj.open(thisCsvPath, 'r', cryptoPwd)
-                        lineCnt = len([line for line in zipFd])
-                        zipFd.close()
-                    except Exception as e:
-                        self.logErr("Could not determine number of lines in %s within %s: %s" % (thisCsvPath, csvFilePath, `e`))
-                else:
-                    try:
-                        # Get a string like: '23 fileName\n', where 23 is an ex. for the line count:
-                        lineCntAndFilename = subprocess.check_output(['wc', '-l', thisCsvPath])
-                        # Isolate the line count:
-                        lineCnt = lineCntAndFilename.split(' ')[0]
-                    except (CalledProcessError, IndexError):
-                        pass
-                
-                # Get the table name from the table file name:
-                if thisCsvPath.find('EventXtract') > -1:
-                    tblName = 'EventXtract'
-                elif thisCsvPath.find('VideoInteraction') > -1:
-                    tblName = 'VideoInteraction'
-                elif thisCsvPath.find('ActivityGrade') > -1:
-                    tblName = 'ActivityGrade'
-                elif re.match(r'.*(engagement).*(allData).csv', thisCsvPath):
-                    tblName = 'EngagementDetails'
-                elif re.match(r'.*(engagement).*(summary).csv', thisCsvPath):
-                    tblName = 'EngagementSummary'
-                elif re.match(r'.*(engagement).*(weeklyEffort).csv', thisCsvPath):
-                    tblName = 'EngagementWeeklyEffort'
-                elif thisCsvPath.find('Forum') > -1:
-                    tblName = 'Forum'
-    
-                else:
-                    tblName = 'unknown table name'
-                
-                # Only output size and sample rows if table
-                # wasn't empty. Line count of an empty
-                # table will be 1, b/c the col header will
-                # have been placed in it. So tblFileSize == 0
-                # won't happen, unless we change that:
-                if tblFileSize == 0 or lineCnt == '1':
-                    self.writeResult('printTblInfo', '<br><b>Table %s</b> is empty.' % tblName)
-                    continue
-                
-                self.writeResult('printTblInfo', 
-                                 '<br><b>Table %s</b></br>' % tblName +\
-                                 '(file %s size: %d bytes, %s line(s))<br>' % (thisCsvPath, tblFileSize, lineCnt) +\
-                                 'Sample rows:<br>')
-                if tblFileSize > 0:
-                    lineCounter = 0
-                    try:
-                        if isZipCSV:
-                            infoFd = zipObj.open(thisCsvPath, 'r', cryptoPwd)
-                        else:
-                            infoFd = open(thisCsvPath, 'r') 
-                        while lineCounter < CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                            tableRow = infoFd.readline()
-                            if len(tableRow) > 0:
-                                self.writeResult('printTblInfo', tableRow + '<br>')
-                            lineCounter += 1
-                    finally:
-                        infoFd.close()
+                tmpFileFd = self.infoTmpFiles.get(exportFileKey)
+                # Ensure we are at start of the tmp file:
+                tmpFileFd.seek(0)
+                eof = False
+                tableInfoDict = OrderedDict()
+                # Pull all file name/numlines out of the info file:
+                while not eof:
+                    tableFileName     = tmpFileFd.readline()
+                    if len(tableFileName)  == 0 or tableFileName == 'herrgottzemenschnochamal!\n':
+                        eof = True
+                        continue 
+                    tableFileNumLines = tmpFileFd.readline().strip()
+                    tableInfoDict[tableFileName.strip()] = tableFileNumLines
+                # Now get all the line samples in the right order:
+                sampleLineBatches = []
+                if tableFileName == 'herrgottzemenschnochamal!\n':
+                    endOfSampleBatch = False
+                    eof = False
+                    while not eof:
+                        sample = ""
+                        while not endOfSampleBatch:
+                            sampleLine = tmpFileFd.readline()
+                            if len(sampleLine) == 0:
+                                eof = True
+                                endOfSampleBatch = True
+                                continue
+                            if sampleLine == 'herrgottzemenschnochamal!\n':
+                                endOfSampleBatch = True
+                                continue
+                            sample += sampleLine.strip() + ' <br>'
+                        sampleLineBatches.append(sample)
                     
-        #****self.writeResult('<br>')
+                sampleBatchIndx = 0
+                for tableFileName in tableInfoDict.keys():
+                    # Get the table name from the table file name:
+                    if tableFileName.find('EventXtract') > -1:
+                        tblName = 'EventXtract'
+                    elif tableFileName.find('VideoInteraction') > -1:
+                        tblName = 'VideoInteraction'
+                    elif tableFileName.find('ActivityGrade') > -1:
+                        tblName = 'ActivityGrade'
+                    elif re.match(r'.*(engagement).*(allData).csv', tableFileName):
+                        tblName = 'EngagementDetails'
+                    elif re.match(r'.*(engagement).*(summary).csv', tableFileName):
+                        tblName = 'EngagementSummary'
+                    elif re.match(r'.*(engagement).*(weeklyEffort).csv', tableFileName):
+                        tblName = 'EngagementWeeklyEffort'
+                    elif tableFileName.find('forum') > -1:
+                        tblName = 'Forum'
+                    elif tableFileName.find('Piazza') > -1:
+                        tblName = 'Piazza'
+        
+                    else:
+                        tblName = 'unknown table name'
+                    
+                    numLines = tableInfoDict[tableFileName]
+                    # If number of lines is 1, then the table was empty.
+                    # The single line is just the column header line:
+                    if numLines <= 1:
+                        self.writeResult('printTblInfo', 
+                                     '<br><b>Table %s</b> is empty.</br>' % tblName)
+                        continue # next table
+                    self.writeResult('printTblInfo', 
+                                     '<br><b>Table %s</b> (%s lines):</br>' % (tblName, tableFileNumLines))
+                    if len(sampleLineBatches) > 0:
+                        self.writeResult('printTblInfo', sampleLineBatches[sampleBatchIndx])
+                    sampleBatchIndx += 1
+            finally:
+                tmpFileFd.close()
+
+            # Get the last part of the directory, where the tables are available
+            # (i.e. the 'CourseSubdir' in:
+            # /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv:)
+            tableDir = os.path.basename(os.path.dirname(tableFileName))
+            thisFullyQualDomainName = socket.getfqdn()
+            url = "https://%s/instructor/%s" % (thisFullyQualDomainName, tableDir)
+
+            return url
      
-    def addClientInstructions(self, inclPII):
+    def addClientInstructions(self, args, url):
         '''
         Send the draft of an email message for the client
         back to the browsser. The message will contain the
         URL to where the client can pick up the result. If
         personally identifiable information was requested,
         the draft will include instructions for opening the
-        zip file.
+        zip file. Instructions for individual tables are added
+        depending on which tables the remote caller requested.
+        Each export module has its own client instruction HTML
+        file that either is sent to the browser, or not.
 
-        :param inclPII: whether or not PII was requested
-        :type inclPII: Boolean
+        :param args: dict of arguments from the request message.
+             See method on_message() for details.
+        :type args: {String : String}
+        :param url: URL where the tables are available to the client
+        :type url: String
         '''
-        # Get just the first table path, we just
-        # need its subdirectory name to build the
-        # URL:
-        if len(self.csvFilePaths) == 0:
-            #self.writeError("Cannot create client instructions: file %s did not contain table paths.<br>" % self.infoTmpFile.name)
-            return
-        # Get the last part of the directory,
-        # which is the 'CourseSubdir' in
-        # /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv:
-        tableDir = os.path.basename(os.path.dirname(self.csvFilePaths[0]))
-        thisFullyQualDomainName = socket.getfqdn()
-        url = "https://%s/instructor/%s" % (thisFullyQualDomainName, tableDir)
         self.writeResult('progress', "<p><b>Email draft for client; copy-paste into email program:</b><br>")
         msgStart = 'Hi,<br>your data is ready for pickup. Please visit our <a href="%s">pickup page</a>.<br>' % url
         self.writeResult('progress', msgStart)
         # The rest of the msg is in a file:
         try:
-            if inclPII:
-                with open(os.path.join(self.thisScriptDir, 'clientInstructionsSecure.html'), 'r') as txtFd:
-                    lines = txtFd.readlines()
-            else:
-                with open(os.path.join(self.thisScriptDir, 'clientInstructions.html'), 'r') as txtFd:
-                    lines = txtFd.readlines()
+            emailLines = ""
+            with open(os.path.join(self.thisScriptDir, 'clientInstructions.html'), 'r') as txtFd:
+                emailLines = txtFd.readlines()
+            
+            if args.get('basicData', False):
+                with open(os.path.join(self.thisScriptDir, 'clientInstructionsBasicTables.html'), 'r') as txtFd:
+                    emailLines += txtFd.readlines()
+            if args.get('engagementData', False):
+                with open(os.path.join(self.thisScriptDir, 'clientInstructionsEngagement.html'), 'r') as txtFd:
+                    emailLines += txtFd.readlines()
+        
+            if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
+                with open(os.path.join(self.thisScriptDir, 'clientInstructionsForum.html'), 'r') as txtFd:
+                    emailLines += txtFd.readlines()
+        
         except Exception as e:
             self.writeError('Could not read client instruction file: %s' % `e`)
             return
-        txt = '<br>'.join(lines)
+        txt = '<br>'.join(emailLines)
+        # Replace sequences '<br><p><br>' by '<p>'
+        txt = re.sub('<br><p>\n<br>', '<p>', txt)
+        txt = re.sub('<br><h2', '<h2', txt)
+        txt = re.sub('</h2>\n<br>', '</h2>', txt)
         # Remove \n everywhere:
         txt = string.replace(txt, '\n', '')
         self.writeResult('progress', txt)

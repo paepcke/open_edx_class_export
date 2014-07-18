@@ -1,0 +1,28 @@
+<h2>Forum Table</h2>
+The forum table contains all the forum posts of one course. This table
+is only meaningful for courses that used the forum that is built into
+the OpenEdX platform. If the course of interest used a different forum
+facility then this table is not what you want.  The individual columns
+are explained on <a href="http://datastage.stanford.edu/#appB"> our
+how-to page</a>.
+<p>
+There are two types of forum table exports: <i>relatable</i>
+and <i>isolated</i>. The difference lies in the coding scheme used to
+anonymize the screen names of forum posters. In relatable forum
+exports the coding scheme is identical to the one used in other course
+data tables. It is thereby possible to compute correlations between
+forum post behavior and other data about the same course participant.
+<p>
+In contrast, isolated forum exports use an entirely different scheme
+for encoding screen names. Computation of correlations with other data
+by the same course participant is therefore not possible with isolated
+forum exports. However, isolated exports somewhat better protect
+privacy, and are therefore preferred.
+<p>
+In all cases an effort is made in each forum post to automatically
+redact occurrences of phone numbers, email addresses, zip codes, and
+the poster's screen name. Word count is preserved with these
+redactions. The redacted word is replaced with a token that identifies
+the type of information that was elided. This process is not at all
+perfect. Strict discretion is required of researchers when person
+names are gleaned in forum data.

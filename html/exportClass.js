@@ -203,15 +203,16 @@ function ExportClass() {
     }
 
     this.evtAnyForumClicked = function() {
-	// If any forum data is requested, PII crypto protection is required:
-	piiCheckbox = document.getElementById('piiPolicy');
-	if (piiCheckbox.checked) {
-	    // Pii checkbox already checked. So the pwd box already exposed:
-	    return
+	// If any forum data is requested, crypto protection is required:
+	if (document.getElementById('edxForum').checked || 
+	    document.getElementById('edxForum').checked) {
+
+	    classExporter.showCryptoPwdSolicitation();
+	    setGetDataButtonUsability(false);
+	} else {
+	    classExporter.hideCryptoPwdSolicitation();
+	    setGetDataButtonUsability(true);
 	}
-	piiCheckbox.checked = true;
-	// Ensure that crypto pwd solicitation is shown:
-	classExporter.evtPIIPolicyClicked();
     }
 
 
@@ -317,8 +318,9 @@ function ExportClass() {
 
 	// Forum data must be encrypted:
 	if ((edxForum || piazzaForum) &&
-	    !inclPII) {
+	    encryptionPwd.length == 0) {
 		alert('Forum data must be encrypted; please supply a password for the .zip file encryption.');
+		classExporter.showCryptoPwdSolicitation();
 		return;
 	}
 
