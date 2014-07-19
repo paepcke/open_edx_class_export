@@ -302,10 +302,11 @@ fi
 #
 # Create all tmp files:
 
-Forum_HEADER_FILE=`mktemp -p /tmp`
+FORUM_HEADER_FILE=`mktemp -p /tmp`
+PREVIEW_TMP_FILE=`mktemp -p /tmp`
 
 # Ensure the files are cleaned up when script exits:
-trap "rm -f $Forum_HEADER_FILE" EXIT
+trap "rm -f $FORUM_HEADER_FILE, $PREVIEW_TMP_FILE" EXIT
 
 # A tmp file for one table's csv data:
 # Must be unlinked (the -u option), b/c
@@ -314,7 +315,7 @@ trap "rm -f $Forum_HEADER_FILE" EXIT
 # deleting this file except as superuser.
 # Need to fix that:
 
-Forum_VALUES=`mktemp -u -p /tmp`
+FORUM_VALUES_FNAME=`mktemp -u -p /tmp`
 
 # Auth part for the subsequent three mysql calls:
 if [ -z $PASSWD ]
@@ -327,7 +328,7 @@ fi
 
 # Start the Forum dump file by adding the column name header row:
 FORUM_HEADER=`mysql --batch $MYSQL_AUTH -e "
-              SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
+              SELECT GROUP_CONCAT(CONCAT('\"',information_schema.COLUMNS.COLUMN_NAME,'\"')) 
 	      FROM information_schema.COLUMNS 
 	      WHERE TABLE_SCHEMA = '$FORUM_DB' 
 	         AND TABLE_NAME = 'contents' 
@@ -338,18 +339,18 @@ FORUM_HEADER=`mysql --batch $MYSQL_AUTH -e "
 # line up to the ': '. The result finally is placed
 # in a tempfile. 
 
-echo "$FORUM_HEADER" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $Forum_HEADER_FILE
+echo "${FORUM_HEADER}" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $FORUM_HEADER_FILE
 
 # Get column names without quotes around them,
 # which the have in the col header row:
-COL_NAMES=`cat $Forum_HEADER_FILE | sed s/\'//g`
+COL_NAMES=`cat $FORUM_HEADER_FILE | sed s/\"//g`
 
 
 #*******************
-#  echo "Forum header line should be in $Forum_HEADER_FILE"
-#  echo "Contents Forum header file:"
-#  cat $Forum_HEADER_FILE
-#  exit 0
+# echo "Forum header line should be in $FORUM_HEADER_FILE"
+# echo "Contents Forum header file:"
+# cat $FORUM_HEADER_FILE
+# exit 0
 # echo "Dirleaf: $DIR_LEAF"
 #*******************
 
@@ -419,17 +420,17 @@ else
     COLS_TO_PULL=$COL_NAMES
 fi
 
-EXPORT_Forum_CMD=" \
+EXPORT_FORUM_CMD=" \
  USE "$FORUM_DB"; \
  SELECT "$COLS_TO_PULL" \
- INTO OUTFILE '"$Forum_VALUES"' \
+ INTO OUTFILE '"$FORUM_VALUES_FNAME"' \
   FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
   LINES TERMINATED BY '\r\n' \
  FROM contents \
  WHERE course_display_name LIKE '"$COURSE_SUBSTR"';"
 
 #********************
-# echo "EXPORT_Forum_CMD: $EXPORT_Forum_CMD"
+# echo "EXPORT_FORUM_CMD: $EXPORT_FORUM_CMD"
 # echo "FORUM_FNAME: $FORUM_FNAME"
 # exit 0
 #********************
@@ -438,17 +439,27 @@ EXPORT_Forum_CMD=" \
 
 #********************
 # echo "MYSQL_AUTH: $MYSQL_AUTH"
-# echo "EXPORT_Forum_CMD: $EXPORT_Forum_CMD"
+# echo "EXPORT_FORUM_CMD: $EXPORT_FORUM_CMD"
 # exit 0
 #********************
 
 echo "Creating Forum extract ...<br>"
 set -o pipefail
 set -e
-echo "$EXPORT_Forum_CMD" | mysql $MYSQL_AUTH
+echo "$EXPORT_FORUM_CMD" | mysql $MYSQL_AUTH
 
-# Concatenate the col name header and the table:
-cat $Forum_HEADER_FILE $Forum_VALUES > $FORUM_FNAME
+# Concatenate the col name header and the table,
+# 
+#******cat $FORUM_HEADER_FILE $FORUM_VALUES_FNAME > $FORUM_FNAME
+cat $FORUM_HEADER_FILE  > $FORUM_FNAME
+echo -e "\r" >> $FORUM_FNAME
+cat $FORUM_VALUES_FNAME >> $FORUM_FNAME
+
+#**************
+# cat $FORUM_FNAME | sed 's/"\r/"|/g' | head -5
+# echo "FORUM_FNAME: $FORUM_FNAME"
+# exit 0
+#**************
 
 echo "Done exporting Forum for class $COURSE_SUBSTR to CSV<br>"
 
@@ -461,15 +472,39 @@ then
 	echo $ZIP_FNAME > $INFO_DEST
 	echo "Appending number of lines to $INFO_DEST<br>"
 	wc -l $FORUM_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
-	echo "Appending sample lines to $INFO_DEST<br>"
+
 	# Separator between the above table info and the
 	# start of the sample lines. That division could
 	# be made based on knowing that forum only consists
 	# of one table; but that is not true of other exports.
 	# so the separator is required everywhere:
 	echo 'herrgottzemenschnochamal!' >> $INFO_DEST
-	head -5 $FORUM_FNAME >> $INFO_DEST
+
+	echo "Appending sample lines to $INFO_DEST<br>"
+	# To maximize usefulness of the five samples, remove
+	# embedded newlines from the body; else the five lines
+	# may be taken up by a single forum post. The mess below:
+	#
+	#    $FORUM_FNAME contains the entire result: header and forum.
+	#    sed 's/"\r/"|/g': replace all newlines with the (arbitrary),
+        #        temporary placeholder '|'.
+	#    tr -d '[:cntrl:]': Remove all control chars, incl. all cr/lf
+	#    sed 's/|/\n/g': replace all previously placed '|' with '\n'
+	#    head -5: keep only the first five lines:
+	#
+	# The temp storage in $PREVIEW_TMP_FILE, with subsequent extraction
+	# of the first five lines from there is needed because having 
+	# head -n5 >> $INFO_DEST the last element of the pipes failed. The
+	# script quietly failed there. Without the >> $INFO_DEST it was OK.
+	cat $FORUM_FNAME | sed 's/"\r/"|/g' | tr -d '[:cntrl:]' | sed 's/|/<br>\n/g' > $PREVIEW_TMP_FILE
+	head -n5 $PREVIEW_TMP_FILE >> $INFO_DEST
 fi
+
+#*******************
+# echo "INFO_DEST: $INFO_DEST"
+# echo "FORUM_FNAME: $FORUM_FNAME"
+# exit 0
+#*******************
 
 # ----------------------- Zip and Encrypt -------------
 
@@ -481,7 +516,7 @@ fi
 # exit 0
 #***********
 
-echo "Encrypting Forum report...<br>"
+echo "Encrypting Forum report to $ZIP_FNAME...<br>"
 # The --junk-paths puts just the files into
 # the zip, not all the directories on their
 # path from root to leaf:
