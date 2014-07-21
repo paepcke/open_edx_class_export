@@ -5,7 +5,7 @@
 #   o -u/--user           : MySQL user to use for query
 #   o -p/--password       : Prompt for MySQL password
 #   o -w/--mysqlpwd       : Provide MySQL pwd on command line
-#   o -c/--cryptoPwd      : The password to use when encrypting .zip file
+#   o -c/--cryptoPwd      : The password to use when encrypting .zip file; default: myClass
 #   o -d/--destDir        : Destination directory for zip file
 #   o -x/--xpunge         : If destination zip file exists, delete it. If not provided, refuse to overwrite
 #   o -r/--relatable      : Provide the anon_screen_name column so that correlations between log data and forum can be explored
@@ -444,7 +444,13 @@ EXPORT_FORUM_CMD=" \
 #********************
 
 echo "Creating Forum extract ...<br>"
+
+# Make pipe fail with error code saved: If pipefail is enabled, 
+# the pipeline's return status is the value of the last (rightmost) 
+# command to exit with a non-zero status, or zero if all commands 
+# exit successfully:
 set -o pipefail
+# Exit on error:
 set -e
 echo "$EXPORT_FORUM_CMD" | mysql $MYSQL_AUTH
 

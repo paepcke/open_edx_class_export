@@ -643,6 +643,12 @@ echo "Done exporting class $COURSE_SUBSTR to CSV<br>"
 
 # ----------------------- If PII then Zip and Encrypt -------------
 
+#***************8
+echo "ll EVENT_EXTRACT_FNAME: "`ls -l $EVENT_EXTRACT_FNAME`
+echo "ll ACTIVITY_GRADE_FNAME: "`ls -l $ACTIVITY_GRADE_FNAME`
+echo "ll VIDEO_FNAME: "`ls -l $VIDEO_FNAME`
+#***************8
+
 # Write table names and sizes to $INFO_DEST if desired:
 if [ ! -z $INFO_DEST ]
 then
@@ -660,7 +666,7 @@ then
     echo 'herrgottzemenschnochamal!' >> $INFO_DEST
     head -5 ${ACTIVITY_GRADE_FNAME} >> $INFO_DEST
     echo 'herrgottzemenschnochamal!' >> $INFO_DEST
-    head -5 echo ${VIDEO_FNAME} >> $INFO_DEST
+    head -5 ${VIDEO_FNAME} >> $INFO_DEST
 fi
 
 if $pii
@@ -670,7 +676,7 @@ then
     # the zip, not all the directories on their
     # path from root to leaf:
     zip --junk-paths --password $ENCRYPT_PWD $ZIP_FNAME $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
-    rm $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
+#**********    rm $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
     exit 0
 fi
 

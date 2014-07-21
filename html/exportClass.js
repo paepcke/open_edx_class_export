@@ -130,7 +130,7 @@ function ExportClass() {
     /*----------------------------  Widget Event Handlers ---------------------*/
 
     this.evtResolveCourseNames = function() {
-	/* Called when Export Class button is pushed. Request
+	/* Called when List Matching Class button is pushed. Request
 	   that server find all matching course names:
 	*/	
 	var courseIDRegExp = document.getElementById("courseID").value;
@@ -145,18 +145,25 @@ function ExportClass() {
     }
 
     this.evtGetData = function() {
-	// Get the full course name that is associated
+	// If required, get the full course name that is associated
 	// with the checked radio buttion in the course
 	// name list:
 	var fullCourseName = null;
-	try {
-	    fullCourseName = getCourseNameChoice();
-	} catch(err) {}
+	if (document.getElementById('basicData').checked ||
+	    document.getElementById('engagementData').checked ||
+	    document.getElementById('edxForum').checked ||
+	    document.getElementById('piazzaForum').checked ||
+	    document.getElementById('edcastForum').checked
+	   ) {
+	    try {
+		fullCourseName = getCourseNameChoice();
+	    } catch(err) {}
 
-	if (fullCourseName == null) {
-	    classExporter.evtResolveCourseNames();
-	    alert('Please select one of the classes');
-	    return;
+	    if (fullCourseName == null) {
+		classExporter.evtResolveCourseNames();
+		alert('Please select one of the classes');
+		return;
+	    }
 	}
 	startProgressStream(fullCourseName);
     }
@@ -207,6 +214,17 @@ function ExportClass() {
 	if (document.getElementById('edxForum').checked || 
 	    document.getElementById('edxForum').checked) {
 
+	    classExporter.showCryptoPwdSolicitation();
+	    setGetDataButtonUsability(false);
+	} else {
+	    classExporter.hideCryptoPwdSolicitation();
+	    setGetDataButtonUsability(true);
+	}
+    }
+
+    this.evtEmailListClicked = function() {
+	emailListChkBox = document.getElementById('emailList');
+	if (emailListChkBox.checked) {
 	    classExporter.showCryptoPwdSolicitation();
 	    setGetDataButtonUsability(false);
 	} else {
@@ -295,6 +313,7 @@ function ExportClass() {
 	/*Start the event stream, and install the required
 	  event listeners on the EventSource
 	*/
+	var encryptionPwd = document.getElementById("pwdFld1").value;
 	var xmlHttp = null;
 	var fileAction = document.getElementById("fileAction").checked;
 	var inclPII    = document.getElementById("piiPolicy").checked;
@@ -306,20 +325,28 @@ function ExportClass() {
 	var piazzaForum = document.getElementById("piazzaForum").checked;
 	var piazzaIsolated = piazzaForum && document.getElementById("piazzaIsolated").checked;
 	var piazzaRelatable = piazzaForum && document.getElementById("piazzaRelatable").checked;
+	var edcastForum = document.getElementById("edcastForum").checked;
+	var edcastIsolated = edcastForum && document.getElementById("edcastIsolated").checked;
+	var edcastRelatable = edcastForum && document.getElementById("edcastRelatable").checked;
+
+	var emailList = document.getElementById("emailList").checked;
+	var emailStartDate = document.getElementById("emailDate").value;
 
 	if (!basicData && 
 	    !engagementData &&
 	    !edxForum &&
-	    !piazzaForum
+	    !piazzaForum &&
+	    !edcastForum &&
+	    !emailList
 	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
 	}
 
 	// Forum data must be encrypted:
-	if ((edxForum || piazzaForum) &&
+	if ((edxForum || piazzaForum || edcastForum || emailList) &&
 	    encryptionPwd.length == 0) {
-		alert('Forum data must be encrypted; please supply a password for the .zip file encryption.');
+		alert('Forum and email data must be encrypted; please supply a password for the .zip file encryption.');
 		classExporter.showCryptoPwdSolicitation();
 		return;
 	}
@@ -333,7 +360,11 @@ function ExportClass() {
 		      "edxForumRelatable"  : edxForumRelatable,
 		      "edxForumIsolated"  : edxForumIsolated,
 		      "piazzaRelatable" : piazzaRelatable,
-		      "piazzaIsolated" : piazzaRelatable
+		      "piazzaIsolated" : piazzaRelatable,
+		      "edcastRelatable" : edcastRelatable,
+		      "edcastIsolated" : edcastRelatable,
+		      "emailList" : emailList,
+		      "emailStartDate" : emailStartDate
 		     };
 	var req = buildRequest("getData", argObj);
 
@@ -488,6 +519,11 @@ function ExportClass() {
 
 
 }
+
+checkEmailOn = function() {
+    document.getElementById('emailList').checked = true;
+}
+
 var classExporter = new ExportClass();
 
 document.getElementById('listClassesBtn').addEventListener('click', classExporter.evtResolveCourseNames);
@@ -498,6 +534,8 @@ document.getElementById('piiPolicy').addEventListener('change', classExporter.ev
 document.getElementById('pwdOK').addEventListener('click', classExporter.evtCryptoPwdSubmit);
 document.getElementById('edxForum').addEventListener('click', classExporter.evtAnyForumClicked);
 document.getElementById('piazzaForum').addEventListener('click', classExporter.evtAnyForumClicked);
+document.getElementById('edcastForum').addEventListener('click', classExporter.evtAnyForumClicked);
+document.getElementById('emailList').addEventListener('click', classExporter.evtEmailListClicked);
 
 // The following is intended to make CR in 
 // course ID text field click the Get Course List

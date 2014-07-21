@@ -125,6 +125,7 @@ class CourseCSVServer(WebSocketHandler):
         self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
         self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
         self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')        
+        self.exportEmailListScript = os.path.join(self.thisScriptDir, '../scripts/makeEmailListCSV.sh')        
         
         # A dict into which the various exporting methods
         # below will place instances of tempfile.NamedTemporaryFile().
@@ -189,6 +190,13 @@ class CourseCSVServer(WebSocketHandler):
             requestName = requestDict['req']
             args        = requestDict['args']
 
+            # Caller wants list of course names?
+            if requestName == 'reqCourseNames':
+                # For course name list requests, args is a 
+                # MySQL regex that returned course names are to match:
+                courseRegex = args.strip()
+                self.handleCourseNamesReq(requestName, courseRegex)
+                return
             # JavaScript at the browser 'helpfully' adds a newline
             # after course id that is checked by user. If the 
             # arguments include a 'courseId' key, then strip its
@@ -197,27 +205,41 @@ class CourseCSVServer(WebSocketHandler):
                 courseId = args['courseId']
                 args['courseId'] = courseId.strip()
                 courseIdWasPresent = True
-            except (KeyError, TypeError):
+            except (KeyError, TypeError, AttributeError):
                 # Arguments either doesn't have a courseId key
                 # (KeyError), or args isn't a dict in the first
                 # place; both legitimate requests:
                 courseIdWasPresent = False 
                 pass
-            
+
             # Check whether the target directory where we
             # will put results already exists. If so,
             # and if the directory contains files, then check
             # whether we are allowed to wipe the files. All
             # this only if the request will touch that directory.
-            # That in turn is signaled by courseId being non-None:
+            # That in turn is signaled by courseId being non-None.
             if courseIdWasPresent:
-                (self.fullTargetDir, dirExisted) = self.constructDeliveryDir(courseId)
+                (self.fullTargetDir, dirExisted) = self.constructCourseSpecificDeliveryDir(courseId)
+            # Similarly for email list request:
+            wantsEmailList = args.get('emailList', False) 
+            if wantsEmailList:
+                emailStartDate = args.get('emailStartDate', None)
+                # Check that email list start date was delivered
+                # with the request:
+                if emailStartDate is None:
+                    self.writeErr('In on_message: start date was not included; could not export email list.')
+                    return
+                (self.fullTargetDir, dirExisted) = self.constructEmailListDeliveryDir(emailStartDate)
+            if courseIdWasPresent or wantsEmailList:
+                # Check whether delivery file already exists, and deal 
+                # with it if it does:                                                                      
                 filesInTargetDir = os.listdir(self.fullTargetDir)
                 if dirExisted and len(filesInTargetDir) > 0:
                     # Are we allowed to wipe the directory?
                     xpungeExisting = self.str2bool(args.get("wipeExisting", False))
                     if not xpungeExisting:
-                        self.writeError("Tables for course %s already existed, and Remove Previous Exports... was not checked." % courseId)
+                        self.writeError("Table(s) for %s %s already existed, and Remove Previous Exports... was not checked." %\
+                                        ('course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else ''))
                         return None
                     for oneFile in filesInTargetDir:
                         try:
@@ -228,10 +250,7 @@ class CourseCSVServer(WebSocketHandler):
             
             courseList = None
 
-            # Caller wants list of course names?
-            if requestName == 'reqCourseNames':
-                self.handleCourseNamesReq(requestName, args)
-            elif requestName == 'getData':
+            if requestName == 'getData':
                 startTime = datetime.datetime.now()
                 if courseIdWasPresent and (courseId == 'None' or courseId is None):
                     # Need list of all courses, b/c we'll do
@@ -264,6 +283,11 @@ class CourseCSVServer(WebSocketHandler):
                     else:
                         self.exportForum(args)
                         
+                if wantsEmailList:
+                    self.setTimer()
+                    self.exportEmailList(args)
+                        
+                        
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
 
@@ -291,9 +315,18 @@ class CourseCSVServer(WebSocketHandler):
             #self.writeError("Server could not extract request name/args from %s" % safeResp)
             self.writeError("%s" % `e`)
             
-    def handleCourseNamesReq(self, requestName, args):
+    def handleCourseNamesReq(self, requestName, courseRegex):
+        '''
+        Given a MySQL type regex in return a list of course
+        names that match the regex.
+        
+        :param requestName:
+        :type requestName:
+        :param courseRegex:
+        :type courseRegex:
+        '''
         try:
-            courseRegex = args
+            courseRegex = courseRegex
             matchingCourseNames = self.queryCourseNameList(courseRegex)
             # Check whether __init__() method was unable to log into 
             # the db:
@@ -520,14 +553,14 @@ class CourseCSVServer(WebSocketHandler):
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportEngagement'] = infoXchangeFile
 
-        infoXchangeFile.writeline(fullSummaryFile)
-        infoXchangeFile.writeline(self.getNumFileLines(fullSummaryFile))
+        infoXchangeFile.write(fullSummaryFile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(fullSummaryFile)) + '\n')
         
-        infoXchangeFile.writeline(fullDetailFile)
-        infoXchangeFile.writeline(self.getNumFileLines(fullDetailFile))
+        infoXchangeFile.write(fullDetailFile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(fullDetailFile)) + '\n')
 
-        infoXchangeFile.writeline(fullWeeklyFile)
-        infoXchangeFile.writeline(self.getNumFileLines(fullWeeklyFile))
+        infoXchangeFile.write(fullWeeklyFile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(fullWeeklyFile)) + '\n')
                                   
         if inclPII:
             targetZipFileBasename = courseId.replace('/','_')
@@ -608,7 +641,7 @@ class CourseCSVServer(WebSocketHandler):
         cryptoPwd = detailDict.get("cryptoPwd", '')
 
         infoXchangeFile = tempfile.NamedTemporaryFile()
-        self.infoTmpFiles['exportForum'] = infoXchangeFile
+        self.infoTmpFiles['exportEmailList'] = infoXchangeFile
 
         # Build the CL command for script makeForumCSV.sh
         # script name plus options:
@@ -676,6 +709,81 @@ class CourseCSVServer(WebSocketHandler):
             if self.testing:
                 raise
 
+    def exportEmailList(self, detailDict):
+        
+        try:
+            emailStartDate = detailDict['emailStartDate']
+        except KeyError:
+            self.logErr('In exportEmailList: start date was not included; could not export email list.')
+            return
+        
+        # Check whether we are to delete any already existing
+        # csv files for this class:
+        xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
+        cryptoPwd = detailDict.get("cryptoPwd", '')
+
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportEmailList'] = infoXchangeFile
+
+        # Build the CL command for script makeEmailListCSV.sh
+        # script name plus options:
+        scriptCmd = [self.exportEmailListScript,'-u',self.currUser]
+        
+        if self.mySQLPwd is not None:
+            scriptCmd.extend(['-w',self.mySQLPwd])
+            
+        if xpungeExisting:
+            scriptCmd.append('--xpunge')
+            
+        # Tell script where to report names of tmp files
+        # where it deposited results:
+        scriptCmd.extend(['--infoDest',infoXchangeFile.name])
+        
+        # Provide the script with a pwd with which to encrypt the 
+        # .csv.zip file:
+        if cryptoPwd is None or len(cryptoPwd) == 0:
+            self.logErr("Email list export needs to be encrypted, and therefore needs a crypto pwd to use.")
+            return;
+        scriptCmd.extend(['--cryptoPwd', cryptoPwd])
+        
+        # If unittesting, tell the script:
+        if self.testing:
+            scriptCmd.extend(['--testing'])
+        
+        # The argument:
+        scriptCmd.append(emailStartDate)
+        
+        #************
+        self.logDebug("Script cmd is: %s" % str(scriptCmd))
+        #************
+
+        # Call makeEmailListCSV.sh to export:
+        # The  script will place a file name and a file size (in lines)
+        # into infoXchangeFile. The file is the csv file path
+        # of export results. The third line to EOF will be 
+        # five sample rows from the list of emails to be sent to the
+        # browser for QA:
+        try:
+            pipeFromScript = subprocess.Popen(scriptCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            while pipeFromScript.poll() is None:
+                (msgFromScript,errmsg) = pipeFromScript.communicate()
+                if len(errmsg) > 0:
+                    self.writeResult('progress', errmsg)
+                    if self.testing:
+                        raise IOError('Error in makeEmailListCSV.sh: %s.' % errmsg)
+                    return
+                else:
+                    self.writeResult('progress', msgFromScript)
+                    
+            #**********            
+            #for msgFromScript in pipeFromScript:
+            #    self.writeResult('progress', msgFromScript)
+            #**********                            
+        except Exception as e:
+            self.writeError(`e`)
+            if self.testing:
+                raise
+
     def getNumFileLines(self, fileFdOrPath):
         '''
         Given either a file descriptor or a file path string,
@@ -712,7 +820,7 @@ class CourseCSVServer(WebSocketHandler):
         zipCmd.extend(filePathsToZip)
         subprocess.call(zipCmd)
     
-    def constructDeliveryDir(self, courseName):
+    def constructCourseSpecificDeliveryDir(self, courseName):
         '''
         Given a course name, construct a directory name where result
         files for that course will be stored to be visible on the 
@@ -739,6 +847,30 @@ class CourseCSVServer(WebSocketHandler):
             os.makedirs(self.fullTargetDir)
             return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
     
+    def constructEmailListDeliveryDir(self, emailListStartDate):
+        '''
+        Given the start date of an email list export, construct a directory 
+        name where result file for that export will be stored to be visible on the 
+        Web. The parent dir is expected in CourseCSVServer.DELIVERY_HOME.
+        The leaf dir is constructed as DELIVERY_HOME/Email_<emailListStartDate>
+
+        :param emailListStartDate: date for first email to include
+        :type courseName: String
+        :return: Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if 
+                 the directory already existed. Method does nothing in this case. 
+                 If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
+                 are returned. Creation includes all intermediate subdirectories.
+
+        :rtype: (String, PreExisting)
+        '''
+        self.fullTargetDir = os.path.join(CourseCSVServer.DELIVERY_HOME, 'Email_' + emailListStartDate)
+        if os.path.isdir(self.fullTargetDir):
+            return (self.fullTargetDir, PreExisted.EXISTED)
+        else:
+            os.makedirs(self.fullTargetDir)
+            return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
+    
+    
     def printTableInfo(self):
         '''
         Writes html to browser that shows result table
@@ -757,7 +889,8 @@ class CourseCSVServer(WebSocketHandler):
         by the token "herrgottzemenschnochamal!"
         
         :return: full path of the last table file that was deposited in the Web pickup area.
-             This info is used later to construct 
+             This info is used later to construct a pickup URL
+        :rtype: String
 
         '''
         
@@ -778,13 +911,20 @@ class CourseCSVServer(WebSocketHandler):
                     tableInfoDict[tableFileName.strip()] = tableFileNumLines
                 # Now get all the line samples in the right order:
                 sampleLineBatches = []
+                #***********
+                sampleLine = ''
+                #***********
                 if tableFileName == 'herrgottzemenschnochamal!\n':
                     endOfSampleBatch = False
                     eof = False
                     while not eof:
                         sample = ""
                         while not endOfSampleBatch:
-                            sampleLine = tmpFileFd.readline()
+                            try:
+                                sampleLine = tmpFileFd.readline()
+                            except Exception as e:
+                                print("Got it: %s" % `e`) #****************
+                                
                             if len(sampleLine) == 0:
                                 eof = True
                                 endOfSampleBatch = True
@@ -794,6 +934,7 @@ class CourseCSVServer(WebSocketHandler):
                                 continue
                             sample += sampleLine.strip() + ' <br>'
                         sampleLineBatches.append(sample)
+                        endOfSampleBatch = False
                     
                 sampleBatchIndx = 0
                 for tableFileName in tableInfoDict.keys():
@@ -814,6 +955,10 @@ class CourseCSVServer(WebSocketHandler):
                         tblName = 'Forum'
                     elif tableFileName.find('Piazza') > -1:
                         tblName = 'Piazza'
+                    elif tableFileName.find('Edcast') > -1:
+                        tblName = 'Edcast'
+                    elif tableFileName.find('Email') > -1:
+                        tblName = 'EmailList'
         
                     else:
                         tblName = 'unknown table name'
@@ -826,7 +971,7 @@ class CourseCSVServer(WebSocketHandler):
                                      '<br><b>Table %s</b> is empty.</br>' % tblName)
                         continue # next table
                     self.writeResult('printTblInfo', 
-                                     '<br><b>Table %s</b> (%s lines):</br>' % (tblName, tableFileNumLines))
+                                     '<br><b>Table %s</b> (%s lines):</br>' % (tblName, numLines))
                     if len(sampleLineBatches) > 0:
                         self.writeResult('printTblInfo', sampleLineBatches[sampleBatchIndx])
                     sampleBatchIndx += 1
@@ -861,7 +1006,7 @@ class CourseCSVServer(WebSocketHandler):
         :type url: String
         '''
         self.writeResult('progress', "<p><b>Email draft for client; copy-paste into email program:</b><br>")
-        msgStart = 'Hi,<br>your data is ready for pickup. Please visit our <a href="%s">pickup page</a>.<br>' % url
+        msgStart = 'Hi,<br>your data is ready for pickup. Please visit our <a href="%s" target="_blank">pickup page</a>.<br>' % url
         self.writeResult('progress', msgStart)
         # The rest of the msg is in a file:
         try:
