@@ -401,35 +401,33 @@ EVENT_XTRACT_HEADER=`mysql --batch $MYSQL_AUTH -e "
 	      WHERE TABLE_SCHEMA = 'Edx' 
 	         AND TABLE_NAME = 'EventXtract' 
 	      ORDER BY ORDINAL_POSITION\G"`
+
 # In the following the first 'sed' call removes the
 # line: "********** 1. row *********" (see above).
 # The second 'sed' call removes everything of the second
 # line up to the ': '. 
-# The third sed call in the ELSE branch below
-# removes the 'ip' from the header
-# if it exists: We don't provide IP with non-PII
-# exports. The result finally is placed
+# The result finally is placed
 # in a tempfile. In case of PII we also add
 # student name and screen_name to the header:
 if $pii
 then
     echo "$EVENT_XTRACT_HEADER"",name,screen_name" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $EventXtract_HEADER_FILE
 else
-    echo "$EVENT_XTRACT_HEADER" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | sed -n "s/,'ip'//p" | cat > $EventXtract_HEADER_FILE
+    echo "$EVENT_XTRACT_HEADER" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $EventXtract_HEADER_FILE
 fi
 
 
 #*******************
-# echo "EventXtract header line should be in $EventXtract_HEADER_FILE"
-# echo "VideoInteraction  header line should be in $VideoInteraction_HEADER_FILE"
-# echo "ActivityGrade  header line should be in $ActivityGrade_HEADER_FILE"
-# echo "Contents EventXtract header file:"
-# cat $EventXtract_HEADER_FILE
-# echo "Contents VideoInteraction header file:"
-# cat $VideoInteraction_HEADER_FILE
-# echo "Contents ActivityGrade header file:"
-# cat $ActivityGrade_HEADER_FILE
-# exit 0
+echo "EventXtract header line should be in $EventXtract_HEADER_FILE"
+echo "VideoInteraction  header line should be in $VideoInteraction_HEADER_FILE"
+echo "ActivityGrade  header line should be in $ActivityGrade_HEADER_FILE"
+echo "Contents EventXtract header file:"
+cat $EventXtract_HEADER_FILE
+echo "Contents VideoInteraction header file:"
+cat $VideoInteraction_HEADER_FILE
+echo "Contents ActivityGrade header file:"
+cat $ActivityGrade_HEADER_FILE
+exit 0
 #echo "Dirleaf: $DIR_LEAF"
 #*******************
 

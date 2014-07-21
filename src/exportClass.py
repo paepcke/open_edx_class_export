@@ -911,9 +911,6 @@ class CourseCSVServer(WebSocketHandler):
                     tableInfoDict[tableFileName.strip()] = tableFileNumLines
                 # Now get all the line samples in the right order:
                 sampleLineBatches = []
-                #***********
-                sampleLine = ''
-                #***********
                 if tableFileName == 'herrgottzemenschnochamal!\n':
                     endOfSampleBatch = False
                     eof = False
