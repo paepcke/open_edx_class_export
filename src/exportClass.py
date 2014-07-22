@@ -596,11 +596,11 @@ class CourseCSVServer(WebSocketHandler):
         Two cases: Web client asked for relatable data, or they asked
         for isolated data. Relatable data gets anon_screen_name filled
         in with the uid that is also used in the rest of the data archive.
-        The forum_int_id is then set to -1 for all rows.
+        The forum_uid is then set to -1 for all rows.
         
         If Web client instead asked for isolated forum data, the data
         are delivered as they are stored in the database: anon_screen_name
-        is redacted, and forum_int_id is some integer. Each integer refers
+        is redacted, and forum_uid is some encrypted string. Each string refers
         to one particular course participant, and can therefore be used for
         forum network analysis, post frequency, etc. But relating that data
         to, for instance, video usage data is not possible.
@@ -1072,7 +1072,7 @@ class CourseCSVServer(WebSocketHandler):
         Restarts timer for next dot.
         '''
         #*******************
-        return
+        #return
         #*******************
         if not self.testing:
             self.writeResult('progress', '.')

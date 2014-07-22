@@ -391,15 +391,15 @@ fi
 
 # Start by constructing the fields to export; first for relatable:
 # The first IF branch creates something like:
-# 'forum_post_id','EdxPrivate.idForum2Anon(forum_int_id)','type','anonymous',...,0,body,...
+# 'forum_post_id','EdxPrivate.idForum2Anon(forum_uid)','type','anonymous',...,0,body,...
 # with the second ellipses being the rest of the forum columns.
 # The first sed expression replaces anon_screen_name
-# with EdxPrivate.idForum2Anon(forum_int_id). That MySQL function
+# with EdxPrivate.idForum2Anon(forum_uid). That MySQL function
 # call converts the uid scheme used in the forum
 # table to an equivalent anon_screen_name value.
 #
 # The second sed expression causes MySQL to output the constant 0 
-# instead of the stored forum_int_id. In the resulting table
+# instead of the stored forum_uid. In the resulting table
 # only the anon_screen_name is then usable as an identifier.
 #
 # If the forum output is to remain non-relatable to the rest 
@@ -410,11 +410,11 @@ if $RELATABLE
 then 
     if $TESTING
     then
-	COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/unittest.idForum2Anon\(forum_int_id\)/ \
-	    | sed s/[^\(]forum_int_id/,0/`
+	COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/unittest.idForum2Anon\(forum_uid\)/ \
+	    | sed s/[^\(]forum_uid/,'null'/`
     else
-	COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/EdxPrivate.idForum2Anon\(forum_int_id\)/ \
-	    | sed s/[^\(]forum_int_id/,0/`
+	COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/EdxPrivate.idForum2Anon\(forum_uid\)/ \
+	    | sed s/[^\(]forum_uid/,'null'/`
     fi
 else
     COLS_TO_PULL=$COL_NAMES
@@ -430,9 +430,9 @@ EXPORT_FORUM_CMD=" \
  WHERE course_display_name LIKE '"$COURSE_SUBSTR"';"
 
 #********************
-# echo "EXPORT_FORUM_CMD: $EXPORT_FORUM_CMD"
-# echo "FORUM_FNAME: $FORUM_FNAME"
-# exit 0
+echo "EXPORT_FORUM_CMD: $EXPORT_FORUM_CMD"
+echo "FORUM_FNAME: $FORUM_FNAME"
+exit 0
 #********************
 
 # ----------------------------- Execute the Main MySQL Command -------------

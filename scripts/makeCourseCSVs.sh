@@ -418,16 +418,16 @@ fi
 
 
 #*******************
-echo "EventXtract header line should be in $EventXtract_HEADER_FILE"
-echo "VideoInteraction  header line should be in $VideoInteraction_HEADER_FILE"
-echo "ActivityGrade  header line should be in $ActivityGrade_HEADER_FILE"
-echo "Contents EventXtract header file:"
-cat $EventXtract_HEADER_FILE
-echo "Contents VideoInteraction header file:"
-cat $VideoInteraction_HEADER_FILE
-echo "Contents ActivityGrade header file:"
-cat $ActivityGrade_HEADER_FILE
-exit 0
+# echo "EventXtract header line should be in $EventXtract_HEADER_FILE"
+# echo "VideoInteraction  header line should be in $VideoInteraction_HEADER_FILE"
+# echo "ActivityGrade  header line should be in $ActivityGrade_HEADER_FILE"
+# echo "Contents EventXtract header file:"
+# cat $EventXtract_HEADER_FILE
+# echo "Contents VideoInteraction header file:"
+# cat $VideoInteraction_HEADER_FILE
+# echo "Contents ActivityGrade header file:"
+# cat $ActivityGrade_HEADER_FILE
+# exit 0
 #echo "Dirleaf: $DIR_LEAF"
 #*******************
 
@@ -546,7 +546,7 @@ then
 else
   EXPORT_EventXtract_CMD=" \
   USE Edx;
-   SELECT DISTINCT anon_screen_name,event_type,time, \
+   SELECT DISTINCT anon_screen_name,event_type,ip_country,time, \
 		   course_display_name,resource_display_name,success, \
 		   video_code, video_current_time, video_speed, video_old_time, \
 		   video_new_time, video_seek_type, video_new_speed, video_old_speed, \
