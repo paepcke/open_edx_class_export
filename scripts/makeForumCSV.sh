@@ -430,9 +430,9 @@ EXPORT_FORUM_CMD=" \
  WHERE course_display_name LIKE '"$COURSE_SUBSTR"';"
 
 #********************
-echo "EXPORT_FORUM_CMD: $EXPORT_FORUM_CMD"
-echo "FORUM_FNAME: $FORUM_FNAME"
-exit 0
+# echo "EXPORT_FORUM_CMD: $EXPORT_FORUM_CMD"
+# echo "FORUM_FNAME: $FORUM_FNAME"
+# exit 0
 #********************
 
 # ----------------------------- Execute the Main MySQL Command -------------
