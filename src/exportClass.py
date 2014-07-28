@@ -495,8 +495,6 @@ class CourseCSVServer(WebSocketHandler):
         engagementComp = EngagementComputer(startYearsArr, # Only profile courses that started in one of the given years.
                                             'localhost',   # MySQL server
                                             CourseCSVServer.SUPPORT_TABLES_DB if not self.testing else 'unittest', # DB within that server 
-                                            'Activities',  # Support table (must have been created earlier via
-                                                           # prepEngagementAnalysis.sql),
                                             #*****openMySQLDB=self.mysqlDb,
                                             mySQLUser=invokingUser, 
                                             mySQLPwd=None, # EngagementComputer will figure it out
