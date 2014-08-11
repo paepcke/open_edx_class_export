@@ -89,6 +89,8 @@
 	  <label class="long" for="engagementData">
 	    Prepare time on task data
 	  </label>
+	  <input type="checkbox" id="engageVideoOnly"  name="engageVideoOnly" value="engageVideoOnly";  style="position: relative; margin-left:-240px;">
+	  <label for="engageVideoOnly"><i>Video events only</i></label>
 	  <br>
 
 	  <input type="checkbox" id="edxForum" value="edxForum">
@@ -125,12 +127,12 @@
 
 	  <input type="checkbox" id="emailList" value="emailList">
 	  <label class="long" for="emailList">
-	    Email mailing list:
+	    Email mailing list; Start date:
 	  </label>
 	  <!-- Text input with calendar popup: -->
 	  <input onclick="ds_sh(this); checkEmailOn()" id="emailDate"
 		 name="emailDate" readonly="readonly" 
-		 style="cursor: text position: relative; margin-left:-270px;"/>
+		 style="cursor: text position: relative; margin-left:-220px;"/>
 
 	  <div id="pwdSolicitationDiv">
 	    <label class="short" for="pwdFld1">Crypto passwd (required):</label> <input id="pwdFld1" type="password"><br>

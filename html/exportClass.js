@@ -233,12 +233,12 @@ function ExportClass() {
 	}
     }
 
-
     var evtCarriageReturnListMatchesTrigger = function(e) {
 	if (e.keyCode == 13) {
 	    document.getElementById("listClassesBtn").click();
 	}
     }
+
 
     /*----------------------------  Utility Functions ---------------------*/
 
@@ -319,6 +319,7 @@ function ExportClass() {
 	var inclPII    = document.getElementById("piiPolicy").checked;
 	var basicData  = document.getElementById("basicData").checked;
 	var engagementData = document.getElementById("engagementData").checked;
+	var engageVideoOnly = document.getElementById("engageVideoOnly").checked;
 	var edxForum = document.getElementById("edxForum").checked;
 	var edxForumIsolated   = edxForum && document.getElementById("edxForumIsolated").checked;
 	var edxForumRelatable  = edxForum && document.getElementById("edxForumRelatable").checked;
@@ -357,6 +358,7 @@ function ExportClass() {
 		      "cryptoPwd" : encryptionPwd,
 		      "basicData" : basicData,
 		      "engagementData" : engagementData,
+		      "engageVideoOnly" : engageVideoOnly,
 		      "edxForumRelatable"  : edxForumRelatable,
 		      "edxForumIsolated"  : edxForumIsolated,
 		      "piazzaRelatable" : piazzaRelatable,

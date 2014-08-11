@@ -492,11 +492,13 @@ class CourseCSVServer(WebSocketHandler):
         # Get an engine that will compute the time engagement:
         invokingUser = getpass.getuser()
         self.mysqlDb.close()
-        engagementComp = EngagementComputer(startYearsArr, # Only profile courses that started in one of the given years.
-                                            'localhost',   # MySQL server
-                                            mySQLUser=invokingUser, 
-                                            mySQLPwd=None, # EngagementComputer will figure it out
-                                            courseToProfile=courseId) # Which course to analyze
+        # Are we only to consider video events?
+        videoEventsOnly = detailDict.get('engageVideoOnly', False)
+        engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
+                                    mySQLUser=invokingUser,                                                                                                    
+                                    courseToProfile=courseId,
+                                    videoOnly=(True if videoEventsOnly else False)                                                                                             
+                                    )                                                                                                                          
         engagementComp.run()
         (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
         # The files will be in paths like:
@@ -557,6 +559,36 @@ class CourseCSVServer(WebSocketHandler):
 
         infoXchangeFile.write(fullWeeklyFile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(fullWeeklyFile)) + '\n')
+        
+        # Add sample lines:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(fullSummaryFile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            with open(fullDetailFile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            with open(fullWeeklyFile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')            
+        except IOError as e:
+            self.logErr('Could not write result sample lines: %s' % `e`)
                                   
         if inclPII:
             targetZipFileBasename = courseId.replace('/','_')
@@ -880,7 +912,7 @@ class CourseCSVServer(WebSocketHandler):
         open tmp file that contains alternating: file name,
         file size in lines for as many tables as were output.
         
-        After that information come batches of up to five
+        After that information come batches of up to NUM_OF_TABLE_SAMPLE_LINES
         sample lines for each table. The batches are separated
         by the token "herrgottzemenschnochamal!"
         
