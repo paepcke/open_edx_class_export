@@ -529,11 +529,12 @@ fi
 if $pii
 then
   EXPORT_EventXtract_CMD=" \
+   DROP VIEW IF EXISTS PIITable;
    USE Edx;
    CREATE VIEW PIITable AS 
-     SELECT anon_screen_name, name, screen_name
+     SELECT anon_screen_name, name, screen_name, email, goals
      FROM EdxPrivate.Account;
-   SELECT DISTINCT EventXtract.*, PIITable.name, PIITable.screen_name \
+   SELECT DISTINCT EventXtract.*, PIITable.name, PIITable.screen_name, PIITable.email, PIITable.goals \
    INTO OUTFILE '"$EventXtract_VALUES"' \
      FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
      LINES TERMINATED BY '\r\n' \
@@ -563,10 +564,11 @@ if $pii
 then
   EXPORT_ActivityGrade_CMD=" \
    USE Edx;
+   DROP VIEW IF EXISTS PIITable;
    CREATE VIEW PIITable AS 
-   SELECT anon_screen_name, name, screen_name
+   SELECT anon_screen_name, name, screen_name, email, goals
     FROM EdxPrivate.Account;
-   SELECT DISTINCT Edx.ActivityGrade.*, PIITable.name, PIITable.screen_name \
+   SELECT DISTINCT Edx.ActivityGrade.*, PIITable.name, PIITable.screen_name, PIITable.email, PIITable.goals \
    INTO OUTFILE '"$ActivityGrade_VALUES"' \
      FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
      LINES TERMINATED BY '\r\n' \
@@ -591,10 +593,11 @@ if $pii
 then
   EXPORT_VideoInteraction_CMD=" \
    USE Edx;
+   DROP VIEW IF EXISTS PIITable;
    CREATE VIEW PIITable AS 
-   SELECT anon_screen_name, name, screen_name
+   SELECT anon_screen_name, name, screen_name, email, goals
    FROM EdxPrivate.Account;
-   SELECT DISTINCT Edx.VideoInteraction.*, PIITable.name, PIITable.screen_name \
+   SELECT DISTINCT Edx.VideoInteraction.*, PIITable.name, PIITable.screen_name, PIITable.email, PIITable.goals \
    INTO OUTFILE '"$VideoInteraction_VALUES"' \
      FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
      LINES TERMINATED BY '\r\n' \
