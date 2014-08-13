@@ -217,7 +217,7 @@ class ExportClassTest(unittest.TestCase):
         os.remove(self.courseServer.latestResultDetailFilename)
         os.remove(self.courseServer.latestResultWeeklyEffortFilename)
 
-    #***@unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testTwoStudentsTwoClasses(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_TWO_CLASSES)
         jsonMsg = '{"req" : "getData", "args" : {"courseId" : "None", "engagementData" : "True", "wipeExisting" : "True", "inclPII" : "False", "cryptoPwd" : "foobar"}}'
@@ -329,6 +329,10 @@ class ExportClassTest(unittest.TestCase):
                                    )
         # Read it all back:
         zipfile.ZipFile('/tmp/zipFileUnittest.zip').extractall(pwd='foobar')
+
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")
+    def testExportPIIDetails(self):
+        pass
 
     def buildSupportTables(self, testSetToLoad):
         # Activities table:

@@ -153,6 +153,22 @@ class CourseCSVServer(WebSocketHandler):
             
         self.currTimer = None
     
+    def openMySQLDb(self):
+        try:
+            with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
+                self.mySQLPwd = fd.readline().strip()
+                self.mysqlDb = MySQLDB(user=self.currUser, passwd=self.mySQLPwd, db=self.defaultDb)
+        except Exception:
+            try:
+                # Try w/o a pwd:
+                self.mySQLPwd = None
+                self.mysqlDb = MySQLDB(user=self.currUser, db=self.defaultDb)
+            except Exception as e:
+                # Remember the error msg for later:
+                self.dbError = `e`;
+                self.mysqlDb = None
+        return self.mysqlDb
+    
     def allow_draft76(self):
         '''
         Allow WebSocket connections via the old Draft-76 protocol. It has some
@@ -283,6 +299,15 @@ class CourseCSVServer(WebSocketHandler):
                     else:
                         self.exportForum(args)
                         
+                if args.get('piiData', False):
+                    self.setTimer()
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportPIIDetails(args)
+                    else:
+                        self.exportPIIDetails(args)
+                
                 if wantsEmailList:
                     self.setTimer()
                     self.exportEmailList(args)
@@ -491,16 +516,22 @@ class CourseCSVServer(WebSocketHandler):
 
         # Get an engine that will compute the time engagement:
         invokingUser = getpass.getuser()
+        # EngagementComputer will open its own MySQLDB instance:
         self.mysqlDb.close()
         # Are we only to consider video events?
         videoEventsOnly = detailDict.get('engageVideoOnly', False)
-        engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
-                                    mySQLUser=invokingUser,                                                                                                    
-                                    courseToProfile=courseId,
-                                    videoOnly=(True if videoEventsOnly else False)                                                                                             
-                                    )                                                                                                                          
-        engagementComp.run()
-        (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
+        try:
+            engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
+                                        mySQLUser=invokingUser,                                                                                                    
+                                        courseToProfile=courseId,
+                                        videoOnly=(True if videoEventsOnly else False)                                                                                             
+                                        )                                                                                                                          
+            engagementComp.run()
+            (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
+        finally:
+            # Re-open MySQLDB instance for this instance:
+            self.openMySQLDb()
+
         # The files will be in paths like:
         #     /tmp/tmpAK5svP_engagement_Engineering_CRYP999_Cryptopgraphy_Repository_summary.csv
         #     /tmp/tmpxpo4Ng_engagement_CME_MedStats_2013-2015_allData.csv,
@@ -737,6 +768,89 @@ class CourseCSVServer(WebSocketHandler):
             if self.testing:
                 raise
 
+    def exportPIIDetails(self, detailDict):
+        '''
+        Get the courseID to get PII for. If that ID is None, 
+        then PII for all courses. The Web UI may allow only
+        one course to profile at a time, but the capability
+        to do all is here; just have on_message put None
+        as the courseId:
+
+        :param detailDict: dict of arguments; expected: 'courseId', cryptoPwd
+        :type detailDict: {String : String}
+        :return full path of outputfile
+        :rtype String
+        '''
+
+        if self.mysqlDb is None:
+            self.writeResult('In exportPIIData: MySQL database interface is None; have to give up.')
+            return
+        
+        try:
+            courseId = detailDict['courseId']
+        except KeyError:
+            self.logErr('In exportPIIDetails: course ID was not included; could not construct PII table.')
+            return
+        
+        if courseId is not None:
+            courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+        else:
+            courseNameNoSpaces = 'allCourses'
+
+        outFilePIIName = os.path.join(self.fullTargetDir, '%s_piiData.csv' % courseNameNoSpaces) 
+        with open(outFilePIIName, 'w') as fd:
+            fd.write('anon_screen_name','user_int_id','screen_name','forum_id','external_lti_id','first_name','last_name','email','date_joined\n')
+            
+            
+            for courseName in self.queryCourseNameList(courseId):
+                mySqlCmd = ' '.join([
+            		'SELECT  EventXtract.anon_screen_name,',
+            				'UserGrade.user_int_id,',
+            				'auth_user.username AS screen_name, ', 
+            				'EdxPrivate.idInt2Forum(auth_user.id) AS forum_id, ', 
+            				'EdxPrivate.idAnon2Ext(EventXtract.anon_screen_name, "%s") AS external_lti_id, ' % courseName, 
+            				'auth_user.first_name, ',
+            				'auth_user.last_name, ',
+            				'auth_user.email, ',
+            				'auth_user.date_joined ',
+            		'INTO OUTFILE "%s" ' % outFilePIIName,
+            		'   FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
+            		'   LINES TERMINATED BY "\n"',
+            		'FROM Edx.EventXtract, EdxPrivate.UserGrade, edxprod.auth_user',
+            		'WHERE EventXtract.course_display_name LIKE "courseName"',
+            		'  AND EventXtract.anon_screen_name = UserGrade.anon_screen_name',
+            		'  AND auth_user.id = UserGrade.user_int_id;'
+            		])
+    
+            for piiResultLine in self.mysqlDb.query(mySqlCmd):
+                fd.write(','.join(piiResultLine) + '\n')
+        
+        # Save information for printTableInfo() method to find:
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportPIIDetails'] = infoXchangeFile
+
+        infoXchangeFile.write(outFilePIIName + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(outFilePIIName)) + '\n')
+
+        # Add sample lines:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(outFilePIIName, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        except IOError as e:
+            self.logErr('Could not write result sample lines: %s' % `e`)
+
+        # zip-encrypt the Zip file:
+        cryptoPwd = detailDict.get("cryptoPwd", '')
+        self.zipFiles(outFilePIIName + '.zip', cryptoPwd, [outFilePIIName])
+        return outFilePIIName
+
     def exportEmailList(self, detailDict):
         
         try:
@@ -907,8 +1021,8 @@ class CourseCSVServer(WebSocketHandler):
 
         The information is in dict self.infoTmpFiles.
         Each exporting method above has its own entry 
-        in the dict: exportClass, exportForum, and 
-        exportEngagement. Each value is the name of an
+        in the dict: exportClass, exportForum, exportEngagement, 
+        exportPIIDetails, etc. Each value is the name of an
         open tmp file that contains alternating: file name,
         file size in lines for as many tables as were output.
         
