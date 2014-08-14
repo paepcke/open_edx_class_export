@@ -35,7 +35,7 @@ function ExportClass() {
 		var response  = argsObj.resp;
 		var args    = argsObj.args;
 	    } catch(err) {
-		alert('Bad response from server (' + oneLineData + '): ' + err );
+		alert('Error report from server (' + oneLineData + '): ' + err );
 		return
 	    }
 	    handleResponse(response, args);
@@ -140,7 +140,7 @@ function ExportClass() {
 	}
 	clrProgressDiv();
 	// Clear the 'I want PII checkbox':
-	document.getElementById('piiPolicy').checked = false;
+	//document.getElementById('piiPolicy').checked = false;
 	queryCourseIDResolution(courseIDRegExp);
     }
 
@@ -151,9 +151,11 @@ function ExportClass() {
 	var fullCourseName = null;
 	if (document.getElementById('basicData').checked ||
 	    document.getElementById('engagementData').checked ||
+	    document.getElementById('learnerPerf').checked ||
 	    document.getElementById('edxForum').checked ||
 	    document.getElementById('piazzaForum').checked ||
-	    document.getElementById('edcastForum').checked
+	    document.getElementById('edcastForum').checked ||
+	    document.getElementById('learnerPII').checked
 	   ) {
 	    try {
 		fullCourseName = getCourseNameChoice();
@@ -198,16 +200,16 @@ function ExportClass() {
 	setGetDataButtonUsability(true);
     }
 
-    this.evtPIIPolicyClicked = function() {
-	piiPolicyChkBox = document.getElementById('piiPolicy');
-	if (piiPolicyChkBox.checked) {
-	    classExporter.showCryptoPwdSolicitation();
-	    setGetDataButtonUsability(false);
-	} else {
-	    classExporter.hideCryptoPwdSolicitation();
-	    setGetDataButtonUsability(true);
-	}
-    }
+    // this.evtPIIPolicyClicked = function() {
+    // 	piiPolicyChkBox = document.getElementById('piiPolicy');
+    // 	if (piiPolicyChkBox.checked) {
+    // 	    classExporter.showCryptoPwdSolicitation();
+    // 	    setGetDataButtonUsability(false);
+    // 	} else {
+    // 	    classExporter.hideCryptoPwdSolicitation();
+    // 	    setGetDataButtonUsability(true);
+    // 	}
+    // }
 
     this.evtAnyForumClicked = function() {
 	// If any forum data is requested, crypto protection is required:
@@ -232,6 +234,18 @@ function ExportClass() {
 	    setGetDataButtonUsability(true);
 	}
     }
+
+    this.evtLearnerPIIClicked = function() {
+	learnerPIIChkBox = document.getElementById('learnerPII');
+	if (learnerPIIChkBox.checked) {
+	    classExporter.showCryptoPwdSolicitation();
+	    setGetDataButtonUsability(false);
+	} else {
+	    classExporter.hideCryptoPwdSolicitation();
+	    setGetDataButtonUsability(true);
+	}
+    }
+
 
     var evtCarriageReturnListMatchesTrigger = function(e) {
 	if (e.keyCode == 13) {
@@ -311,15 +325,19 @@ function ExportClass() {
 
     var startProgressStream = function(resolvedCourseID) {
 	/*Start the event stream, and install the required
-	  event listeners on the EventSource
+	  event listeners on the EventSource. This is where
+	  you add any new data export option. If you do add
+	  an option, and it is specific to a particular course,
+	  then also update function evtGetData().
 	*/
 	var encryptionPwd = document.getElementById("pwdFld1").value;
 	var xmlHttp = null;
 	var fileAction = document.getElementById("fileAction").checked;
-	var inclPII    = document.getElementById("piiPolicy").checked;
+	//var inclPII    = document.getElementById("piiPolicy").checked;
 	var basicData  = document.getElementById("basicData").checked;
 	var engagementData = document.getElementById("engagementData").checked;
 	var engageVideoOnly = document.getElementById("engageVideoOnly").checked;
+	var learnerPerf = document.getElementById("learnerPerf").checked;
 	var edxForum = document.getElementById("edxForum").checked;
 	var edxForumIsolated   = edxForum && document.getElementById("edxForumIsolated").checked;
 	var edxForumRelatable  = edxForum && document.getElementById("edxForumRelatable").checked;
@@ -329,36 +347,43 @@ function ExportClass() {
 	var edcastForum = document.getElementById("edcastForum").checked;
 	var edcastIsolated = edcastForum && document.getElementById("edcastIsolated").checked;
 	var edcastRelatable = edcastForum && document.getElementById("edcastRelatable").checked;
-
 	var emailList = document.getElementById("emailList").checked;
 	var emailStartDate = document.getElementById("emailDate").value;
+	var learnerPII = document.getElementById("learnerPII").value;
+	var quarterRep = document.getElementById("quarterRep").checked;
+	var quarterRepQuarter = quarterRep && document.getElementById("quarterRepQuarter").value;
+	var quarterRepYear = quarterRep && document.getElementById("quarterRepYear").value;
 
 	if (!basicData && 
 	    !engagementData &&
+	    !learnerPerf &&
 	    !edxForum &&
 	    !piazzaForum &&
 	    !edcastForum &&
-	    !emailList
+	    !emailList &&
+	    !learnerPII &&
+	    !quarterlyReport
 	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
 	}
 
 	// Forum data must be encrypted:
-	if ((edxForum || piazzaForum || edcastForum || emailList) &&
+	if ((edxForum || piazzaForum || edcastForum || emailList || learnerPII) &&
 	    encryptionPwd.length == 0) {
-		alert('Forum and email data must be encrypted; please supply a password for the .zip file encryption.');
+		alert('Forum, email, and learner PII data must be encrypted; please supply a password for the .zip file encryption.');
 		classExporter.showCryptoPwdSolicitation();
 		return;
 	}
 
 	var argObj = {"courseId" : resolvedCourseID, 
 		      "wipeExisting" : fileAction, 
-		      "inclPII" : inclPII, 
+		      //"inclPII" : inclPII, 
 		      "cryptoPwd" : encryptionPwd,
 		      "basicData" : basicData,
 		      "engagementData" : engagementData,
 		      "engageVideoOnly" : engageVideoOnly,
+		      "learnerPerf": learnerPerf,
 		      "edxForumRelatable"  : edxForumRelatable,
 		      "edxForumIsolated"  : edxForumIsolated,
 		      "piazzaRelatable" : piazzaRelatable,
@@ -366,7 +391,11 @@ function ExportClass() {
 		      "edcastRelatable" : edcastRelatable,
 		      "edcastIsolated" : edcastRelatable,
 		      "emailList" : emailList,
-		      "emailStartDate" : emailStartDate
+		      "emailStartDate" : emailStartDate,
+		      "learnerPII": learnerPII,
+		      "quarterRep": quarterRep,
+		      "quarterRepQuarter": quarterRepQuarter,
+		      "quarterRepYear": quarterRepYear
 		     };
 	var req = buildRequest("getData", argObj);
 
@@ -532,12 +561,13 @@ document.getElementById('listClassesBtn').addEventListener('click', classExporte
 document.getElementById('getDataBtn').addEventListener('click', classExporter.evtGetData);
 document.getElementById('clrProgressBtn').addEventListener('click', classExporter.evtClrPro);
 document.getElementById('cancelBtn').addEventListener('click', classExporter.evtCancelProcess);
-document.getElementById('piiPolicy').addEventListener('change', classExporter.evtPIIPolicyClicked);
+//document.getElementById('piiPolicy').addEventListener('change', classExporter.evtPIIPolicyClicked);
 document.getElementById('pwdOK').addEventListener('click', classExporter.evtCryptoPwdSubmit);
 document.getElementById('edxForum').addEventListener('click', classExporter.evtAnyForumClicked);
 document.getElementById('piazzaForum').addEventListener('click', classExporter.evtAnyForumClicked);
 document.getElementById('edcastForum').addEventListener('click', classExporter.evtAnyForumClicked);
 document.getElementById('emailList').addEventListener('click', classExporter.evtEmailListClicked);
+document.getElementById('learnerPII').addEventListener('click', classExporter.evtLearnerPIIClicked);
 
 // The following is intended to make CR in 
 // course ID text field click the Get Course List

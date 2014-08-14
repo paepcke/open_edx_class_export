@@ -16,8 +16,10 @@ deposited in /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv.
 from collections import OrderedDict
 import datetime
 import getpass
+import glob
 import json
 import os
+import random
 import re
 import shutil
 import socket
@@ -31,7 +33,6 @@ import time # @UnusedImport
 import zipfile
 
 from engagement import EngagementComputer
-
 from pymysql_utils.pymysql_utils import MySQLDB
 
 
@@ -53,6 +54,15 @@ class PreExisted:
     DID_NOT_EXIST = 0
     EXISTED = 1
 
+# New exception class used in checkForOldOutpuFiles().
+# This exception carries one pieced of added information
+# to make feedback to browser more clear:
+class ExistingOutFile(Exception):
+    actionRequest = None
+    def __init__(self, msg, theActionRequest):
+        super(ExistingOutFile, self).__init__(msg)
+        self.actionRequest = theActionRequest
+
 class CourseCSVServer(WebSocketHandler):
     
     LOG_LEVEL_NONE  = 0
@@ -61,8 +71,12 @@ class CourseCSVServer(WebSocketHandler):
     LOG_LEVEL_DEBUG = 3
     
     # Time interval after which a 'dot' or other progress
-    # indicator is sent to the calling browser:
+    # indicator is sent to the calling browser as heartbeat:
     PROGRESS_INTERVAL = 3 # seconds
+    
+    # Time interval after which heartbeat sending is
+    # written to the debug log:
+    PROGRESS_LOGGING_INTERVAL = 30 # seconds
     
     # Max number of lines from each csv table to output
     # as samples to the calling browser for human sanity 
@@ -137,23 +151,14 @@ class CourseCSVServer(WebSocketHandler):
             self.currUser = 'unittest'
         else:
             self.currUser = getpass.getuser()
-        try:
-            with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
-                self.mySQLPwd = fd.readline().strip()
-                self.mysqlDb = MySQLDB(user=self.currUser, passwd=self.mySQLPwd, db=self.defaultDb)
-        except Exception:
-            try:
-                # Try w/o a pwd:
-                self.mySQLPwd = None
-                self.mysqlDb = MySQLDB(user=self.currUser, db=self.defaultDb)
-            except Exception as e:
-                # Remember the error msg for later:
-                self.dbError = `e`;
-                self.mysqlDb = None
-            
+        self.ensureOpenMySQLDb()
         self.currTimer = None
+        
+        # Interval between logging the sending of
+        # the heartbeat:
+        self.latestHeartbeatLogTime = None
     
-    def openMySQLDb(self):
+    def ensureOpenMySQLDb(self):
         try:
             with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
                 self.mySQLPwd = fd.readline().strip()
@@ -228,42 +233,34 @@ class CourseCSVServer(WebSocketHandler):
                 courseIdWasPresent = False 
                 pass
 
-            # Check whether the target directory where we
-            # will put results already exists. If so,
-            # and if the directory contains files, then check
-            # whether we are allowed to wipe the files. All
-            # this only if the request will touch that directory.
-            # That in turn is signaled by courseId being non-None.
-            if courseIdWasPresent:
-                (self.fullTargetDir, dirExisted) = self.constructCourseSpecificDeliveryDir(courseId)
-            # Similarly for email list request:
-            wantsEmailList = args.get('emailList', False) 
-            if wantsEmailList:
-                emailStartDate = args.get('emailStartDate', None)
-                # Check that email list start date was delivered
-                # with the request:
-                if emailStartDate is None:
-                    self.writeErr('In on_message: start date was not included; could not export email list.')
-                    return
-                (self.fullTargetDir, dirExisted) = self.constructEmailListDeliveryDir(emailStartDate)
-            if courseIdWasPresent or wantsEmailList:
-                # Check whether delivery file already exists, and deal 
-                # with it if it does:                                                                      
-                filesInTargetDir = os.listdir(self.fullTargetDir)
-                if dirExisted and len(filesInTargetDir) > 0:
-                    # Are we allowed to wipe the directory?
-                    xpungeExisting = self.str2bool(args.get("wipeExisting", False))
-                    if not xpungeExisting:
-                        self.writeError("Table(s) for %s %s already existed, and Remove Previous Exports... was not checked." %\
-                                        ('course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else ''))
-                        return None
-                    for oneFile in filesInTargetDir:
-                        try:
-                            os.remove(os.path.join(self.fullTargetDir, oneFile))
-                        except:
-                            # Best effort:
-                            pass
-            
+            # Ensure that email start date is present if
+            # email export is requested:
+            emailStartDate = args.get('emailStartDate', None)
+            if emailStartDate is None and requestName == 'emailList': 
+                self.writeErr('In on_message: start date was not included; could not export email list.')
+                return
+
+            # Check whether any of the requests 
+            # were previously issued, and output files 
+            # were therefore created. If so, then delete
+            # those if allowed ('Remove any previous...'
+            # box is checked in the UI). Else return error
+            # to browser: 
+            try:
+                xpungeExisting = self.str2bool(args.get("wipeExisting", False))
+                self.checkForOldOutpuFiles([action for action in args.keys()],
+                                           xpungeExisting,
+                                           args['courseId'],
+                                           emailStartDate)
+            except ExistingOutFile as e:
+                # At least one of the actions was called earlier.
+                # That invocation produced an output file, and the
+                # "Remove any previous exports of same type' option
+                # was not checked.
+                self.writeError("Request '%s': table(s) for %s %s already existed, and Remove Previous Exports... was not checked." %\
+                                (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else ''))
+                return None
+                
             courseList = None
 
             if requestName == 'getData':
@@ -299,7 +296,7 @@ class CourseCSVServer(WebSocketHandler):
                     else:
                         self.exportForum(args)
                         
-                if args.get('piiData', False):
+                if args.get('learnerPII', False):
                     self.setTimer()
                     if courseList is not None:
                         for courseName in courseList:
@@ -307,11 +304,10 @@ class CourseCSVServer(WebSocketHandler):
                             self.exportPIIDetails(args)
                     else:
                         self.exportPIIDetails(args)
-                
-                if wantsEmailList:
+
+                if args.get('emailList', False):
                     self.setTimer()
-                    self.exportEmailList(args)
-                        
+                    self.exportPIIDetails(args)
                         
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
@@ -340,6 +336,84 @@ class CourseCSVServer(WebSocketHandler):
             #self.writeError("Server could not extract request name/args from %s" % safeResp)
             self.writeError("%s" % `e`)
             
+    def checkForOldOutpuFiles(self, actions, mayDelete, courseDisplayName, emailStartDate):
+        '''
+        Given an action requested by the end user (e.g. 'basicData', 'engagementData', etc.)
+        check whether any output files already exist for that type
+        of request. If so, then the passed-in mayDelete controls
+        whether the method may delete the found files. If not allowed
+        to delete, raises IOError, else deletes the respective file(s) 
+        
+        :param actions: list of output requests (e.g. 'basicData', 'engagementData', etc.)
+        :type actions: String
+        :param mayDelete: whether or not method may delete prior output files it finds.
+        :type mayDelete: Boolean
+        :param courseDisplayName: name of course for which data is being exported. 
+            None if no specific course is involved, as for email address export.
+        :type courseDisplayName: {String | None}
+        :param emailStartDate: start date for email export, or None if no email export.
+        :type String
+        :raises ExistingOutFile when at least one output file already existes, and mayDelete is False.
+            The exception's actionRequest contains the action that had an outfile present.
+        '''
+        
+        if courseDisplayName is not None:
+            (self.fullTargetDir, dirExisted) = self.constructCourseSpecificDeliveryDir(courseDisplayName)
+        if dirExisted:
+            for action in actions:
+                if (action == 'basicData'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*ActivityGrade.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*VideoInteraction.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*EventXtract.csv'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Basic course info'))
+                if (action == 'engagementData'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*allData.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*summary.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*weeklyEffort.csv'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Time on task'))
+        
+                if (action == 'edxForumRelatable') or (action == 'edxForumIsolated'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*forum.csv.zip'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Forum data'))
+        
+                if (action == 'learnerPII'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*piiData.*'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Learner PII'))
+
+        # If email export requested, an export start date 
+        # will have been provided:
+        if emailStartDate is not None:
+            (self.fullEmailTargetDir, dirExisted) = self.constructEmailListDeliveryDir(emailStartDate)
+            existingFiles = glob.glob(os.path.join(self.fullTargetDir,'Email*'))
+            if len(existingFiles) > 0:
+                if mayDelete:
+                    for fileName in existingFiles:
+                        os.remove(fileName)
+                else:
+                    raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Email addresses'))
+        
+        return True
+    
     def handleCourseNamesReq(self, requestName, courseRegex):
         '''
         Given a MySQL type regex in return a list of course
@@ -390,8 +464,10 @@ class CourseCSVServer(WebSocketHandler):
         
         {"resp" : "<respName>", "args" : "<jsonizedArgs>"}
         
-        That is, the args will be turned into JSON that is the
-        in the response's "args" value:
+        That is, the args will be turned into JSON that is
+        in the response's "args" value. The responseName parameter
+        tells the browser what type of msg is coming back;
+        currently 'progress', 'courseList', and 'printTblInfo'.
 
         :param responseName: name of result that is recognized by the JS in the browser
         :type responseName: String
@@ -404,7 +480,7 @@ class CourseCSVServer(WebSocketHandler):
         self.logDebug("Sending result to browser: %s" % msg)
         if not self.testing:
             self.write_message(msg)
-        
+
     def exportClass(self, detailDict):
         '''
         Export basic info about one class: EventXtract, VideoInteraction, and ActivityGrade.
@@ -530,7 +606,7 @@ class CourseCSVServer(WebSocketHandler):
             (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
         finally:
             # Re-open MySQLDB instance for this instance:
-            self.openMySQLDb()
+            self.ensureOpenMySQLDb()
 
         # The files will be in paths like:
         #     /tmp/tmpAK5svP_engagement_Engineering_CRYP999_Cryptopgraphy_Repository_summary.csv
@@ -700,7 +776,7 @@ class CourseCSVServer(WebSocketHandler):
         cryptoPwd = detailDict.get("cryptoPwd", '')
 
         infoXchangeFile = tempfile.NamedTemporaryFile()
-        self.infoTmpFiles['exportEmailList'] = infoXchangeFile
+        self.infoTmpFiles['exportForum'] = infoXchangeFile
 
         # Build the CL command for script makeForumCSV.sh
         # script name plus options:
@@ -783,13 +859,13 @@ class CourseCSVServer(WebSocketHandler):
         '''
 
         if self.mysqlDb is None:
-            self.writeResult('In exportPIIData: MySQL database interface is None; have to give up.')
+            self.writeError('In exportPIIData: Database is disconnected; have to give up.')
             return
         
         try:
             courseId = detailDict['courseId']
         except KeyError:
-            self.logErr('In exportPIIDetails: course ID was not included; could not construct PII table.')
+            self.writeError('In exportPIIDetails: course ID was not included; could not construct PII table.')
             return
         
         if courseId is not None:
@@ -797,11 +873,24 @@ class CourseCSVServer(WebSocketHandler):
         else:
             courseNameNoSpaces = 'allCourses'
 
-        outFilePIIName = os.path.join(self.fullTargetDir, '%s_piiData.csv' % courseNameNoSpaces) 
-        with open(outFilePIIName, 'w') as fd:
-            fd.write('anon_screen_name','user_int_id','screen_name','forum_id','external_lti_id','first_name','last_name','email','date_joined\n')
-            
-            
+        # File name for eventual final result:
+        outFilePIIName = os.path.join(self.fullTargetDir, '%s_piiData.csv' % courseNameNoSpaces)
+
+        # Get tmp file name for MySQL to write its 
+        # result table to. Can't use built-in tempfile module,
+        # b/c it creates a file, which then has MySQL 
+        # complain.
+        # Create a random num sequence seeded with
+        # this instance object:
+        random.seed(self)
+        tmpFileForPII =  '/tmp/classExportPIITmp' + str(time.time()) + str(random.randint(1,10000)) + '.csv'
+        # Ensure the file doesn't exist (highly unlikely):
+        try:
+            os.remove(tmpFileForPII)
+        except OSError:
+            pass
+        
+        try:        
             for courseName in self.queryCourseNameList(courseId):
                 mySqlCmd = ' '.join([
             		'SELECT  EventXtract.anon_screen_name,',
@@ -813,7 +902,7 @@ class CourseCSVServer(WebSocketHandler):
             				'auth_user.last_name, ',
             				'auth_user.email, ',
             				'auth_user.date_joined ',
-            		'INTO OUTFILE "%s" ' % outFilePIIName,
+            		'INTO OUTFILE "%s" ' % tmpFileForPII,
             		'   FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
             		'   LINES TERMINATED BY "\n"',
             		'FROM Edx.EventXtract, EdxPrivate.UserGrade, edxprod.auth_user',
@@ -823,8 +912,19 @@ class CourseCSVServer(WebSocketHandler):
             		])
     
             for piiResultLine in self.mysqlDb.query(mySqlCmd):
-                fd.write(','.join(piiResultLine) + '\n')
-        
+                tmpFileForPII.write(','.join(piiResultLine) + '\n')
+    
+            # Create the final output file, prepending the column 
+            # name header:
+            with open(outFilePIIName, 'w') as fd:
+                fd.write('anon_screen_name,user_int_id,screen_name,forum_id,external_lti_id,first_name,last_name,email,date_joined\n')
+            self.catFiles(outFilePIIName, tmpFileForPII, mode='a')
+            
+        finally:
+            try:
+                os.remove(tmpFileForPII)
+            except OSError:
+                pass    
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportPIIDetails'] = infoXchangeFile
@@ -849,7 +949,14 @@ class CourseCSVServer(WebSocketHandler):
         # zip-encrypt the Zip file:
         cryptoPwd = detailDict.get("cryptoPwd", '')
         self.zipFiles(outFilePIIName + '.zip', cryptoPwd, [outFilePIIName])
-        return outFilePIIName
+
+        # Remove the un-encrypted original:
+        try:
+            os.remove(outFilePIIName)
+        except OSError:
+            pass
+        
+        return outFilePIIName + '.zip'
 
     def exportEmailList(self, detailDict):
         
@@ -1005,12 +1112,12 @@ class CourseCSVServer(WebSocketHandler):
 
         :rtype: (String, PreExisting)
         '''
-        self.fullTargetDir = os.path.join(CourseCSVServer.DELIVERY_HOME, 'Email_' + emailListStartDate)
-        if os.path.isdir(self.fullTargetDir):
-            return (self.fullTargetDir, PreExisted.EXISTED)
+        self.fullEmailTargetDir = os.path.join(CourseCSVServer.DELIVERY_HOME, 'Email_' + emailListStartDate)
+        if os.path.isdir(self.fullEmailTargetDir):
+            return (self.fullEmailTargetDir, PreExisted.EXISTED)
         else:
-            os.makedirs(self.fullTargetDir)
-            return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
+            os.makedirs(self.fullEmailTargetDir)
+            return (self.fullEmailTargetDir, PreExisted.DID_NOT_EXIST)
     
     
     def printTableInfo(self):
@@ -1098,6 +1205,8 @@ class CourseCSVServer(WebSocketHandler):
                         tblName = 'Edcast'
                     elif tableFileName.find('Email') > -1:
                         tblName = 'EmailList'
+                    elif tableFileName.find('piiData') > -1:
+                        tblName = 'PIIMappings'
         
                     else:
                         tblName = 'unknown table name'
@@ -1216,8 +1325,18 @@ class CourseCSVServer(WebSocketHandler):
         #*******************
         #return
         #*******************
+        
+        # Only log heartbeat sending every so often:
+        if self.latestHeartbeatLogTime is None:
+            self.latestHeartbeatLogTime = time.time()
+        elif time.time() - self.latestHeartbeatLogTime > CourseCSVServer.PROGRESS_LOGGING_INTERVAL:
+            numHeartbeatsSent = int(CourseCSVServer.PROGRESS_LOGGING_INTERVAL / CourseCSVServer.PROGRESS_INTERVAL)
+            self.logDebug('Sent %d heartbeats.' % numHeartbeatsSent)
+            self.latestHeartbeatLogTime = time.time()
+        
+        msg = {"resp" : "progress", "args" : "."}
         if not self.testing:
-            self.writeResult('progress', '.')
+            self.write_message(msg)
         self.setTimer(CourseCSVServer.PROGRESS_INTERVAL)
      
     def getDeliveryURL(self, courseId):
@@ -1268,6 +1387,29 @@ class CourseCSVServer(WebSocketHandler):
             return False
         else:
             return True
+
+    def catFiles(self, destFileName, *srcFileNames, **mode):
+        '''
+        Simulates Unix cat command. Given a destination
+        file and any number of source files, concatenate the
+        source files to the destination file. If mode keyword
+        is given, it must be one of the Unix file operation
+        modes 'w' for 'overwrite existing dest file, or or 'a'
+        for 'append to' existing dest file. Default is 'w'
+        
+        :param destFileName:
+        :type destFileName:
+        '''
+        mode = mode.get('mode', None)
+        if mode is None:
+            mode = 'w'
+        try:
+            with open(destFileName, mode) as outFd:
+                for srcFileName in srcFileNames:
+                    with open(srcFileName, 'r') as inFd:
+                        shutil.copyfileobj(inFd, outFd)                    
+        except (IOError, OSError) as e:
+            raise IOError('Error trying to copy files %s to destination file %s: %s' % (srcFileNames, destFileName, `e`))
             
     def logInfo(self, msg):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_INFO:
