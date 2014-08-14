@@ -349,7 +349,7 @@ function ExportClass() {
 	var edcastRelatable = edcastForum && document.getElementById("edcastRelatable").checked;
 	var emailList = document.getElementById("emailList").checked;
 	var emailStartDate = document.getElementById("emailDate").value;
-	var learnerPII = document.getElementById("learnerPII").value;
+	var learnerPII = document.getElementById("learnerPII").checked;
 	var quarterRep = document.getElementById("quarterRep").checked;
 	var quarterRepQuarter = quarterRep && document.getElementById("quarterRepQuarter").value;
 	var quarterRepYear = quarterRep && document.getElementById("quarterRepYear").value;

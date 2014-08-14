@@ -307,7 +307,7 @@ class CourseCSVServer(WebSocketHandler):
 
                 if args.get('emailList', False):
                     self.setTimer()
-                    self.exportPIIDetails(args)
+                    self.exportEmailList(args)
                         
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
@@ -356,7 +356,7 @@ class CourseCSVServer(WebSocketHandler):
         :raises ExistingOutFile when at least one output file already existes, and mayDelete is False.
             The exception's actionRequest contains the action that had an outfile present.
         '''
-        
+        dirExisted = False
         if courseDisplayName is not None:
             (self.fullTargetDir, dirExisted) = self.constructCourseSpecificDeliveryDir(courseDisplayName)
         if dirExisted:
@@ -404,13 +404,13 @@ class CourseCSVServer(WebSocketHandler):
         # will have been provided:
         if emailStartDate is not None:
             (self.fullEmailTargetDir, dirExisted) = self.constructEmailListDeliveryDir(emailStartDate)
-            existingFiles = glob.glob(os.path.join(self.fullTargetDir,'Email*'))
+            existingFiles = glob.glob(os.path.join(self.fullEmailTargetDir,'Email*'))
             if len(existingFiles) > 0:
                 if mayDelete:
                     for fileName in existingFiles:
                         os.remove(fileName)
                 else:
-                    raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Email addresses'))
+                    raise(ExistingOutFile('File(s) for action %s already exist in %s' % ('getEmailAddresses', self.fullEmailTargetDir), 'Email addresses'))
         
         return True
     
@@ -906,7 +906,7 @@ class CourseCSVServer(WebSocketHandler):
             		'   FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
             		'   LINES TERMINATED BY "\n"',
             		'FROM Edx.EventXtract, EdxPrivate.UserGrade, edxprod.auth_user',
-            		'WHERE EventXtract.course_display_name LIKE "courseName"',
+            		'WHERE EventXtract.course_display_name LIKE "%s"' % courseName,
             		'  AND EventXtract.anon_screen_name = UserGrade.anon_screen_name',
             		'  AND auth_user.id = UserGrade.user_int_id;'
             		])
