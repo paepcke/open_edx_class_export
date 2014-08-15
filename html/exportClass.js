@@ -10,6 +10,8 @@
 
 function ExportClass() {
 
+    var keepAliveTimer = null;
+    var keepAliveInterval = 15000; /* 15 sec*/
     var screenContent = "";
     var source = null;
     var ws = null;
@@ -24,7 +26,9 @@ function ExportClass() {
     this.construct = function() {
 	originHost = window.location.host;
 	ws = new WebSocket("wss://" + originHost + ":8080/exportClass");
-	ws.onopen = function() {};
+	ws.onopen = function() {
+	    keepAliveTimer = window.setInterval(function() {sendKeepAlive()}, keepAliveInterval);
+	};
 
 	ws.onmessage = function(evt) {
 	    // Internalize the JSON
@@ -51,6 +55,7 @@ function ExportClass() {
 	    break;
 	case 'progress':
 	    displayProgressInfo(args);
+	    sendKeepAlive();
 	    break;
 	case 'printTblInfo':
 	    displayTableInfo(args);
@@ -62,6 +67,11 @@ function ExportClass() {
 	    alert('Unknown response type from server: ' + responseName);
 	    break;
 	}
+    }
+
+    var sendKeepAlive = function() {
+	var req = buildRequest("keepAlive", "");
+	ws.send(req);
     }
 
     var listCourseNames = function(courseNameArr) {

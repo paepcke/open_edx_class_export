@@ -131,7 +131,8 @@ class CourseCSVServer(WebSocketHandler):
         self.testing = testing
         self.request = request;        
 
-        self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
+        #self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
+        self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
         #self.loglevel = CourseCSVServer.LOG_LEVEL_NONE
 
         # Locate the makeCourseCSV.sh script:
@@ -201,7 +202,8 @@ class CourseCSVServer(WebSocketHandler):
         #print message
         try:
             requestDict = json.loads(message)
-            self.logDebug("request received: %s" % str(message))
+            if requestDict['req'] != 'keepAlive':
+                self.logInfo("request received: %s" % str(message))
         except Exception as e:
             self.writeError("Bad JSON in request received at server: %s" % `e`)
 
@@ -210,6 +212,9 @@ class CourseCSVServer(WebSocketHandler):
         try:
             requestName = requestDict['req']
             args        = requestDict['args']
+
+            if requestName == 'keepAlive':
+                return
 
             # Caller wants list of course names?
             if requestName == 'reqCourseNames':
@@ -893,7 +898,7 @@ class CourseCSVServer(WebSocketHandler):
         try:        
             for courseName in self.queryCourseNameList(courseId):
                 mySqlCmd = ' '.join([
-            		'SELECT  EventXtract.anon_screen_name,',
+            		'SELECT  DISTINCT EventXtract.anon_screen_name,',
             				'UserGrade.user_int_id,',
             				'auth_user.username AS screen_name, ', 
             				'EdxPrivate.idInt2Forum(auth_user.id) AS forum_id, ', 
