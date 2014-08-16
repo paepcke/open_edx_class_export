@@ -30,6 +30,11 @@ function ExportClass() {
 	    keepAliveTimer = window.setInterval(function() {sendKeepAlive()}, keepAliveInterval);
 	};
 
+	ws.onclose = function() {
+	    clearInterval(keepAliveTimer);
+	    alert("The browser or server closed the connection, or network trouble; please reload the page to resume.");
+	}
+
 	ws.onmessage = function(evt) {
 	    // Internalize the JSON
 	    // e.g. "{resp : "courseList", "args" : ['course1','course2']"
