@@ -898,22 +898,31 @@ class CourseCSVServer(WebSocketHandler):
         try:        
             for courseName in self.queryCourseNameList(courseId):
                 mySqlCmd = ' '.join([
-            		'SELECT  DISTINCT EventXtract.anon_screen_name,',
-            				'UserGrade.user_int_id,',
-            				'auth_user.username AS screen_name, ', 
-            				'EdxPrivate.idInt2Forum(auth_user.id) AS forum_id, ', 
-            				'EdxPrivate.idAnon2Ext(EventXtract.anon_screen_name, "%s") AS external_lti_id, ' % courseName, 
-            				'auth_user.first_name, ',
-            				'auth_user.last_name, ',
-            				'auth_user.email, ',
-            				'auth_user.date_joined ',
-            		'INTO OUTFILE "%s" ' % tmpFileForPII,
-            		'   FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
-            		'   LINES TERMINATED BY "\n"',
-            		'FROM Edx.EventXtract, EdxPrivate.UserGrade, edxprod.auth_user',
-            		'WHERE EventXtract.course_display_name LIKE "%s"' % courseName,
-            		'  AND EventXtract.anon_screen_name = UserGrade.anon_screen_name',
-            		'  AND auth_user.id = UserGrade.user_int_id;'
+                                'SELECT EdxPrivate.idInt2Anon(Enrollment.user_int_id) AS anon_screen_name,',
+                                       'Enrollment.user_int_id,',
+                                       'auth_user.username AS screen_name,',
+                                       'EdxPrivate.idInt2Forum(auth_user.id) AS forum_id,',
+                                       'auth_user.email,',
+                                       'auth_user.date_joined,',
+                                       'anonymous_user_id as external_lti_id,',
+                                       'Enrollment.course_display_name ',
+                                'INTO OUTFILE "%s" ' % tmpFileForPII,
+                                '   FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
+                                '   LINES TERMINATED BY "\n"',
+                                'FROM edxprod.auth_user,',
+                                     '(',
+                                      'SELECT user_id as user_int_id,',
+                                             'EdxPrivate.idInt2Anon(user_id) as anon_screen_name,',
+                                         'course_id AS course_display_name ',
+                                      'FROM edxprod.student_courseenrollment ',
+                                      'WHERE EdxPrivate.idInt2Anon(user_id) != "9c1185a5c5e9fc54612808977ee8f548b2258d31" ',
+                                        'AND course_id="%s"' % courseName,
+                                     ') AS Enrollment ',
+                                'LEFT JOIN ',
+                                'edxprod.student_anonymoususerid AS PlatformExtTable ',
+                                'ON Enrollment.user_int_id=PlatformExtTable.user_id ',
+                                'WHERE PlatformExtTable.course_id IS NULL ',
+                                   'OR PlatformExtTable.course_id="%s";' % courseName                                    
             		])
     
             for piiResultLine in self.mysqlDb.query(mySqlCmd):
