@@ -1,23 +1,39 @@
 #!/bin/bash
 
+# Outputs all course_display_name(s) and their respective
+# enrollment. Output sampl:
+#
+#    Medicine/HRP214/Winter2014	32
+#    Medicine/HRP258/Statistics_in_Medicine	26415
+#    Medicine/HRP259/Fall2013	74
+#
+# Optionally, a MySQL regex pattern can be provided, which
+# filters the course names. 
+#
+# Independently of this regex pattern, the script tries to filter out
+# course names that are clearly just tests, or course name
+# misspellings that pollute the log files. Part of this filtering is
+# that only courses with enrollment numbers greater than
+# $MIN_ENROLLMENT.
+#
+# This script may be used from the command line. It is also used
+# by exportClass.py in open_edx_class_export.
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd] courseNamePattern"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-s silent] [courseNamePattern]"
 
 # ----------------------------- Process CLI Parameters -------------
 
-if [ $# -lt 1 ]
-then
-    echo $USAGE
-    exit 1
-fi
-
 USERNAME=`whoami`
 PASSWD=''
-COURSE_SUBSTR=''
+SILENT=false
+COURSE_SUBSTR='%'
 needPasswd=false
+# Number of course enrollees that a course
+# must have in order to be listed:
+MIN_ENROLLMENT=9
 
 # Execute getopt
-ARGS=`getopt -o "u:pw:" -l "user:,password,mysqlpwd:" \
+ARGS=`getopt -o "hu:pw:s" -l "help,user:,password,mysqlpwd:,silent" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -33,6 +49,9 @@ eval set -- "$ARGS"
 while true;
 do
   case "$1" in
+    -h|--help)
+      echo $USAGE
+      exit 0;;
     -u|--user)
       shift
       # Grab the option value
@@ -49,7 +68,9 @@ do
     -p|--password)
       needPasswd=true
       shift;;
- 
+    -s|--silent)
+      SILENT=true
+      shift;;
     -w|--mysqlpwd)
       shift
       # Grab the option value:
@@ -74,10 +95,11 @@ done
 
 if [ -z $1 ]
 then
-  echo $USAGE
-  exit 1
+  COURSE_SUBSTR='%'
+else
+  COURSE_SUBSTR=$1
 fi
-COURSE_SUBSTR=$1
+
 
 # ----------------------------- Process or Lookup the Password -------------
 
@@ -127,18 +149,48 @@ else
     MYSQL_AUTH="-u $USERNAME -p$PASSWD"
 fi
 
-COURSE_NAMES=`mysql --batch $MYSQL_AUTH -e "
-              USE Edx;
-              SELECT course_display_name 
-	      FROM AllCourseDisplayNames 
-	      WHERE course_display_name LIKE \"$COURSE_SUBSTR\" 
-	      ORDER BY course_display_name\G"`
+# Use edxprod.student_coursenrollment to find courses
+# with enrollment greater than $MIN_ENROLLMENT. This constraint filters
+# some course entries whose names are misspelled. The
+# " AS '' " terms cause the column headers to be suppressed.
+# That's useful when invoking this script from Python, which
+# manages its own UI. The most appropriate col headers would
+# be 'course_display_name', 'enrollment':
+
+MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
+	   FROM student_courseenrollment
+	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
+	   GROUP BY course_id HAVING COUNT(user_id) > "$MIN_ENROLLMENT";\G"
+
+#*************
+#echo "MYSQL_CMD: $MYSQL_CMD"
+#*************
+
+if $SILENT
+then
+    COURSE_NAMES=`echo $MYSQL_CMD | mysql --skip-column-names $MYSQL_AUTH edxprod`
+else
+    COURSE_NAMES=`echo $MYSQL_CMD | mysql $MYSQL_AUTH edxprod`
+fi
+
+#*************
+#echo "COURSE_NAMES: "$COURSE_NAMES
+#*************
 
 # In the following the first 'sed' call removes the
 # line: "********** 1. row *********" and following rows.
 # The second 'sed' call removes everything of the second
-# line up to the ': '.
+# line up to the ': '. Together this next line creates
+# two (still tab-separated) columns: course-name and number of 
+# course mentions:
+NAME_ACTIVITY_LINES=`echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d' | sed 's/[^:]*: //'`
 
-echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d' | sed 's/[^:]*: //'
-
+# Now throw out all lines that are clearly 
+# bad course names stemming from people creating
+# test courses without adhering to any naming pattern:
+echo "${NAME_ACTIVITY_LINES}" | 
+     awk -F'\t' '/^[^-0-9]/'   |               # exclude names starting w/ a digit
+     awk -F'\t' '{ if ($2 > 9) print $0 }' |   # exclude courses with activity < 10
+          # filter all the pieces of course names that signal badness:
+     awk 'tolower($0) !~ /jbau|janeu|sefu|davidu|caitlynx|josephtest|nickdupuniversity|nathanielu|sandbox|demo|sampleuniversity|.*zzz.*|\/test\//'
 exit 0

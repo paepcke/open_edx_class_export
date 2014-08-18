@@ -21,6 +21,8 @@ function ExportClass() {
     // selection list:
     var crsNmFormObj = null; 
     var encryptionPwd = null;
+    // Regex to separate course name from the enrollment column:
+    var courseNameSepPattern = /([^\s])*/;
 
     /*----------------------------  Constructor ---------------------*/
     this.construct = function() {
@@ -92,6 +94,7 @@ function ExportClass() {
 
 	    clrProgressDiv();
 	    addTextToProgDiv('<h3>Matching class names; pick one:</h3>');
+	    addTextToProgDiv('<b>CourseName, Enrollment</b>');
 
 	    // JSON encode/decode adds a string with \n at index 0
 	    // of the course names array; eliminate that:
@@ -154,8 +157,9 @@ function ExportClass() {
 	    courseIDRegExp = '%';
 	}
 	clrProgressDiv();
-	// Clear the 'I want PII checkbox':
+	// Clear the 'I want PII checkbox' (historic: doesn't exist anymore):
 	//document.getElementById('piiPolicy').checked = false;
+
 	queryCourseIDResolution(courseIDRegExp);
     }
 
@@ -265,6 +269,7 @@ function ExportClass() {
     var evtCarriageReturnListMatchesTrigger = function(e) {
 	if (e.keyCode == 13) {
 	    document.getElementById("listClassesBtn").click();
+	    return false
 	}
     }
 
@@ -281,10 +286,13 @@ function ExportClass() {
 	    }
 	    var chosenCourseNameId = chosenCourseNameObj.getAttribute("id");
 	    var labels = document.getElementsByTagName("LABEL");
+	    // Go through each radio button label, and match it against
+	    // the course name we know was chosen by the user:
 	    for (var i = 0; i < labels.length; i++) {
 		var oneLabel = labels[i];
 		if (oneLabel.getAttribute("htmlFor") == chosenCourseNameId) {
-		    return oneLabel.innerHTML;
+		    courseIdOnlyMatch = courseNameSepPattern.exec(oneLabel.innerHTML);
+		    return courseIdOnlyMatch[0];
 		}
 	    }
 	} catch(err) {
@@ -383,12 +391,18 @@ function ExportClass() {
 	    return;
 	}
 
-	// Forum data must be encrypted:
+	// Forum data and email lists must be encrypted:
 	if ((edxForum || piazzaForum || edcastForum || emailList || learnerPII) &&
 	    encryptionPwd.length == 0) {
 		alert('Forum, email, and learner PII data must be encrypted; please supply a password for the .zip file encryption.');
 		classExporter.showCryptoPwdSolicitation();
 		return;
+	}
+
+	// If email list wanted: need the start date:
+	if (emailList && emailStartDate.length == 0) {
+	    alert("Please fill in the start date for your email list.");
+	    return;
 	}
 
 	var argObj = {"courseId" : resolvedCourseID, 
@@ -587,7 +601,7 @@ document.getElementById('learnerPII').addEventListener('click', classExporter.ev
 // The following is intended to make CR in 
 // course ID text field click the Get Course List
 // button, but the assigned func is never talled:
-document.getElementById('listClassesBtn').addEventListener('onkeydown', classExporter.evtCarriageReturnListMatchesTrigger);
+document.getElementById('courseID').addEventListener('onkeydown', classExporter.evtCarriageReturnListMatchesTrigger);
 
 // Initially, we hide the solicitation for
 // a PII zip file encryption pwd:

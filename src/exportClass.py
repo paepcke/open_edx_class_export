@@ -111,6 +111,10 @@ class CourseCSVServer(WebSocketHandler):
     # group(0) will contain 'forum...' to the end: 
     FORUM_FILE_CHOPPER_PATTERN = re.compile(r'(forum.*)')
     
+    # Regex to separate first col from second 
+    # col in something like 'foo bar': returns 'foo':
+    COURSE_NAME_SEP_PATTERN = re.compile(r'([^\s]*)')
+    
     def __init__(self, application, request, testing=False ):
         '''
         Invoked when browser accesses this server via ws://...
@@ -431,22 +435,17 @@ class CourseCSVServer(WebSocketHandler):
         '''
         try:
             courseRegex = courseRegex
-            matchingCourseNames = self.queryCourseNameList(courseRegex)
+            courseNamesAndEnrollments = self.queryCourseNameList(courseRegex)
             # Check whether __init__() method was unable to log into 
             # the db:
-            if matchingCourseNames is None:
+            if courseNamesAndEnrollments is None:
                 self.writeError('Server could not log into database: %s' % self.dbError)
                 return
         except Exception as e:
             self.writeError(`e`)
             return
-        
-        # Remove the most obvious bogus courses.
-        # We use list comprehension: keep all names
-        # that do not match the BOGUS_COURSE_NAME_PATTERN:
-        finalCourseList = [courseName for courseName in matchingCourseNames if CourseCSVServer.BOGUS_COURSE_NAME_PATTERN.search(courseName) is None]
-        
-        self.writeResult('courseList', finalCourseList)
+        self.writeResult('progress', '')
+        self.writeResult('courseList', courseNamesAndEnrollments)
         
     def writeError(self, msg):
         '''
@@ -1161,27 +1160,29 @@ class CourseCSVServer(WebSocketHandler):
             try:
                 tmpFileFd = self.infoTmpFiles.get(exportFileKey)
                 # Ensure we are at start of the tmp file:
+                if tmpFileFd.closed:
+                    continue
                 tmpFileFd.seek(0)
                 eof = False
                 tableInfoDict = OrderedDict()
                 # Pull all file name/numlines out of the info file:
                 while not eof:
-                    tableFileName     = tmpFileFd.readline()
-                    if len(tableFileName)  == 0 or tableFileName == 'herrgottzemenschnochamal!\n':
+                    tableFileName     = tmpFileFd.readline().strip()
+                    if len(tableFileName)  == 0 or tableFileName == 'herrgottzemenschnochamal!':
                         eof = True
                         continue 
                     tableFileNumLines = tmpFileFd.readline().strip()
                     tableInfoDict[tableFileName.strip()] = tableFileNumLines
                 # Now get all the line samples in the right order:
                 sampleLineBatches = []
-                if tableFileName == 'herrgottzemenschnochamal!\n':
+                if tableFileName == 'herrgottzemenschnochamal!':
                     endOfSampleBatch = False
                     eof = False
                     while not eof:
                         sample = ""
                         while not endOfSampleBatch:
                             try:
-                                sampleLine = tmpFileFd.readline()
+                                sampleLine = tmpFileFd.readline().strip()
                             except Exception as e:
                                 print("Got it: %s" % `e`) #****************
                                 
@@ -1189,7 +1190,7 @@ class CourseCSVServer(WebSocketHandler):
                                 eof = True
                                 endOfSampleBatch = True
                                 continue
-                            if sampleLine == 'herrgottzemenschnochamal!\n':
+                            if sampleLine == 'herrgottzemenschnochamal!':
                                 endOfSampleBatch = True
                                 continue
                             sample += sampleLine.strip() + ' <br>'
@@ -1238,16 +1239,19 @@ class CourseCSVServer(WebSocketHandler):
                         self.writeResult('printTblInfo', sampleLineBatches[sampleBatchIndx])
                     sampleBatchIndx += 1
             finally:
-                tmpFileFd.close()
+                try:
+                    tmpFileFd.close()
+                except:
+                    pass
 
-            # Get the last part of the directory, where the tables are available
-            # (i.e. the 'CourseSubdir' in:
-            # /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv:)
-            tableDir = os.path.basename(os.path.dirname(tableFileName))
-            thisFullyQualDomainName = socket.getfqdn()
-            url = "https://%s/instructor/%s" % (thisFullyQualDomainName, tableDir)
+        # Get the last part of the directory, where the tables are available
+        # (i.e. the 'CourseSubdir' in:
+        # /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv:)
+        tableDir = os.path.basename(os.path.dirname(tableFileName))
+        thisFullyQualDomainName = socket.getfqdn()
+        url = "https://%s/instructor/%s" % (thisFullyQualDomainName, tableDir)
 
-            return url
+        return url
      
     def addClientInstructions(self, args, url):
         '''
@@ -1314,7 +1318,9 @@ class CourseCSVServer(WebSocketHandler):
         :rtype: {[String] | None}
         '''
         courseNames = []
-        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser]
+        # The --silent suppresses a column header line
+        # from being displayed ('course_display_name' and 'enrollment'):
+        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser,'--silent']
         if self.mySQLPwd is not None:
             mySqlCmd.extend(['-w',self.mySQLPwd])
         mySqlCmd.extend([courseID])
@@ -1327,6 +1333,16 @@ class CourseCSVServer(WebSocketHandler):
             return courseNames
         for courseName in pipeFromMySQL:
             courseName = courseName.strip()
+            # This got us 'myCourse 10', i.e. course name 
+            # plus enrollment:
+            try:
+                # The ...match(...) returns a match object,
+                # of which we select the 0th capture group.
+                # That group is a tuple: ('myCourseName',),
+                # so therefore the [0]:
+                courseName = CourseCSVServer.COURSE_NAME_SEP_PATTERN.match(courseName).groups(0)[0]
+            except:
+                pass
             if len(courseName) > 0:
                 courseNames.append(courseName)
         return courseNames
