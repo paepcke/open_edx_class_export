@@ -435,7 +435,7 @@ class CourseCSVServer(WebSocketHandler):
         '''
         try:
             courseRegex = courseRegex
-            courseNamesAndEnrollments = self.queryCourseNameList(courseRegex)
+            courseNamesAndEnrollments = self.queryCourseNameList(courseRegex, includeEnrollment=True)
             # Check whether __init__() method was unable to log into 
             # the db:
             if courseNamesAndEnrollments is None:
@@ -897,32 +897,29 @@ class CourseCSVServer(WebSocketHandler):
         try:        
             for courseName in self.queryCourseNameList(courseId):
                 mySqlCmd = ' '.join([
-                                'SELECT EdxPrivate.idInt2Anon(Enrollment.user_int_id) AS anon_screen_name,',
-                                       'Enrollment.user_int_id,',
-                                       'auth_user.username AS screen_name,',
-                                       'EdxPrivate.idInt2Forum(auth_user.id) AS forum_id,',
-                                       'auth_user.email,',
-                                       'auth_user.date_joined,',
-                                       'anonymous_user_id as external_lti_id,',
-                                       'Enrollment.course_display_name ',
-                                'INTO OUTFILE "%s" ' % tmpFileForPII,
-                                '   FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
-                                '   LINES TERMINATED BY "\n"',
-                                'FROM edxprod.auth_user,',
-                                     '(',
-                                      'SELECT user_id as user_int_id,',
-                                             'EdxPrivate.idInt2Anon(user_id) as anon_screen_name,',
-                                         'course_id AS course_display_name ',
-                                      'FROM edxprod.student_courseenrollment ',
-                                      'WHERE EdxPrivate.idInt2Anon(user_id) != "9c1185a5c5e9fc54612808977ee8f548b2258d31" ',
-                                        'AND course_id="%s"' % courseName,
-                                     ') AS Enrollment ',
-                                'LEFT JOIN ',
-                                'edxprod.student_anonymoususerid AS PlatformExtTable ',
-                                'ON Enrollment.user_int_id=PlatformExtTable.user_id ',
-                                'WHERE PlatformExtTable.course_id IS NULL ',
-                                   'OR PlatformExtTable.course_id="%s";' % courseName                                    
-            		])
+                'SELECT EdxPrivate.idInt2Anon(Enrollment.user_int_id) AS anon_screen_name, ',
+				'       Enrollment.user_int_id, ',
+				'       auth_user.username AS screen_name, ',
+				'       EdxPrivate.idInt2Forum(auth_user.id) AS forum_id, ',
+				'       auth_user.email, ',
+				'       auth_user.date_joined, ',
+				'       edxprod.student_anonymoususerid.anonymous_user_id as external_lti_id, ',
+				'       Enrollment.course_display_name  ',
+        		'INTO OUTFILE "%s"' % tmpFileForPII,
+        		'FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
+        		'LINES TERMINATED BY "\n"',
+				'FROM edxprod.auth_user, ',
+				'     edxprod.student_anonymoususerid,',
+				'     ( SELECT user_id as user_int_id, ',
+				'              EdxPrivate.idInt2Anon(user_id) as anon_screen_name, ',
+				'          course_id AS course_display_name  ',
+				'       FROM edxprod.student_courseenrollment  ',
+				'       WHERE EdxPrivate.idInt2Anon(user_id) != "9c1185a5c5e9fc54612808977ee8f548b2258d31"  ',
+				'       AND course_id="%s"' % courseName,
+				'     ) AS Enrollment',
+				'WHERE edxprod.student_anonymoususerid.user_id = Enrollment.user_int_id',
+				'  AND edxprod.auth_user.id = Enrollment.user_int_id;'  
+                ])
     
             for piiResultLine in self.mysqlDb.query(mySqlCmd):
                 tmpFileForPII.write(','.join(piiResultLine) + '\n')
@@ -1303,7 +1300,7 @@ class CourseCSVServer(WebSocketHandler):
         txt = string.replace(txt, '\n', '')
         self.writeResult('progress', txt)
       
-    def queryCourseNameList(self, courseID):
+    def queryCourseNameList(self, courseID, includeEnrollment=False):
         '''
         Given a MySQL regexp courseID string, return a list
         of matchine course_display_name in the db. If self.mysql
@@ -1312,9 +1309,12 @@ class CourseCSVServer(WebSocketHandler):
 
         :param courseID: Course name regular expression in MySQL syntax.
         :type courseID: String
+        :param includeEnrollment: each result course name will be followed by its enrollment
+            as per the student_courseenrollment table.
+        :type includeEnrollment: boolean
         :return: An array of matching course_display_name, which may
                  be empty. None if _init__() was unable to log into db.
-
+                 If includeEnrollment is True, append enrollment to each course name.
         :rtype: {[String] | None}
         '''
         courseNames = []
@@ -1333,16 +1333,17 @@ class CourseCSVServer(WebSocketHandler):
             return courseNames
         for courseName in pipeFromMySQL:
             courseName = courseName.strip()
-            # This got us 'myCourse 10', i.e. course name 
-            # plus enrollment:
-            try:
-                # The ...match(...) returns a match object,
-                # of which we select the 0th capture group.
-                # That group is a tuple: ('myCourseName',),
-                # so therefore the [0]:
-                courseName = CourseCSVServer.COURSE_NAME_SEP_PATTERN.match(courseName).groups(0)[0]
-            except:
-                pass
+            if not includeEnrollment:
+                # This got us 'myCourse 10', i.e. course name 
+                # plus enrollment:
+                try:
+                    # The ...match(...) returns a match object,
+                    # of which we select the 0th capture group.
+                    # That group is a tuple: ('myCourseName',),
+                    # so therefore the [0]:
+                    courseName = CourseCSVServer.COURSE_NAME_SEP_PATTERN.match(courseName).groups(0)[0]
+                except:
+                    pass
             if len(courseName) > 0:
                 courseNames.append(courseName)
         return courseNames

@@ -8,7 +8,8 @@
 #    Medicine/HRP259/Fall2013	74
 #
 # Optionally, a MySQL regex pattern can be provided, which
-# filters the course names. 
+# filters the course names. Source of the result is table
+# student_courseenrollment.
 #
 # Independently of this regex pattern, the script tries to filter out
 # course names that are clearly just tests, or course name
@@ -160,12 +161,16 @@ fi
 MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
 	   FROM student_courseenrollment
 	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
-	   GROUP BY course_id HAVING COUNT(user_id) > "$MIN_ENROLLMENT";\G"
+	   GROUP BY course_id 
+           HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
+               OR course_id LIKE 'ohsx%';\G"
 
 #*************
 #echo "MYSQL_CMD: $MYSQL_CMD"
 #*************
 
+# --skip-column-names suppresses the col name 
+# headers in the output:
 if $SILENT
 then
     COURSE_NAMES=`echo $MYSQL_CMD | mysql --skip-column-names $MYSQL_AUTH edxprod`
@@ -190,7 +195,8 @@ NAME_ACTIVITY_LINES=`echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d'
 # test courses without adhering to any naming pattern:
 echo "${NAME_ACTIVITY_LINES}" | 
      awk -F'\t' '/^[^-0-9]/'   |               # exclude names starting w/ a digit
-     awk -F'\t' '{ if ($2 > 9) print $0 }' |   # exclude courses with activity < 10
-          # filter all the pieces of course names that signal badness:
-     awk 'tolower($0) !~ /jbau|janeu|sefu|davidu|caitlynx|josephtest|nickdupuniversity|nathanielu|sandbox|demo|sampleuniversity|.*zzz.*|\/test\//'
+#     awk -F'\t' '{ if ($2 > 9) print $0 }' |   # exclude courses with activity < 10
+                                               # filter all the pieces of course names that signal badness:
+     awk 'tolower($0) !~ /jbau|janeu|sefu|davidu|caitlynx|josephtest|nickdupuniversity|nathanielu|gracelyou|sandbox|demo|sampleuniversity|.*zzz.*|\/test\//' |
+     awk -F'\t' '{ print }'
 exit 0
