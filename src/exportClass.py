@@ -902,8 +902,8 @@ class CourseCSVServer(WebSocketHandler):
 				'       auth_user.username AS screen_name, ',
 				'       EdxPrivate.idInt2Forum(auth_user.id) AS forum_id, ',
 				'       auth_user.email, ',
-				'       auth_user.date_joined, ',
 				'       edxprod.student_anonymoususerid.anonymous_user_id as external_lti_id, ',
+				'       auth_user.date_joined, ',
 				'       Enrollment.course_display_name  ',
         		'INTO OUTFILE "%s"' % tmpFileForPII,
         		'FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
@@ -927,7 +927,7 @@ class CourseCSVServer(WebSocketHandler):
             # Create the final output file, prepending the column 
             # name header:
             with open(outFilePIIName, 'w') as fd:
-                fd.write('anon_screen_name,user_int_id,screen_name,forum_id,external_lti_id,first_name,last_name,email,date_joined\n')
+                fd.write('anon_screen_name,user_int_id,screen_name,forum_id,email,external_lti_id,date_joined,course_display_name\n')
             self.catFiles(outFilePIIName, tmpFileForPII, mode='a')
             
         finally:
