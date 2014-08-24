@@ -468,7 +468,10 @@ class CourseCSVServer(WebSocketHandler):
         self.logDebug("Sending err to browser: %s" % msg)
         if not self.testing:
             errMsg = '{"resp" : "error", "args" : "%s"}' % msg
-            self.write_message(errMsg)
+            try:
+                self.write_message(errMsg)
+            except IOError as e:
+                self.logErr('IOError while writing error to browser; msg attempted to write; "%s" (%s)' % (msg, `e`))
 
     def writeResult(self, responseName, args):
         '''
