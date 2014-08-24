@@ -296,6 +296,15 @@ class CourseCSVServer(WebSocketHandler):
                     else:
                         self.exportTimeEngagement(args)
                         
+                if args.get('learnerPerf', False):
+                    self.setTimer()
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportLearnerPerf(args)
+                    else:
+                        self.exportLearnerPerf(args)
+
                 if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
                     self.setTimer()
                     if courseList is not None:
@@ -479,7 +488,10 @@ class CourseCSVServer(WebSocketHandler):
         :type args: {int | String | [String] | ...}
         '''
         self.logDebug("Prep to send result to browser: %s" % responseName + ':' +  str(args))
-        jsonArgs = json.dumps(args)
+        # The decode() is applied for safety: Forum strings
+        # are notorious for bad unicode, which would then lead
+        # to a UnicodeDecodeError during the dumps:
+        jsonArgs = json.dumps(args.decode('utf-8', 'ignore') if type(args) == str else args)
         msg = '{"resp" : "%s", "args" : %s}' % (responseName, jsonArgs)
         self.logDebug("Sending result to browser: %s" % msg)
         if not self.testing:
@@ -838,7 +850,6 @@ class CourseCSVServer(WebSocketHandler):
                     return
                 else:
                     self.writeResult('progress', msgFromScript)
-                    
             #**********            
             #for msgFromScript in pipeFromScript:
             #    self.writeResult('progress', msgFromScript)
@@ -967,6 +978,95 @@ class CourseCSVServer(WebSocketHandler):
             pass
         
         return outFilePIIName + '.zip'
+
+    def exportLearnerPerf(self, detailDict):
+
+        if self.mysqlDb is None:
+            self.writeError('In exportLearnerPerf: Database is disconnected; have to give up.')
+            return
+        
+        try:
+            courseId = detailDict['courseId']
+        except KeyError:
+            self.writeError('In exportLearnerPerf: course ID was not included; could not construct lerner performance table.')
+            return
+        
+        if courseId is not None:
+            courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+        else:
+            courseNameNoSpaces = 'allCourses'
+
+        # File name for eventual final result:
+        outFileLearnerPerfName = os.path.join(self.fullTargetDir, '%s_learnerPerf.csv' % courseNameNoSpaces)
+
+        # Get tmp file name for MySQL to write its 
+        # result table to. Can't use built-in tempfile module,
+        # b/c it creates a file, which then has MySQL 
+        # complain.
+        # Create a random num sequence seeded with
+        # this instance object:
+        random.seed(self)
+        tmpFileForLearnerPerf =  '/tmp/classExportLearnerPerfTmp' + str(time.time()) + str(random.randint(1,10000)) + '.csv'
+        # Ensure the file doesn't exist (highly unlikely):
+        try:
+            os.remove(tmpFileForLearnerPerf)
+        except OSError:
+            pass
+        
+        try:        
+            for courseName in self.queryCourseNameList(courseId):
+                #*******************
+                mySqlCmd = ' '.join([
+                                     
+                    'SELECT EdxPrivate.idInt2Anon(Enrollment.user_int_id) AS anon_screen_name, ',
+                ])
+            for learnerPerfResultLine in self.mysqlDb.query(mySqlCmd):
+                tmpFileForLearnerPerf.write(','.join(learnerPerfResultLine) + '\n')
+    
+            # Create the final output file, prepending the column 
+            # name header:
+            with open(outFileLearnerPerfName, 'w') as fd:
+                fd.write('****anon_screen_name,user_int_id,screen_name,forum_id,email,external_lti_id,date_joined,course_display_name\n')
+            self.catFiles(outFileLearnerPerfName, tmpFileForLearnerPerf, mode='a')
+            
+        finally:
+            try:
+                os.remove(tmpFileForLearnerPerf)
+            except OSError:
+                pass    
+        # Save information for printTableInfo() method to find:
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportPIIDetails'] = infoXchangeFile
+
+        infoXchangeFile.write(outFileLearnerPerfName + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(outFileLearnerPerfName)) + '\n')
+
+        # Add sample lines:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(outFileLearnerPerfName, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        except IOError as e:
+            self.logErr('Could not write result sample lines: %s' % `e`)
+
+        # zip-encrypt the Zip file:
+        cryptoPwd = detailDict.get("cryptoPwd", '')
+        self.zipFiles(outFileLearnerPerfName + '.zip', cryptoPwd, [outFileLearnerPerfName])
+
+        # Remove the un-encrypted original:
+        try:
+            os.remove(outFileLearnerPerfName)
+        except OSError:
+            pass
+        
+        return outFileLearnerPerfName + '.zip'
+        
 
     def exportEmailList(self, detailDict):
         
