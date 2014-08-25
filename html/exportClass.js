@@ -40,6 +40,7 @@ function ExportClass() {
 	ws.onerror = function(evt) {
 	    clearInterval(keepAliveTimer);
 	    alert("The browser has detected an error while communicating withe the data server: " + evt.data);
+	}
 
 	ws.onmessage = function(evt) {
 	    // Internalize the JSON
