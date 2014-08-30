@@ -29,8 +29,13 @@ PASSWD=''
 SILENT=false
 COURSE_SUBSTR='%'
 needPasswd=false
+
+# Get directory in which this script is running,
+# and where its support scripts therefore live:
+currScriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Number of course enrollees that a course
 # must have in order to be listed:
+
 MIN_ENROLLMENT=9
 
 # Execute getopt
@@ -193,10 +198,5 @@ NAME_ACTIVITY_LINES=`echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d'
 # Now throw out all lines that are clearly 
 # bad course names stemming from people creating
 # test courses without adhering to any naming pattern:
-echo "${NAME_ACTIVITY_LINES}" | 
-     awk -F'\t' '/^[^-0-9]/'   |               # exclude names starting w/ a digit
-#     awk -F'\t' '{ if ($2 > 9) print $0 }' |   # exclude courses with activity < 10
-                                               # filter all the pieces of course names that signal badness:
-     awk 'tolower($0) !~ /jbau|janeu|sefu|davidu|caitlynx|josephtest|nickdupuniversity|nathanielu|gracelyou|sandbox|demo|sampleuniversity|.*zzz.*|\/test\//' |
-     awk -F'\t' '{ print }'
+echo "${NAME_ACTIVITY_LINES}" | $currScriptsDir/filterCourseNames.sh
 exit 0
