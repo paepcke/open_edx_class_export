@@ -14,7 +14,7 @@ do
     echo "${ONE_LINE}" | 
     awk -F'\t' '/^[^-0-9]/'   |               # exclude names starting w/ a digit
                                               # filter all the pieces of course names that signal badness:
-    awk 'tolower($0) !~ /jbau|janeu|sefu|davidu|caitlynx|josephtest|nickdupuniversity|nathanielu|gracelyou|sandbox|demo|sampleuniversity|.*zzz.*|\/test\//' |
+    awk 'tolower($0) !~ /jbau|janeu|sefu|davidu|caitlynx|josephtest|nickdupuniversity|nathanielu|gracelyou|sandbox|demo|sampleuniversity|.*zzz.*|\/test\/|joeU/' |
     awk -F'\t' '{ print }'
 done;
 
