@@ -10,7 +10,9 @@ import getpass
 import os
 import subprocess
 import sys
+import tempfile
 
+from engagement import EngagementComputer
 from pymysql_utils.pymysql_utils import MySQLDB
 
 
@@ -45,7 +47,14 @@ class QuarterlyReportExporter(object):
         self.ensureOpenMySQLDb()
         
 
-    def enrollment(self, academicYear, quarter):
+    def enrollment(self, academicYear, quarter, outFile=None):
+
+        if outFile is None:
+            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=False)
+
+        if type(outFile) == str:
+            outFile = open(outFile, 'r')
+        
         self.courseNameDict = OrderedDict()
         mysqlCmd = "SELECT course_display_name, is_internal " +\
                    "FROM CourseInfo " +\
@@ -54,13 +63,60 @@ class QuarterlyReportExporter(object):
         for (courseName, isInternal) in self.mysqlDb.query(mysqlCmd):
             self.courseNameDict[courseName] = isInternal
         
-        self.output('course,is_internal,enrollment')
+        outFile.write('course,is_internal,enrollment\n')
         for courseName in self.courseNameDict.keys():
             enrollment = self.getEnrollment(courseName)
             if enrollment is None:
                 enrollment = 'n/a'
-            self.output('%s,%s,%s' % (courseName, self.courseNameDict[courseName], enrollment))
+            outFile.write('%s,%s,%s\n' % (courseName, self.courseNameDict[courseName], enrollment))
+
+        self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,outFile.name))
+        outFile.close()
+
             
+    def engagement(self, academicYear, quarter, outFile=None):
+        
+        if outFile is None:
+            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement_summaries.csv' % (academicYear, quarter), delete=False)
+
+        if type(outFile) == str:
+            outFile = open(outFile, 'r')
+
+        colHeaderGrabbed = False
+        for courseName in self.mysqlDb.query("SELECT course_display_name " +\
+                                             "FROM Edx.CourseInfo " +\
+                                             "WHERE academic_year = %d AND quarter = '%s';"\
+                                             % (academicYear, quarter)):
+            # Query results come in tuples, like ('myUniversity/CS101/me',). Grab
+            # the name itself:
+            courseName = courseName[0]
+            comp = EngagementComputer(dbHost=self.dbHost, mySQLUser=self.mySQLUser, mySQLPwd=self.mySQLPwd, courseToProfile=courseName)
+            comp.run()
+            (summaryFile, detailFile, weeklyEffortFile) = comp.writeResultsToDisk() #@UnusedVariable
+            # Pull the summary data from the engagement summary
+            # file, grabbing the col header only from the first
+            # file:
+            with open(summaryFile, 'r') as fd:
+                # discard or transfer the column header line
+                # depending on whether this is the first engagement
+                # summary file we process:
+                colHeaderLine = fd.readline()
+                if not colHeaderGrabbed:
+                    try:
+                        outFile.write(colHeaderLine)
+                    except IOError:
+                        self.output('No column header line in first summary file: %s' % summaryFile)
+                        continue
+                    colHeaderGrabbed = True
+                try:
+                    # Grab second line from summary file and 
+                    # write to outfile:
+                    outFile.write(fd.readline())
+                except IOError:
+                    self.output('No rows in %s' % summaryFile)
+                    continue
+        self.output('Engagement summaries for %s%s are in %s' % (academicYear,quarter,outFile.name))
+        outFile.close()
 
     
     def ensureOpenMySQLDb(self):
@@ -85,16 +141,16 @@ class QuarterlyReportExporter(object):
                 self.mysqlDb = None
         return self.mysqlDb
 
-    def getEnrollment(self, courseNameRegex):
+    def getEnrollment(self, courseDisplayName):
         '''
         Given a MySQL regexp courseNameWildcard string, return a list
         of matchine course_display_name in the db. If self.mysql
         is None, indicating that the __init__() method was unable
         to log into the db, then return None.
 
-        :param courseNameRegex: Course name regular expression in MySQL syntax.
-        :type courseNameRegex: String
-        **********
+        :param courseDisplayName: Course name whose enrollment to find.
+        :type courseDisplayName: String
+
         :return: An array of matching course_display_name, which may
                  be empty. None if _init__() was unable to log into db.
                  If includeEnrollment is True, append enrollment to each course name.
@@ -103,7 +159,7 @@ class QuarterlyReportExporter(object):
         
         # Was asked for this exact name before?
         try:
-            return self.enrollmentCache[courseNameRegex]
+            return self.enrollmentCache[courseDisplayName]
         except KeyError:
             pass
         
@@ -113,7 +169,7 @@ class QuarterlyReportExporter(object):
         mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser,'--silent']
         if self.mySQLPwd is not None:
             mySqlCmd.extend(['-w',self.mySQLPwd])
-        mySqlCmd.extend([courseNameRegex])
+        mySqlCmd.extend([courseDisplayName])
         
         try:
             pipeFromMySQL = subprocess.Popen(mySqlCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE).stdout
@@ -153,7 +209,7 @@ if __name__ == '__main__':
                              '    default: content of scriptInvokingUser$Home/.ssh/mysql if --user is unspecified,\n' +\
                              '    or, if specified user is root, then the content of scriptInvokingUser$Home/.ssh/mysql_root.'
                         )
-    parser.add_argument('acacemicYear',
+    parser.add_argument('academicYear',
                         action='store',
                         type=int,
                         help='The *acdemic* year of the course (not the calendar year).'
@@ -170,7 +226,7 @@ if __name__ == '__main__':
     if args.quarter not in ['fall', 'winter', 'spring', 'summer']:
         raise ValueError('Quarter must be fall, winter, spring, or summer.')
     
-    if args.acacemicYear < 2012:
+    if args.academicYear < 2012:
         raise ValueError('Data only available for academic year 2012 onwards.')
     
     if args.user is None:
@@ -206,5 +262,7 @@ if __name__ == '__main__':
                 pwd = ''
 
     myReporter = QuarterlyReportExporter()
-    myReporter.enrollment(args.acacemicYear, args.quarter)
+    myReporter.engagement(args.academicYear, args.quarter)
+    myReporter.output('-------------------------------------')
+    myReporter.enrollment(args.academicYear, args.quarter)
 

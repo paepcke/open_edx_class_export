@@ -983,7 +983,8 @@ class CourseCSVServer(WebSocketHandler):
         return outFilePIIName + '.zip'
 
     def exportLearnerPerf(self, detailDict):
-
+        #***** To be written. This is partly still a
+        #      copy of PII export!!!
         if self.mysqlDb is None:
             self.writeError('In exportLearnerPerf: Database is disconnected; have to give up.')
             return

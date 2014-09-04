@@ -175,7 +175,7 @@ function ExportClass() {
 	var fullCourseName = null;
 	if (document.getElementById('basicData').checked ||
 	    document.getElementById('engagementData').checked ||
-	    document.getElementById('learnerPerf').checked ||
+	    //****document.getElementById('learnerPerf').checked ||
 	    document.getElementById('edxForum').checked ||
 	    document.getElementById('piazzaForum').checked ||
 	    document.getElementById('edcastForum').checked ||
@@ -365,7 +365,7 @@ function ExportClass() {
 	var basicData  = document.getElementById("basicData").checked;
 	var engagementData = document.getElementById("engagementData").checked;
 	var engageVideoOnly = document.getElementById("engageVideoOnly").checked;
-	var learnerPerf = document.getElementById("learnerPerf").checked;
+	//*****var learnerPerf = document.getElementById("learnerPerf").checked;
 	var edxForum = document.getElementById("edxForum").checked;
 	var edxForumIsolated   = edxForum && document.getElementById("edxForumIsolated").checked;
 	var edxForumRelatable  = edxForum && document.getElementById("edxForumRelatable").checked;
@@ -384,7 +384,7 @@ function ExportClass() {
 
 	if (!basicData && 
 	    !engagementData &&
-	    !learnerPerf &&
+	    //******!learnerPerf &&
 	    !edxForum &&
 	    !piazzaForum &&
 	    !edcastForum &&
@@ -417,7 +417,7 @@ function ExportClass() {
 		      "basicData" : basicData,
 		      "engagementData" : engagementData,
 		      "engageVideoOnly" : engageVideoOnly,
-		      "learnerPerf": learnerPerf,
+		      //******"learnerPerf": learnerPerf,
 		      "edxForumRelatable"  : edxForumRelatable,
 		      "edxForumIsolated"  : edxForumIsolated,
 		      "piazzaRelatable" : piazzaRelatable,
