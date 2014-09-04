@@ -269,7 +269,7 @@ if __name__ == '__main__':
                 pwd = ''
 
     myReporter = QuarterlyReportExporter(mySQLUser=user, mySQLPwd=pwd)
-#*******    myReporter.engagement(args.academicYear, args.quarter)
+    myReporter.engagement(args.academicYear, args.quarter)
     myReporter.output('-------------------------------------')
     myReporter.enrollment(args.academicYear, args.quarter)
 
