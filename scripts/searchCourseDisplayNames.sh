@@ -20,7 +20,7 @@
 # This script may be used from the command line. It is also used
 # by exportClass.py in open_edx_class_export.
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-s silent] [courseNamePattern]"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent] [courseNamePattern]"
 
 # ----------------------------- Process CLI Parameters -------------
 

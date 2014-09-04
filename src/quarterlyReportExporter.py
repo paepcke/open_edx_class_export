@@ -174,7 +174,7 @@ class QuarterlyReportExporter(object):
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment'):
         mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser,'--silent']
-        if self.mySQLPwd is not None:
+        if self.mySQLPwd is not None and self.mySQLPwd != '':
             mySqlCmd.extend(['-w',self.mySQLPwd])
         mySqlCmd.extend([courseDisplayName])
         
@@ -269,7 +269,7 @@ if __name__ == '__main__':
                 pwd = ''
 
     myReporter = QuarterlyReportExporter(mySQLUser=user, mySQLPwd=pwd)
-    myReporter.engagement(args.academicYear, args.quarter)
+#*******    myReporter.engagement(args.academicYear, args.quarter)
     myReporter.output('-------------------------------------')
     myReporter.enrollment(args.academicYear, args.quarter)
 
