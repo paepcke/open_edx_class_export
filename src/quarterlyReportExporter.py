@@ -125,20 +125,27 @@ class QuarterlyReportExporter(object):
             return self.mysqlDb
         try:
             if self.mySQLPwd is None:
+	        self.output('Trying to access MySQL using pwd file...')
                 with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
                     self.mySQLPwd = fd.readline().strip()
                     self.mysqlDb = MySQLDB(user=self.mySQLUser, passwd=self.mySQLPwd, db=self.defaultDb)
+		    self.output('Access to MySQL OK...')
             else:
-                    self.mysqlDb = MySQLDB(user=self.mySQLUser, passwd=self.mySQLPwd, db=self.defaultDb)
-        except Exception:
+                self.output('Trying to access MySQL using given pwd...')
+                self.mysqlDb = MySQLDB(user=self.mySQLUser, passwd=self.mySQLPwd, db=self.defaultDb)
+                self.output('Access to MySQL OK...')
+        except Exception as e:
             try:
                 # Try w/o a pwd:
                 self.mySQLPwd = None
+	        self.output('Trying to access MySQL without a pwd...')
                 self.mysqlDb = MySQLDB(user=self.currUser, db=self.defaultDb)
+                self.output('Access to MySQL OK...')
             except Exception as e:
                 # Remember the error msg for later:
                 self.dbError = `e`;
                 self.mysqlDb = None
+                self.output('Failed to access MySQL.')
         return self.mysqlDb
 
     def getEnrollment(self, courseDisplayName):
@@ -261,7 +268,7 @@ if __name__ == '__main__':
                 # No .ssh subdir of user's home, or no mysql inside .ssh:
                 pwd = ''
 
-    myReporter = QuarterlyReportExporter()
+    myReporter = QuarterlyReportExporter(mySQLUser=user, mySQLPwd=pwd)
     myReporter.engagement(args.academicYear, args.quarter)
     myReporter.output('-------------------------------------')
     myReporter.enrollment(args.academicYear, args.quarter)
