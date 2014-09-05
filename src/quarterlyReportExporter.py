@@ -125,11 +125,11 @@ class QuarterlyReportExporter(object):
             return self.mysqlDb
         try:
             if self.mySQLPwd is None:
-	        self.output('Trying to access MySQL using pwd file...')
+                self.output('Trying to access MySQL using pwd file...')
                 with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
                     self.mySQLPwd = fd.readline().strip()
                     self.mysqlDb = MySQLDB(user=self.mySQLUser, passwd=self.mySQLPwd, db=self.defaultDb)
-		    self.output('Access to MySQL OK...')
+                    self.output('Access to MySQL OK...')
             else:
                 self.output('Trying to access MySQL using given pwd...')
                 self.mysqlDb = MySQLDB(user=self.mySQLUser, passwd=self.mySQLPwd, db=self.defaultDb)
@@ -138,7 +138,7 @@ class QuarterlyReportExporter(object):
             try:
                 # Try w/o a pwd:
                 self.mySQLPwd = None
-	        self.output('Trying to access MySQL without a pwd...')
+                self.output('Trying to access MySQL without a pwd...')
                 self.mysqlDb = MySQLDB(user=self.currUser, db=self.defaultDb)
                 self.output('Access to MySQL OK...')
             except Exception as e:
@@ -222,7 +222,6 @@ if __name__ == '__main__':
                         help='The *acdemic* year of the course (not the calendar year).'
                         ) 
     
-    # Optionally: any number of years as ints:
     parser.add_argument('quarter',
                         action='store',
                         help='One of fall, winter, spring, or summer.'

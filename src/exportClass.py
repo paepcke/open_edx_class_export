@@ -983,8 +983,7 @@ class CourseCSVServer(WebSocketHandler):
         return outFilePIIName + '.zip'
 
     def exportLearnerPerf(self, detailDict):
-        #***** To be written. This is partly still a
-        #      copy of PII export!!!
+        #***** To be completed:
         if self.mysqlDb is None:
             self.writeError('In exportLearnerPerf: Database is disconnected; have to give up.')
             return
@@ -1019,18 +1018,23 @@ class CourseCSVServer(WebSocketHandler):
         
         try:        
             for courseName in self.queryCourseNameList(courseId):
-                #*******************
                 mySqlCmd = ' '.join([
-                                     
-                    'SELECT EdxPrivate.idInt2Anon(Enrollment.user_int_id) AS anon_screen_name, ',
-                ])
+                                     "SELECT  anon_screen_name," +\
+                                              "COUNT(DISTINCT module_id) AS num_problems," +\
+    								    	  "AVG(percent_grade) AS avg_problem_grade,"+\
+    								    	  "AVG(num_attempts) AS avg_num_attempts" +\
+                                     "FROM ActivityGrade " +\
+                                     "WHERE num_attempts > -1 " +\
+                                       "AND course_display_name = '" + courseName + "' " +\
+                                     "GROUP BY anon_screen_name"
+                                     ])
             for learnerPerfResultLine in self.mysqlDb.query(mySqlCmd):
                 tmpFileForLearnerPerf.write(','.join(learnerPerfResultLine) + '\n')
     
             # Create the final output file, prepending the column 
             # name header:
             with open(outFileLearnerPerfName, 'w') as fd:
-                fd.write('****anon_screen_name,user_int_id,screen_name,forum_id,email,external_lti_id,date_joined,course_display_name\n')
+                fd.write('anon_screen_name,num_problems,avg_program_grade,avg_num_attempts\n')
             self.catFiles(outFileLearnerPerfName, tmpFileForLearnerPerf, mode='a')
             
         finally:

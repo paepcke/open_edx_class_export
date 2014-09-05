@@ -334,6 +334,11 @@ class ExportClassTest(unittest.TestCase):
     def testExportPIIDetails(self):
         pass
 
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")
+    def testLearnerPerformance(self):
+        pass
+
+    
     def buildSupportTables(self, testSetToLoad):
         # Activities table:
         schema = OrderedDict([('course_display_name','varchar(255)'),
