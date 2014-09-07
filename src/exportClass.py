@@ -54,7 +54,7 @@ class PreExisted:
     DID_NOT_EXIST = 0
     EXISTED = 1
 
-# New exception class used in checkForOldOutpuFiles().
+# New exception class used in checkForOldOutputFiles().
 # This exception carries one pieced of added information
 # to make feedback to browser more clear:
 class ExistingOutFile(Exception):
@@ -257,7 +257,7 @@ class CourseCSVServer(WebSocketHandler):
             # to browser: 
             try:
                 xpungeExisting = self.str2bool(args.get("wipeExisting", False))
-                self.checkForOldOutpuFiles([action for action in args.keys()],
+                self.checkForOldOutputFiles([action for action in args.keys() if args[action] == True],
                                            xpungeExisting,
                                            args['courseId'],
                                            emailStartDate)
@@ -354,7 +354,7 @@ class CourseCSVServer(WebSocketHandler):
             #self.writeError("Server could not extract request name/args from %s" % safeResp)
             self.writeError("%s" % `e`)
             
-    def checkForOldOutpuFiles(self, actions, mayDelete, courseDisplayName, emailStartDate):
+    def checkForOldOutputFiles(self, actions, mayDelete, courseDisplayName, emailStartDate):
         '''
         Given an action requested by the end user (e.g. 'basicData', 'engagementData', etc.)
         check whether any output files already exist for that type
