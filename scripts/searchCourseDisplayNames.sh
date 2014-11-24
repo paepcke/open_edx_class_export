@@ -20,7 +20,7 @@
 # This script may be used from the command line. It is also used
 # by exportClass.py in open_edx_class_export.
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent] [courseNamePattern]"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent][-q quarter][-y academicYear] [courseNamePattern]"
 
 # ----------------------------- Process CLI Parameters -------------
 
@@ -28,6 +28,8 @@ USERNAME=`whoami`
 PASSWD=''
 SILENT=false
 COURSE_SUBSTR='%'
+QUARTER='%'
+ACADEMIC_YEAR='%'
 needPasswd=false
 
 # Get directory in which this script is running,
@@ -39,7 +41,7 @@ currScriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MIN_ENROLLMENT=9
 
 # Execute getopt
-ARGS=`getopt -o "hu:pw:s" -l "help,user:,password,mysqlpwd:,silent" \
+ARGS=`getopt -o "hu:pw:sq:y:" -l "help,user:,password,mysqlpwd:,silent,quarter,academic_year" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -74,9 +76,11 @@ do
     -p|--password)
       needPasswd=true
       shift;;
+
     -s|--silent)
       SILENT=true
       shift;;
+
     -w|--mysqlpwd)
       shift
       # Grab the option value:
@@ -89,6 +93,33 @@ do
 	echo $USAGE
 	exit 1
       fi;;
+
+    -q|--quarter)
+      shift
+      # Grab the option value
+      # unless it's null:
+      if [ -n "$1" ]
+      then
+        QUARTER=$1
+        shift
+      else
+	echo $USAGE
+	exit 1
+      fi;;
+
+    -y|--academic_year)
+      shift
+      # Grab the option value
+      # unless it's null:
+      if [ -n "$1" ]
+      then
+        ACADEMIC_YEAR=$1
+        shift
+      else
+	echo $USAGE
+	exit 1
+      fi;;
+
     --)
       shift
       break;;
@@ -163,12 +194,47 @@ fi
 # manages its own UI. The most appropriate col headers would
 # be 'course_display_name', 'enrollment':
 
-MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
-	   FROM student_courseenrollment
-	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
-	   GROUP BY course_id 
-           HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
-               OR course_id LIKE 'ohsx%';\G"
+# MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
+# 	   FROM student_courseenrollment
+# 	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
+# 	   GROUP BY course_id 
+#            HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
+#                OR course_id LIKE 'ohsx%';\G"
+
+# Find all the requested quarter's courses,
+# collecting them into Misc.RelevantCoursesTmp.
+# Can't use CREATE TEMPORARY, b/c the following
+# SELECT would try to open that table twice, which
+# is illegal.
+#
+# Use student_courseenrollment to compute enrollment
+# (summing students), and certificates_generatedcertificate
+# to count certs awarded in this course:
+
+MYSQL_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+	   CREATE TABLE Misc.RelevantCoursesTmp
+	   (SELECT course_display_name, is_internal
+	           FROM Edx.CourseInfo
+	          WHERE quarter LIKE '"$QUARTER"'
+	            AND academic_year LIKE "$ACADEMIC_YEAR"
+	   ); 
+	   SELECT SummedAwards.course_display_name,
+	          theSummedUsers AS enrollment,     
+	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
+	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
+	          SummedUsers.is_internal
+	   FROM (SELECT course_display_name, COUNT(user_id) AS theSummedUsers, is_internal
+	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.student_courseenrollment 
+	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.student_courseenrollment.course_id
+	         GROUP BY course_display_name
+	        ) AS SummedUsers
+	      LEFT JOIN
+	        (SELECT course_display_name, SUM(status = 'downloadable') AS theSummedAwards
+	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.certificates_generatedcertificate
+	             ON Misc.RelevantCoursesTmp.course_display_name = certificates_generatedcertificate.course_id
+	         GROUP BY course_display_name
+	        ) AS SummedAwards
+	       ON SummedUsers.course_display_name = SummedAwards.course_display_name;"
 
 #*************
 #echo "MYSQL_CMD: $MYSQL_CMD"
@@ -184,7 +250,8 @@ else
 fi
 
 #*************
-#echo "COURSE_NAMES: "$COURSE_NAMES
+echo "COURSE_NAMES: "$COURSE_NAMES
+exit 0
 #*************
 
 # In the following the first 'sed' call removes the
