@@ -211,7 +211,8 @@ fi
 # (summing students), and certificates_generatedcertificate
 # to count certs awarded in this course:
 
-MYSQL_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+MYSQL_CMD="CREATE DATABASE IF NOT EXISTS Misc;
+           DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
 	   CREATE TABLE Misc.RelevantCoursesTmp
 	   (SELECT course_display_name, is_internal
 	           FROM Edx.CourseInfo
@@ -250,20 +251,21 @@ else
 fi
 
 #*************
-echo "COURSE_NAMES: "$COURSE_NAMES
-exit 0
+#echo "COURSE_NAMES: "$COURSE_NAMES
+#exit 0
 #*************
 
 # In the following the first 'sed' call removes the
 # line: "********** 1. row *********" and following rows.
 # The second 'sed' call removes everything of the second
 # line up to the ': '. Together this next line creates
-# two (still tab-separated) columns: course-name and number of 
+# four (still tab-separated) columns.
 # course mentions:
 NAME_ACTIVITY_LINES=`echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d' | sed 's/[^:]*: //'`
 
 # Now throw out all lines that are clearly 
 # bad course names stemming from people creating
-# test courses without adhering to any naming pattern:
-echo "${NAME_ACTIVITY_LINES}" | $currScriptsDir/filterCourseNames.sh
+# test courses without adhering to any naming pattern;
+# On the way, replace tabs with commas:
+echo "${NAME_ACTIVITY_LINES}" | sed "s/\t/,/g"  | $currScriptsDir/filterCourseNames.sh
 exit 0
