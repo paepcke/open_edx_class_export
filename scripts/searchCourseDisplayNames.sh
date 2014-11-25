@@ -227,7 +227,7 @@ MYSQL_CMD="CREATE DATABASE IF NOT EXISTS Misc;
 	          SummedUsers.is_internal
 	   FROM (SELECT course_display_name, 
                  COUNT(user_id) AS theSummedUsers, 
-                 IF(is_internal == 1, 'yes','no') AS is_internal
+                 IF(is_internal = 1, 'yes','no') AS is_internal
 	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.student_courseenrollment 
 	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.student_courseenrollment.course_id
 	         GROUP BY course_display_name

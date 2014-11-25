@@ -211,6 +211,16 @@ if __name__ == '__main__':
                              '    default: content of scriptInvokingUser$Home/.ssh/mysql if --user is unspecified,\n' +\
                              '    or, if specified user is root, then the content of scriptInvokingUser$Home/.ssh/mysql_root.'
                         )
+    parser.add_argument('-e', '--enrollment',
+                        action='store_true',
+                        help='Request enrollment numbers; if neither --enrollment nor -engagement are requested,\n' +\
+                             '    then both are provided.'
+                        )
+    parser.add_argument('-g', '--engagement',
+                        action='store_true',
+                        help='Request engagement numbers; if neither --enrollment nor --engagement are requested,\n' +\
+                             '    then both are provided.'
+                        )
     parser.add_argument('academicYear',
                         action='store',
                         type=int,
@@ -224,7 +234,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args();
     
-    if args.quarter not in ['fall', 'winter', 'spring', 'summer']:
+    if args.quarter not in ['fall', 'winter', 'spring', 'summer', '%']:
         raise ValueError('Quarter must be fall, winter, spring, or summer.')
     
     if args.academicYear < 2012:
@@ -262,8 +272,16 @@ if __name__ == '__main__':
                 # No .ssh subdir of user's home, or no mysql inside .ssh:
                 pwd = ''
 
+    # If neither enrollment nor engagement were specifically
+    # requested, then both are supplied:
+    if not (args.engagement or args.enrollment):
+        args.engagement = True
+        args.engagement = True
+    
     myReporter = QuarterlyReportExporter(mySQLUser=user, mySQLPwd=pwd)
-    #******myReporter.engagement(args.academicYear, args.quarter)
-    myReporter.output('-------------------------------------')
-    myReporter.enrollment(args.academicYear, args.quarter)
+    if args.engagement:
+        myReporter.engagement(args.academicYear, args.quarter)
+    if args.enrollment:
+        myReporter.output('-------------------------------------')
+        myReporter.enrollment(args.academicYear, args.quarter)
 
