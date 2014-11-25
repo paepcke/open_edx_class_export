@@ -217,7 +217,7 @@ MYSQL_CMD="CREATE DATABASE IF NOT EXISTS Misc;
 	   (SELECT course_display_name, is_internal
 	           FROM Edx.CourseInfo
 	          WHERE quarter LIKE '"$QUARTER"'
-	            AND academic_year LIKE "$ACADEMIC_YEAR"
+	            AND academic_year LIKE '"$ACADEMIC_YEAR"'
 	   ); 
 	   SELECT SummedAwards.course_display_name,
 	          theSummedUsers AS enrollment,     

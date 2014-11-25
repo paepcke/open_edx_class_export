@@ -219,7 +219,7 @@ if __name__ == '__main__':
     parser.add_argument('academicYear',
                         action='store',
                         type=int,
-                        help='The *acdemic* year of the course (not the calendar year).'
+                        help='The *academic* year of the course (not the calendar year).'
                         ) 
     
     parser.add_argument('quarter',
