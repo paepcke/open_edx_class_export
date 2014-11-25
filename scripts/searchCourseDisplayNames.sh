@@ -241,7 +241,8 @@ MYSQL_CMD="CREATE DATABASE IF NOT EXISTS Misc;
 	       ON SummedUsers.course_display_name = SummedAwards.course_display_name;"
 
 #*************
-#echo "MYSQL_CMD: $MYSQL_CMD"
+echo "MYSQL_CMD: $MYSQL_CMD"
+exit 0
 #*************
 
 # --skip-column-names suppresses the col name 

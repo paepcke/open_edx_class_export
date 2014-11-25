@@ -381,6 +381,8 @@ function ExportClass() {
 	var quarterRep = document.getElementById("quarterRep").checked;
 	var quarterRepQuarter = quarterRep && document.getElementById("quarterRepQuarter").value;
 	var quarterRepYear = quarterRep && document.getElementById("quarterRepYear").value;
+	var quarterRepEnroll = quarterRep && document.getElementById("quarterRepEnroll").value;
+	var quarterRepEngage = quarterRep && document.getElementById("quarterRepEngage").value;
 
 	if (!basicData && 
 	    !engagementData &&
@@ -390,7 +392,7 @@ function ExportClass() {
 	    !edcastForum &&
 	    !emailList &&
 	    !learnerPII &&
-	    !quarterlyReport
+	    !quarterRep
 	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
@@ -429,7 +431,9 @@ function ExportClass() {
 		      "learnerPII": learnerPII,
 		      "quarterRep": quarterRep,
 		      "quarterRepQuarter": quarterRepQuarter,
-		      "quarterRepYear": quarterRepYear
+		      "quarterRepYear": quarterRepYear,
+		      "quarterRepEnroll": quarterRepEnroll,
+		      "quarterRepEngage": quarterRepEngage,
 		     };
 	var req = buildRequest("getData", argObj);
 

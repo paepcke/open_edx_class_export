@@ -32,6 +32,7 @@ from threading import Timer
 import time # @UnusedImport
 import zipfile
 
+from quarterlyReportExporter import QuarterlyReportExporter
 from engagement import EngagementComputer
 from pymysql_utils.pymysql_utils import MySQLDB
 
@@ -326,6 +327,10 @@ class CourseCSVServer(WebSocketHandler):
                 if args.get('emailList', False):
                     self.setTimer()
                     self.exportEmailList(args)
+
+                if args.get('quarterRep', False):
+                    self.setTimer()
+                    self.exportQuarterlyReport(args)
                         
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
@@ -1150,6 +1155,39 @@ class CourseCSVServer(WebSocketHandler):
             self.writeError(`e`)
             if self.testing:
                 raise
+
+    def exportQuarterlyReport(self, detailDict):
+        
+        try:
+            quarter = detailDict['quarterRepQuarter']
+        except KeyError:
+            self.logErr('In exportQuarterlyReport: quarter was not included; could not export quarterly reqport.')
+            return
+        try:
+            academic_year = detailDict['quarterRepYear']
+        except KeyError:
+            self.logErr('In exportQuarterlyReport: academic year was not included; could not export quarterly reqport.')
+            return
+
+        exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd,)
+        
+        doEnrollment = detailDict.get('quarterRepEnroll', False);
+        doEngagement = detailDict.get('quarterRepEngage', False);
+        
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportQuarterlyReport'] = infoXchangeFile
+        
+        if doEnrollment:
+            resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False)
+            infoXchangeFile.write(resFileNameEnroll + '\n')
+            infoXchangeFile.write(str(os.path.getsize(resFileNameEnroll)) + '\n')
+        
+        #*****needs three-file return? (maybe just does summary)    
+        if doEngagement:
+            resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
+            if doEnrollment:
+                infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            
 
     def getNumFileLines(self, fileFdOrPath):
         '''

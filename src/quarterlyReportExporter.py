@@ -47,7 +47,7 @@ class QuarterlyReportExporter(object):
         self.ensureOpenMySQLDb()
         
 
-    def enrollment(self, academicYear, quarter, outFile=None):
+    def enrollment(self, academicYear, quarter, outFile=None, printResultFilePath=True):
 
         if outFile is None:
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=False)
@@ -57,19 +57,36 @@ class QuarterlyReportExporter(object):
             
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment'):
-        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser, '-q', quarter, '-y', str(academicYear), '>', outFile.name]
+        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser, '-q', quarter, '-y', str(academicYear)]
         if self.mySQLPwd is not None and self.mySQLPwd != '':
             mySqlCmd.extend(['-w',self.mySQLPwd])
-        
         try:
-            subprocess.call(mySqlCmd)
+            subprocess.call(mySqlCmd, stdout=outFile)
         except Exception as e:
             self.output('Error while searching for course names: %s' % `e`)
             return None
-        self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,outFile.name))
+        
+        resFileName = outFile.name;
+        if printResultFilePath:
+            self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,resFileName))
         outFile.close()
+        return resFileName
             
-    def engagement(self, academicYear, quarter, outFile=None):
+    def engagement(self, academicYear, quarter, outFile=None, printResultFilePath=True):
+        '''
+                
+        :param academicYear:
+        :type academicYear:
+        :param quarter:
+        :type quarter:
+        :param outFile:
+        :type outFile:
+        :param printResultFilePath: whether or not to print msg to stdout about where 
+            result file is to be found
+        :type printResultFilePath: bool
+        :return full path of file where results are stored
+        :rtype string 
+        '''
         
         if outFile is None:
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement_summaries.csv' % (academicYear, quarter), delete=False)
@@ -110,8 +127,11 @@ class QuarterlyReportExporter(object):
                 except IOError:
                     self.output('No rows in %s' % summaryFile)
                     continue
-        self.output('Engagement summaries for %s%s are in %s' % (academicYear,quarter,outFile.name))
+        resFileName = outFile.name;
+        if printResultFilePath:
+            self.output('Engagement summaries for %s%s are in %s' % (academicYear,quarter,resFileName))
         outFile.close()
+        return resFileName
 
     
     def ensureOpenMySQLDb(self):
@@ -213,7 +233,7 @@ if __name__ == '__main__':
                         )
     parser.add_argument('-e', '--enrollment',
                         action='store_true',
-                        help='Request enrollment numbers; if neither --enrollment nor -engagement are requested,\n' +\
+                        help='Request enrollment numbers; if neither --enrollment nor --engagement are requested,\n' +\
                              '    then both are provided.'
                         )
     parser.add_argument('-g', '--engagement',
@@ -221,15 +241,15 @@ if __name__ == '__main__':
                         help='Request engagement numbers; if neither --enrollment nor --engagement are requested,\n' +\
                              '    then both are provided.'
                         )
+    parser.add_argument('quarter',
+                        action='store',
+                        help='One of fall, winter, spring, or summer.'
+                        ) 
+    
     parser.add_argument('academicYear',
                         action='store',
                         type=int,
                         help='The *academic* year of the course (not the calendar year).'
-                        ) 
-    
-    parser.add_argument('quarter',
-                        action='store',
-                        help='One of fall, winter, spring, or summer.'
                         ) 
     
     args = parser.parse_args();
