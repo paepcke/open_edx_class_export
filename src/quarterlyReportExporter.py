@@ -54,25 +54,20 @@ class QuarterlyReportExporter(object):
 
         if type(outFile) == str:
             outFile = open(outFile, 'r')
+            
+        # The --silent suppresses a column header line
+        # from being displayed ('course_display_name' and 'enrollment'):
+        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser, '-q', quarter, '-y', str(academicYear), '>', outFile.name]
+        if self.mySQLPwd is not None and self.mySQLPwd != '':
+            mySqlCmd.extend(['-w',self.mySQLPwd])
         
-        self.courseNameDict = OrderedDict()
-        mysqlCmd = "SELECT course_display_name, is_internal " +\
-                   "FROM CourseInfo " +\
-                   "WHERE academic_year = %d AND quarter = '%s'" \
-                    % (academicYear, quarter)
-        for (courseName, isInternal) in self.mysqlDb.query(mysqlCmd):
-            self.courseNameDict[courseName] = isInternal
-        
-        outFile.write('course,is_internal,enrollment\n')
-        for courseName in self.courseNameDict.keys():
-            enrollment = self.getEnrollment(courseName)
-            if enrollment is None:
-                enrollment = 'n/a'
-            outFile.write('%s,%s,%s\n' % (courseName, self.courseNameDict[courseName], enrollment))
-
+        try:
+            subprocess.call(mySqlCmd)
+        except Exception as e:
+            self.output('Error while searching for course names: %s' % `e`)
+            return None
         self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,outFile.name))
         outFile.close()
-
             
     def engagement(self, academicYear, quarter, outFile=None):
         
@@ -268,7 +263,7 @@ if __name__ == '__main__':
                 pwd = ''
 
     myReporter = QuarterlyReportExporter(mySQLUser=user, mySQLPwd=pwd)
-    myReporter.engagement(args.academicYear, args.quarter)
+    #******myReporter.engagement(args.academicYear, args.quarter)
     myReporter.output('-------------------------------------')
     myReporter.enrollment(args.academicYear, args.quarter)
 
