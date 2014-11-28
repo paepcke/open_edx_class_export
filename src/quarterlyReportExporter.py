@@ -56,8 +56,10 @@ class QuarterlyReportExporter(object):
             outFile = open(outFile, 'r')
             
         # The --silent suppresses a column header line
-        # from being displayed ('course_display_name' and 'enrollment'):
-        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser, '-q', quarter, '-y', str(academicYear)]
+        # from being displayed ('course_display_name' and 'enrollment').
+        # '-e' says: "only produce enrollment numbers after each course name;
+        # don't provide all the statistics, like awarded certificates.
+        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser, '-e', '-q', quarter, '-y', str(academicYear)]
         if self.mySQLPwd is not None and self.mySQLPwd != '':
             mySqlCmd.extend(['-w',self.mySQLPwd])
         try:
