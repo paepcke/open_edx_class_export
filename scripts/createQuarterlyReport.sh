@@ -271,10 +271,8 @@ then
     # were specified explicitly on the CL:
     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
           CREATE TABLE Misc.RelevantCoursesTmp
-	  SELECT DISTINCT EdxTrackEvent.course_display_name, 
-                 IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
-	    FROM EdxTrackEvent LEFT JOIN CourseInfo
-	      ON CourseInfo.course_display_name = EdxTrackEvent.course_display_name
+	  SELECT DISTINCT EdxTrackEvent.course_display_name
+	    FROM EdxTrackEvent
 	   WHERE EdxTrackEvent.course_display_name LIKE '%'
     	     AND time BETWEEN makeLowQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
                         AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR");
@@ -369,10 +367,9 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
 	          theSummedUsers AS enrollment,     
 	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
 	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
-	          SummedUsers.is_internal
+                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
 	   FROM (SELECT course_display_name, 
-                 COUNT(user_id) AS theSummedUsers, 
-                 IF(is_internal = 1, 'yes','no') AS is_internal
+                 COUNT(user_id) AS theSummedUsers
 	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.student_courseenrollment 
 	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.student_courseenrollment.course_id
 	         GROUP BY course_display_name "$ENROLLMENT_CONDITION"
@@ -383,7 +380,10 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
 	             ON Misc.RelevantCoursesTmp.course_display_name = certificates_generatedcertificate.course_id
 	         GROUP BY course_display_name
 	        ) AS SummedAwards
-	       ON SummedUsers.course_display_name = SummedAwards.course_display_name;
+	       ON SummedUsers.course_display_name = SummedAwards.course_display_name
+              LEFT JOIN
+                (SELECT course_display_name, is_internal FROM Edx.CourseInfo) AS IsInternalInfo
+               ON IsInternalInfo.course_display_name = SummedAwards.course_display_name;
            "
 
 #*************
