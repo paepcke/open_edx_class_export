@@ -22,7 +22,7 @@ function ExportClass() {
     var crsNmFormObj = null; 
     var encryptionPwd = null;
     // Regex to separate course name from the enrollment column:
-    var courseNameSepPattern = /([^\s])*/;
+    var courseNameSepPattern = /([^\s,])*/;
 
     /*----------------------------  Constructor ---------------------*/
     this.construct = function() {
@@ -381,8 +381,8 @@ function ExportClass() {
 	var quarterRep = document.getElementById("quarterRep").checked;
 	var quarterRepQuarter = quarterRep && document.getElementById("quarterRepQuarter").value;
 	var quarterRepYear = quarterRep && document.getElementById("quarterRepYear").value;
-	var quarterRepEnroll = quarterRep && document.getElementById("quarterRepEnroll").value;
-	var quarterRepEngage = quarterRep && document.getElementById("quarterRepEngage").value;
+	var quarterRepEnroll = quarterRep && document.getElementById("quarterRepEnroll").checked;
+	var quarterRepEngage = quarterRep && document.getElementById("quarterRepEngage").checked;
 
 	if (!basicData && 
 	    !engagementData &&
@@ -410,6 +410,14 @@ function ExportClass() {
 	if (emailList && emailStartDate.length == 0) {
 	    alert("Please fill in the start date for your email list.");
 	    return;
+	}
+
+        // For quarterly report: server expects academic year,
+	// but users will consider pull-down for year as the
+	// calendar year when the course ran:
+
+	if (quarterRep && quarterRepQuarter != 'fall') {
+	    quarterRepYear -= 1;
 	}
 
 	var argObj = {"courseId" : resolvedCourseID, 

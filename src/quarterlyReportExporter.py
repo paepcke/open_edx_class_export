@@ -43,7 +43,7 @@ class QuarterlyReportExporter(object):
         self.mysqlDb = None
         self.enrollmentCache = {}
         self.thisScriptDir = os.path.dirname(__file__)        
-        self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
+        self.courseInfoScript = os.path.join(self.thisScriptDir, '../scripts/createQuarterlyReport.sh')
         self.ensureOpenMySQLDb()
         
 
@@ -59,11 +59,11 @@ class QuarterlyReportExporter(object):
         # from being displayed ('course_display_name' and 'enrollment').
         # '-e' says: "only produce enrollment numbers after each course name;
         # don't provide all the statistics, like awarded certificates.
-        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser, '-e', '-q', quarter, '-y', str(academicYear)]
+        shellCmd = [self.courseInfoScript,'-u',self.currUser, '-e', '--silent', '-q', quarter, '-y', str(academicYear)]
         if self.mySQLPwd is not None and self.mySQLPwd != '':
-            mySqlCmd.extend(['-w',self.mySQLPwd])
+            shellCmd.extend(['-w',self.mySQLPwd])
         try:
-            subprocess.call(mySqlCmd, stdout=outFile)
+            subprocess.call(shellCmd, stdout=outFile)
         except Exception as e:
             self.output('Error while searching for course names: %s' % `e`)
             return None
@@ -190,7 +190,7 @@ class QuarterlyReportExporter(object):
         
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment'):
-        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser,'--silent']
+        mySqlCmd = [self.courseInfoScript,'-u',self.currUser,'--silent']
         if self.mySQLPwd is not None and self.mySQLPwd != '':
             mySqlCmd.extend(['-w',self.mySQLPwd])
         mySqlCmd.extend([courseDisplayName])

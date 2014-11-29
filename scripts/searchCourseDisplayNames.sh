@@ -1,26 +1,60 @@
 #!/bin/bash
 
-# Outputs all course_display_name(s) and their respective
-# enrollment. Output sampl:
+# This older version of searchCourseDisplayNames.sh is more general
+# than the modern one. This one here includes the functionality of
+# createQuarterlyReport.sh. 
+
+# Outputs all course_display_name(s) and, optionally, their respective
+# enrollment, plus, optionally, number of awarded certificates,
+# ratio of certsAwarded to enrollment, and whether the course is
+# Stanford-internal or not. The amount of information is controlled
+# by CLI switches.
+# Output sample:
 #
-#    Medicine/HRP214/Winter2014	32
-#    Medicine/HRP258/Statistics_in_Medicine	26415
-#    Medicine/HRP259/Fall2013	74
+#    Medicine/HRP214/Winter2014
+#    Medicine/HRP214/Winter2014,26415
+#    Medicine/HRP258/Statistics_in_Medicine,26415,500,0.0189,no
+#
+# By default all stats are output.
 #
 # Optionally, a MySQL regex pattern can be provided, which
 # filters the course names. Source of the result is table
 # student_courseenrollment.
 #
-# Independently of this regex pattern, the script tries to filter out
+# Also controlled by a CLI switch is whether only courses with
+# minimum enrollment $MIN_ENROLLMENT are to be included. This
+# filter is not applied in two cases:
+#
+#    - the -a (all courses) is requested, in which
+#      case only course names are returned.
+#    - the -n (no statistics) option is not provided.
+#      That is, when full stats are requested (enrollment,
+#      certificates, etc.), then even low enrollment courses
+#      are included.
+#
+# Independently of the course name regex pattern and the enrollment
+# minimum, the script tries to filter out
 # course names that are clearly just tests, or course name
-# misspellings that pollute the log files. Part of this filtering is
-# that only courses with enrollment numbers greater than
-# $MIN_ENROLLMENT.
+# misspellings that pollute the log files. This filter is always
+# applied. 
 #
 # This script may be used from the command line. It is also used
 # by exportClass.py in open_edx_class_export.
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent][-q quarter][-y academicYear] [courseNamePattern]"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent][-q quarter][-y academicYear][-e enrollmentOnly][-n noStats][-a allCourses][courseNamePattern]"
+
+HELP_TEXT="-u uid\t\t: the MySQL user id\r\n
+           -p\t\t: ask for MySQL pwd\n
+           -w pwd\t\t: provide pwd in CLI\n
+           -q\t\t: academic quarter: fall,winter,spring, or summer.\n
+                   \t\t\tDefault is all quarters.\n
+           -y\t\t: academic year. Default is all years.\n
+           -e\t\t: only output course names and enrollment\n
+                   \t\t\tMinimum enrollment is applied\n
+           -n\t\t: no statistics at all: only course names are\n
+                   \t\t\treturned. Minimum enrollment is applied \n
+           --silent\t: not column headers are output\n
+"
 
 # ----------------------------- Process CLI Parameters -------------
 
@@ -30,6 +64,9 @@ SILENT=false
 COURSE_SUBSTR='%'
 QUARTER='%'
 ACADEMIC_YEAR='%'
+ENROLL_ONLY=0
+SKIP_STATS=0
+ALL_COURSES=0
 needPasswd=false
 
 # Get directory in which this script is running,
@@ -41,7 +78,7 @@ currScriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MIN_ENROLLMENT=9
 
 # Execute getopt
-ARGS=`getopt -o "hu:pw:sq:y:" -l "help,user:,password,mysqlpwd:,silent,quarter,academic_year" \
+ARGS=`getopt -o "hu:pw:sq:y:ena" -l "help,user:,password,mysqlpwd:,silent,quarter,academic_year,enroll_only,no_stats,all_courses" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -79,6 +116,18 @@ do
 
     -s|--silent)
       SILENT=true
+      shift;;
+
+    -e|--enroll_only)
+      ENROLL_ONLY=1
+      shift;;
+
+    -n|--no_stats)
+      SKIP_STATS=1
+      shift;;
+
+    -a|--all_courses)
+      ALL_COURSES=1
       shift;;
 
     -w|--mysqlpwd)
@@ -194,55 +243,73 @@ fi
 # manages its own UI. The most appropriate col headers would
 # be 'course_display_name', 'enrollment':
 
-# MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
-# 	   FROM student_courseenrollment
-# 	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
-# 	   GROUP BY course_id 
-#            HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
-#                OR course_id LIKE 'ohsx%';\G"
+if [[ $ALL_COURSES == 1 ]]
+then
+      MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
+      	   FROM student_courseenrollment
+      	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
+      	   GROUP BY course_id;\G"
+elif [[ $ENROLL_ONLY == 1 ]]
+then
+      MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
+      	   FROM student_courseenrollment
+      	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
+      	   GROUP BY course_id 
+                 HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
+                     OR course_id LIKE 'ohsx%';\G"
+elif [[ $SKIP_STATS == 1 ]]
+then
+      MYSQL_CMD="SELECT course_id AS 'course_display_name'
+      	   FROM student_courseenrollment
+      	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
+      	   GROUP BY course_id 
+                 HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
+                     OR course_id LIKE 'ohsx%';\G"
+else
+      # Full Monte:
+      # Find all the requested quarter's courses,
+      # collecting them into Misc.RelevantCoursesTmp.
+      # Can't use CREATE TEMPORARY, b/c the following
+      # SELECT would try to open that table twice, which
+      # is illegal.
+      #
+      # Use student_courseenrollment to compute enrollment
+      # (summing students), and certificates_generatedcertificate
+      # to count certs awarded in this course:
 
-# Find all the requested quarter's courses,
-# collecting them into Misc.RelevantCoursesTmp.
-# Can't use CREATE TEMPORARY, b/c the following
-# SELECT would try to open that table twice, which
-# is illegal.
-#
-# Use student_courseenrollment to compute enrollment
-# (summing students), and certificates_generatedcertificate
-# to count certs awarded in this course:
+      MYSQL_CMD="CREATE DATABASE IF NOT EXISTS Misc;
+                 DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+      	   CREATE TABLE Misc.RelevantCoursesTmp
+      	   (SELECT course_display_name, is_internal
+      	           FROM Edx.CourseInfo
+      	          WHERE quarter LIKE '"$QUARTER"'
+      	            AND academic_year LIKE '"$ACADEMIC_YEAR"'
+                          AND course_display_name LIKE '"$COURSE_SUBSTR"'
+      	   ); 
+      	   SELECT SummedAwards.course_display_name,
+      	          theSummedUsers AS enrollment,     
+      	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
+      	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
+      	          SummedUsers.is_internal
+      	   FROM (SELECT course_display_name, 
+                       COUNT(user_id) AS theSummedUsers, 
+                       IF(is_internal = 1, 'yes','no') AS is_internal
+      	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.student_courseenrollment 
+      	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.student_courseenrollment.course_id
+      	         GROUP BY course_display_name
+      	        ) AS SummedUsers
+      	      LEFT JOIN
+      	        (SELECT course_display_name, SUM(status = 'downloadable') AS theSummedAwards
+      	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.certificates_generatedcertificate
+      	             ON Misc.RelevantCoursesTmp.course_display_name = certificates_generatedcertificate.course_id
+      	         GROUP BY course_display_name
+      	        ) AS SummedAwards
+      	       ON SummedUsers.course_display_name = SummedAwards.course_display_name;"
 
-MYSQL_CMD="CREATE DATABASE IF NOT EXISTS Misc;
-           DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
-	   CREATE TABLE Misc.RelevantCoursesTmp
-	   (SELECT course_display_name, is_internal
-	           FROM Edx.CourseInfo
-	          WHERE quarter LIKE '"$QUARTER"'
-	            AND academic_year LIKE '"$ACADEMIC_YEAR"'
-                    AND course_display_name LIKE '"$COURSE_SUBSTR"'
-	   ); 
-	   SELECT SummedAwards.course_display_name,
-	          theSummedUsers AS enrollment,     
-	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
-	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
-	          SummedUsers.is_internal
-	   FROM (SELECT course_display_name, 
-                 COUNT(user_id) AS theSummedUsers, 
-                 IF(is_internal = 1, 'yes','no') AS is_internal
-	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.student_courseenrollment 
-	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.student_courseenrollment.course_id
-	         GROUP BY course_display_name
-	        ) AS SummedUsers
-	      LEFT JOIN
-	        (SELECT course_display_name, SUM(status = 'downloadable') AS theSummedAwards
-	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.certificates_generatedcertificate
-	             ON Misc.RelevantCoursesTmp.course_display_name = certificates_generatedcertificate.course_id
-	         GROUP BY course_display_name
-	        ) AS SummedAwards
-	       ON SummedUsers.course_display_name = SummedAwards.course_display_name;"
-
+fi
 #*************
-echo "MYSQL_CMD: $MYSQL_CMD"
-exit 0
+#echo "MYSQL_CMD: $MYSQL_CMD"
+#exit 0
 #*************
 
 # --skip-column-names suppresses the col name 

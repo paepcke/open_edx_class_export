@@ -143,7 +143,7 @@ class CourseCSVServer(WebSocketHandler):
         # Locate the makeCourseCSV.sh script:
         self.thisScriptDir = os.path.dirname(__file__)
         self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
-        self.searchCourseNameScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
+        self.courseInfoScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
         self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')        
         self.exportEmailListScript = os.path.join(self.thisScriptDir, '../scripts/makeEmailListCSV.sh')        
         
@@ -343,8 +343,12 @@ class CourseCSVServer(WebSocketHandler):
                 duration = endTime - datetime.timedelta(microseconds=endTime.microseconds)
                 self.writeResult('progress', "<br>Runtime: %s<br>" % str(duration))
                                 
-                # Add an example client letter:
-                self.addClientInstructions(args, deliveryUrl)
+                # Add an example client letter,
+                # unless export method wrote directly to 
+                # the browser, rather than writing to
+                # a file:
+                if deliveryUrl is not None:
+                    self.addClientInstructions(args, deliveryUrl)
 
             else:
                 self.writeError("Unknown request name: %s" % requestName)
@@ -1161,33 +1165,31 @@ class CourseCSVServer(WebSocketHandler):
         try:
             quarter = detailDict['quarterRepQuarter']
         except KeyError:
-            self.logErr('In exportQuarterlyReport: quarter was not included; could not export quarterly reqport.')
+            self.logErr('In exportQuarterlyReport: quarter was not included; could not export quarterly report.')
             return
         try:
             academic_year = detailDict['quarterRepYear']
         except KeyError:
             self.logErr('In exportQuarterlyReport: academic year was not included; could not export quarterly reqport.')
             return
-
+        if academic_year == '%' or quarter == '%':
+            self.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
+            return
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd,)
         
         doEnrollment = detailDict.get('quarterRepEnroll', False);
         doEngagement = detailDict.get('quarterRepEngage', False);
         
-        infoXchangeFile = tempfile.NamedTemporaryFile()
-        self.infoTmpFiles['exportQuarterlyReport'] = infoXchangeFile
-        
         if doEnrollment:
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False)
-            infoXchangeFile.write(resFileNameEnroll + '\n')
-            infoXchangeFile.write(str(os.path.getsize(resFileNameEnroll)) + '\n')
+            with open(resFileNameEnroll, 'r') as fd:
+                for line in fd:
+                    self.writeResult('printTblInfo', line)
         
         #*****needs three-file return? (maybe just does summary)    
         if doEngagement:
             resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
-            if doEnrollment:
-                infoXchangeFile.write('herrgottzemenschnochamal!\n')
-            
+            # If we did enrollment, insert the separator:
 
     def getNumFileLines(self, fileFdOrPath):
         '''
@@ -1299,6 +1301,10 @@ class CourseCSVServer(WebSocketHandler):
 
         '''
         
+        if len(self.infoTmpFiles) == 0:
+            # Export methods wrote directly to
+            # browser:
+            return None
         for exportFileKey in self.infoTmpFiles.keys():
             try:
                 tmpFileFd = self.infoTmpFiles.get(exportFileKey)
@@ -1365,7 +1371,8 @@ class CourseCSVServer(WebSocketHandler):
                         tblName = 'EmailList'
                     elif tableFileName.find('piiData') > -1:
                         tblName = 'PIIMappings'
-        
+                    elif tableFileName.find('enrollment') > -1:
+                        tblName = 'Enrollment'
                     else:
                         tblName = 'unknown table name'
                     
@@ -1466,14 +1473,14 @@ class CourseCSVServer(WebSocketHandler):
         courseNames = []
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment'):
-        mySqlCmd = [self.searchCourseNameScript,'-u',self.currUser,'--silent']
+        mySqlCmd = [self.courseInfoScript,'-u',self.currUser, '-e', '--silent']
         if self.mySQLPwd is not None:
             mySqlCmd.extend(['-w',self.mySQLPwd])
         mySqlCmd.extend([courseID])
         self.logDebug("About to query for course names on regexp: '%s'" % mySqlCmd)
         
         try:
-            pipeFromMySQL = subprocess.Popen(mySqlCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE).stdout
+            pipeFromMySQL = subprocess.Popen(mySqlCmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout
         except Exception as e:
             self.writeError('Error while searching for course names: %s' % `e`)
             return courseNames
