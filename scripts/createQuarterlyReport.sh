@@ -275,7 +275,8 @@ then
 	    FROM EdxTrackEvent
 	   WHERE EdxTrackEvent.course_display_name LIKE '%'
     	     AND time BETWEEN makeLowQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
-                        AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR");
+                        AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR")
+             AND isEngagementEvent(event_type);
     "
 #     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
 #           CREATE TABLE Misc.RelevantCoursesTmp
