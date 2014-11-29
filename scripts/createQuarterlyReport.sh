@@ -271,86 +271,101 @@ then
     # were specified explicitly on the CL:
     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
           CREATE TABLE Misc.RelevantCoursesTmp
-	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
-	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
-	    FROM 
-	          (SELECT DISTINCT course_display_name
-	             FROM EdxTrackEvent 
-	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
-	              AND EXISTS(SELECT 1 
-	                  	FROM EdxTrackEvent 
-	                 	       WHERE time BETWEEN makeLowQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
-                                                      AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
-	                  	 AND isUserEvent(event_type) 
-	  			 AND isTrueCourseName(course_display_name)
-	  			 AND quarter = '"${QUARTER}${ACADEMIC_YEAR}"' 
-	                       )
-	           ) AS QualifyingCourseNames
-	  	 LEFT JOIN CourseInfo
-	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
-	  "
-elif [[ $QUARTER == '%' && $ACADEMIC_YEAR != '%' ]]
-then
-    # Quarter is wildcard, but year is specified:
-    COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
-          CREATE TABLE Misc.RelevantCoursesTmp
-	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
-	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
-	    FROM 
-	          (SELECT DISTINCT course_display_name
-	             FROM EdxTrackEvent 
-	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
-	              AND EXISTS(SELECT 1 
-	                  	FROM EdxTrackEvent 
-	                 	       WHERE YEAR(time) = "$ACADEMIC_YEAR"
-	                  	 AND isUserEvent(event_type) 
-	  			 AND isTrueCourseName(course_display_name)
-	                       )
-	           ) AS QualifyingCourseNames
-	  	 LEFT JOIN CourseInfo
-	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
-	  "
-elif [[ $QUARTER != '%' && $ACADEMIC_YEAR == '%' ]]
-then
-    # Year is wildcard, but quarter is specified
-    COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
-          CREATE TABLE Misc.RelevantCoursesTmp
-	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
-	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
-	    FROM 
-	          (SELECT DISTINCT course_display_name
-	             FROM EdxTrackEvent 
-	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
-	              AND EXISTS(SELECT 1 
-	                  	FROM EdxTrackEvent 
-                                 WHERE dateInQuarter(time,'"$QUARTER"','%')
-	                  	 AND isUserEvent(event_type) 
-	  			 AND isTrueCourseName(course_display_name)
-	                       )
-	           ) AS QualifyingCourseNames
-	  	 LEFT JOIN CourseInfo
-	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
-	  "
+	  SELECT DISTINCT EdxTrackEvent.course_display_name, 
+                 IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
+	    FROM EdxTrackEvent LEFT JOIN CourseInfo
+	      ON CourseInfo.course_display_name = EdxTrackEvent.course_display_name
+	   WHERE EdxTrackEvent.course_display_name LIKE '%'
+    	     AND time BETWEEN makeLowQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
+                        AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR");
+    "
+#     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+#           CREATE TABLE Misc.RelevantCoursesTmp
+# 	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
+# 	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
+# 	    FROM 
+# 	          (SELECT DISTINCT course_display_name
+# 	             FROM EdxTrackEvent 
+# 	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
+# 	              AND EXISTS(SELECT 1 
+# 	                  	FROM EdxTrackEvent 
+# 	                 	       WHERE time BETWEEN makeLowQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
+#                                                       AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
+# 	                  	 AND isUserEvent(event_type) 
+# 	  			 AND isTrueCourseName(course_display_name)
+# 	  			 AND quarter = '"${QUARTER}${ACADEMIC_YEAR}"' 
+# 	                       )
+# 	           ) AS QualifyingCourseNames
+# 	  	 LEFT JOIN CourseInfo
+# 	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
+# 	  "
+# elif [[ $QUARTER == '%' && $ACADEMIC_YEAR != '%' ]]
+# then
+#     # Quarter is wildcard, but year is specified:
+#     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+#           CREATE TABLE Misc.RelevantCoursesTmp
+# 	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
+# 	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
+# 	    FROM 
+# 	          (SELECT DISTINCT course_display_name
+# 	             FROM EdxTrackEvent 
+# 	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
+# 	              AND EXISTS(SELECT 1 
+# 	                  	FROM EdxTrackEvent 
+# 	                 	       WHERE YEAR(time) = "$ACADEMIC_YEAR"
+# 	                  	 AND isUserEvent(event_type) 
+# 	  			 AND isTrueCourseName(course_display_name)
+# 	                       )
+# 	           ) AS QualifyingCourseNames
+# 	  	 LEFT JOIN CourseInfo
+# 	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
+# 	  "
+# elif [[ $QUARTER != '%' && $ACADEMIC_YEAR == '%' ]]
+# then
+#     # Year is wildcard, but quarter is specified
+#     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+#           CREATE TABLE Misc.RelevantCoursesTmp
+# 	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
+# 	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
+# 	    FROM 
+# 	          (SELECT DISTINCT course_display_name
+# 	             FROM EdxTrackEvent 
+# 	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
+# 	              AND EXISTS(SELECT 1 
+# 	                  	FROM EdxTrackEvent 
+#                                  WHERE dateInQuarter(time,'"$QUARTER"','%')
+# 	                  	 AND isUserEvent(event_type) 
+# 	  			 AND isTrueCourseName(course_display_name)
+# 	                       )
+# 	           ) AS QualifyingCourseNames
+# 	  	 LEFT JOIN CourseInfo
+# 	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
+# 	  "
 
-else
-    # Year is wildcard, but quarter is specified
-    COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
-          CREATE TABLE Misc.RelevantCoursesTmp
-	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
-	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
-	    FROM 
-	          (SELECT DISTINCT course_display_name
-	             FROM EdxTrackEvent 
-	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
-	              AND isUserEvent(event_type) 
-                      AND isTrueCourseName(course_display_name)
-	           ) AS QualifyingCourseNames
-	  	 LEFT JOIN CourseInfo
-	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
-	  "
+# else
+#     # Year is wildcard, but quarter is specified
+#     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+#           CREATE TABLE Misc.RelevantCoursesTmp
+# 	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
+# 	                  IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
+# 	    FROM 
+# 	          (SELECT DISTINCT course_display_name
+# 	             FROM EdxTrackEvent 
+# 	            WHERE course_display_name LIKE '"$COURSE_SUBSTR"' 
+# 	              AND isUserEvent(event_type) 
+#                       AND isTrueCourseName(course_display_name)
+# 	           ) AS QualifyingCourseNames
+# 	  	 LEFT JOIN CourseInfo
+# 	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
+# 	  "
 fi
 
-MYSQL_CMD="SELECT SummedAwards.course_display_name,
+MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','enrollment','num_certs', 'certs_ratio', 'is_internal'
+           UNION
+           SELECT 'OpenEdX',
+                  SummedAwards.course_display_name,
+                  '"$QUARTER"',
+                  '"$ACADEMIC_YEAR"',
 	          theSummedUsers AS enrollment,     
 	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
 	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
@@ -372,7 +387,7 @@ MYSQL_CMD="SELECT SummedAwards.course_display_name,
            "
 
 #*************
-echo "COURSE_NAME_CREATION_CMD: "$COURSE_NAME_CREATION_CMD
+#echo "COURSE_NAME_CREATION_CMD: "$COURSE_NAME_CREATION_CMD
 #echo "MYSQL_CMD: $MYSQL_CMD"
 #exit 0
 #*************
