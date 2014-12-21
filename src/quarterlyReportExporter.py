@@ -99,8 +99,8 @@ class QuarterlyReportExporter(object):
         colHeaderGrabbed = False
         for courseName in self.mysqlDb.query("SELECT course_display_name " +\
                                              "FROM Edx.CourseInfo " +\
-                                             "WHERE academic_year = %d AND quarter = '%s';"\
-                                             % (academicYear, quarter)):
+                                             "WHERE academic_year LIKE '%s' AND quarter LIKE '%s';"\
+                                             % (str(academicYear), quarter)):
             # Query results come in tuples, like ('myUniversity/CS101/me',). Grab
             # the name itself:
             courseName = courseName[0]
@@ -245,22 +245,31 @@ if __name__ == '__main__':
                         )
     parser.add_argument('quarter',
                         action='store',
-                        help='One of fall, winter, spring, or summer.'
+                        help="One of fall, winter, spring, or summer. Or 'all' if all quarter are of interest."
                         ) 
     
     parser.add_argument('academicYear',
                         action='store',
-                        type=int,
-                        help='The *academic* year of the course (not the calendar year).'
+                        help="The *academic* year of the course (not the calendar year). Or 'all' if all years are of interest."
                         ) 
     
     args = parser.parse_args();
     
-    if args.quarter not in ['fall', 'winter', 'spring', 'summer', '%']:
-        raise ValueError('Quarter must be fall, winter, spring, or summer.')
+    if args.quarter not in ['fall', 'winter', 'spring', 'summer', 'all']:
+        raise ValueError('Quarter must be fall, winter, spring, summer, or all.')
     
-    if args.academicYear < 2012:
-        raise ValueError('Data only available for academic year 2012 onwards.')
+    # Replace 'all' by MySQL wildcard: 
+    if args.quarter == 'all':
+        args.quarter = '%'
+    
+    if args.academicYear == 'all':
+        args.academicYear = '%' 
+    else:
+        # If not 'all', then year must be an int:
+        if not type(args.academicYear) == int:
+            raise ValueError("The academic_year parameter must be 'all', or an integer year > 2011.")
+        if args.academicYear < 2012:
+            raise ValueError('Data only available for academic year 2012 onwards.')
     
     if args.user is None:
         user = getpass.getuser()

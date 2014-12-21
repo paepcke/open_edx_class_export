@@ -1188,7 +1188,8 @@ class CourseCSVServer(WebSocketHandler):
         
         #*****needs three-file return? (maybe just does summary)    
         if doEngagement:
-            resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
+            self.writeError('Engagement not implemented; is on the way.')
+            #resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
             # If we did enrollment, insert the separator:
 
     def getNumFileLines(self, fileFdOrPath):
@@ -1473,7 +1474,7 @@ class CourseCSVServer(WebSocketHandler):
         courseNames = []
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment'):
-        mySqlCmd = [self.courseInfoScript,'-u',self.currUser, '-e', '--silent']
+        mySqlCmd = [self.courseInfoScript,'-u',self.currUser, '--silent']
         if self.mySQLPwd is not None:
             mySqlCmd.extend(['-w',self.mySQLPwd])
         mySqlCmd.extend([courseID])
