@@ -1,11 +1,7 @@
 #!/bin/bash
 
-# This older version of searchCourseDisplayNames.sh is more general
-# than the modern one. This one here includes the functionality of
-# createQuarterlyReport.sh. 
-
-# Outputs all course_display_name(s) and, optionally, their respective
-# enrollment, plus, optionally, number of awarded certificates,
+# Outputs all course_display_name(s) and their respective
+# enrollment, plus number of awarded certificates,
 # ratio of certsAwarded to enrollment, and whether the course is
 # Stanford-internal or not. The amount of information is controlled
 # by CLI switches.
@@ -15,22 +11,24 @@
 #    Medicine/HRP214/Winter2014,26415
 #    Medicine/HRP258/Statistics_in_Medicine,26415,500,0.0189,no
 #
-# By default all stats are output.
-#
 # Optionally, a MySQL regex pattern can be provided, which
-# filters the course names. Source of the result is table
-# student_courseenrollment.
+# filters the course names.
 #
-# Also controlled by a CLI switch is whether only courses with
-# minimum enrollment $MIN_ENROLLMENT are to be included. This
-# filter is not applied in two cases:
+# Beyond the regex pattern, course names to include in the output 
+# may be from one of two sources, depending on the presence of
+# the --byActivity option: if that option is provided the script includes 
+# courses that show any activity during the requested quarter(s)
+# and academic year. This option takes a little over 2 minutes,
+# and will include more courses, b/c course material is accessed
+# beyond course end dates.
+# When the --byActivity option is absent, course names that ran during the 
+# requested quarter(s)/year(s) are taken from table CourseInfo,
+# which is constructed from the OpenEdX modulestore. This case
+# is fast (about 2sec).
 #
-#    - the -a (all courses) is requested, in which
-#      case only course names are returned.
-#    - the -n (no statistics) option is not provided.
-#      That is, when full stats are requested (enrollment,
-#      certificates, etc.), then even low enrollment courses
-#      are included.
+# Also controlled by a CLI is the minimum number of enrollments
+# a course must have to be included in the output: -m/--minEnrollment.
+# Default is 9.
 #
 # Independently of the course name regex pattern and the enrollment
 # minimum, the script tries to filter out
@@ -41,7 +39,7 @@
 # This script may be used from the command line. It is also used
 # by exportClass.py in open_edx_class_export.
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent][-q quarter][-y academicYear][-e enrollmentOnly][-n noStats][-a allCourses][courseNamePattern]"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent][-q quarter][-y academicYear][-m minEnrollment][-a allCourses][-b byActivity][courseNamePattern]"
 
 HELP_TEXT="-u uid\t\t: the MySQL user id\r\n
            -p\t\t: ask for MySQL pwd\n
@@ -49,11 +47,9 @@ HELP_TEXT="-u uid\t\t: the MySQL user id\r\n
            -q\t\t: academic quarter: fall,winter,spring, or summer.\n
                    \t\t\tDefault is all quarters.\n
            -y\t\t: academic year. Default is all years.\n
-           -e\t\t: only output course names and enrollment\n
-                   \t\t\tMinimum enrollment is applied\n
-           -n\t\t: no statistics at all: only course names are\n
-                   \t\t\treturned. Minimum enrollment is applied \n
-           --silent\t: not column headers are output\n
+           -m\t\t: only include courses with at least minEnrollment learners\n
+           --silent\t: no column headers are output\n
+           --byActivity\t: determine relevant course names by activity rather than course schedule\n
 "
 
 # ----------------------------- Process CLI Parameters -------------
@@ -64,8 +60,7 @@ SILENT=false
 COURSE_SUBSTR='%'
 QUARTER='%'
 ACADEMIC_YEAR='%'
-ENROLL_ONLY=0
-SKIP_STATS=0
+BY_ACTIVITY=0
 ALL_COURSES=0
 needPasswd=false
 
@@ -78,7 +73,7 @@ currScriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MIN_ENROLLMENT=9
 
 # Execute getopt
-ARGS=`getopt -o "hu:pw:sq:y:ena" -l "help,user:,password,mysqlpwd:,silent,quarter,academic_year,enroll_only,no_stats,all_courses" \
+ARGS=`getopt -o "hu:pw:sq:y:m:ab" -l "help,user:,password,mysqlpwd:,silent,quarter:,academicYear:,minEnrollment:,allCourses,byActivity" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -95,7 +90,8 @@ while true;
 do
   case "$1" in
     -h|--help)
-      echo $USAGE
+      # The -e activates backslash cmd execution:
+      echo -e $HELP_TEXT
       exit 0;;
     -u|--user)
       shift
@@ -118,15 +114,30 @@ do
       SILENT=true
       shift;;
 
-    -e|--enroll_only)
-      ENROLL_ONLY=1
+    -b|--byActivity)
+      BY_ACTIVITY=true
       shift;;
 
-    -n|--no_stats)
-      SKIP_STATS=1
-      shift;;
+    -m|--minEnrollment)
+      shift
+      # Grab the option value:
+      if [ -n "$1" ]
+      then
+        MIN_ENROLLMENT=$1
+	re='^[0-9]+$'
+	if ! [[ $MIN_ENROLLMENT =~ $re ]]
+	then
+	   echo "Minimum enrollment must be an integer. Was '$MIN_ENROLLMENT'"
+	   echo $USAGE
+	   exit 1
+	fi
+        shift
+      else
+	echo $USAGE
+	exit 1
+      fi;;
 
-    -a|--all_courses)
+    -a|--allCourses)
       ALL_COURSES=1
       shift;;
 
@@ -156,7 +167,7 @@ do
 	exit 1
       fi;;
 
-    -y|--academic_year)
+    -y|--academicYear)
       shift
       # Grab the option value
       # unless it's null:
@@ -242,8 +253,6 @@ fi
 # manages its own UI. The most appropriate col headers would
 # be 'course_display_name', 'enrollment':
 
-ENROLLMENT_CONDITION="HAVING theSummedUsers > $MIN_ENROLLMENT"
-
 if [[ $ALL_COURSES == 1 ]]
 then
     ENROLLMENT_CONDITION=""
@@ -251,19 +260,95 @@ else
     ENROLLMENT_CONDITION="HAVING theSummedUsers > $MIN_ENROLLMENT"
 fi;
 
+# The Quarter start and end dates:
+FALL_START='-09-01'
+FALL_END='-11-30'
+WINTER_START='-12-01'
+WINTER_END='-02-28'
+SPRING_START='-03-01'
+SPRING_END='-05-31'
+SUMMER_START='-06-01'
+SUMMER_END='-08-31'
+
+
+# Ensure quarter lower case:
+QUARTER=`echo $QUARTER | tr '[:upper:]' '[:lower:]'`
+
+# Create a time MySQL time constraint, depending on
+# which quarter is requested (or '%'):
+if [[ $BY_ACTIVITY == 0 ]]
+then
+   TIME_CONSTRAINT="1"
+else
+    # Can't ask for byActivity for all years:
+    if [[ $ACADEMIC_YEAR == '%' ]]
+    then
+        echo "Cannot ask for byActivity without providing an academic year (-y or --academicYear)"
+	exit -1
+    fi
+    # Compute calendar year in which quarter will happen:
+    CAL_YEAR=$((${ACADEMIC_YEAR}+1))
+
+    if [[ $QUARTER == 'fall' ]]
+    then
+       TIME_CONSTRAINT="time BETWEEN '${ACADEMIC_YEAR}${FALL_START}' AND '${ACADEMIC_YEAR}${FALL_END}'"
+    elif [[ $QUARTER == 'winter' ]]
+    then
+       TIME_CONSTRAINT="time BETWEEN '${ACADEMIC_YEAR}${WINTER_START}' AND '${CAL_YEAR}${WINTER_END}'"
+    elif [[ $QUARTER == 'spring' ]]
+    then
+       TIME_CONSTRAINT="time BETWEEN '${CAL_YEAR}${SPRING_START}' AND '${CAL_YEAR}${SPRING_END}'"
+    elif [[ $QUARTER == 'summer' ]]
+    then
+       TIME_CONSTRAINT="time BETWEEN '${CAL_YEAR}${SUMMER_START}' AND '${CAL_YEAR}${SUMMER_END}'"
+    elif [[ $QUARTER == '%' ]]
+    then
+       TIME_CONSTRAINT="(time BETWEEN '${ACADEMIC_YEAR}${FALL_START}' AND ${ACADEMIC_YEAR}${FALL_END}' \
+                      OR time BETWEEN '${CAL_YEAR}${WINTER_START}' AND '${CAL_YEAR}${WINTER_END}' \
+                      OR time BETWEEN '${CAL_YEAR}${SPRING_START}' AND '${CAL_YEAR}${SPRING_END}' \
+                      OR time BETWEEN '${CAL_YEAR}${SUMMER_START}' AND '${CAL_YEAR}${SUMMER_END}' \
+                        )"
+    else TIME_CONSTRAINT=1
+    fi
+fi
+#****************
+#echo $TIME_CONSTRAINT
+#exit 0
+#****************
+
 # Find all the requested quarter's courses,
 # collecting them into Misc.RelevantCoursesTmp.
 # Can't use CREATE TEMPORARY, b/c the following
 # SELECT would try to open that table twice, which
 # is illegal.
 
-course_name_creation_cmd="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
-			      CREATE TABLE Misc.RelevantCoursesTmp
-			      SELECT course_display_name
-			        FROM CourseInfo
-			       WHERE quarter LIKE '"$QUARTER"'
-			         AND academic_year LIKE "$ACADEMIC_YEAR";
-                         "
+if [[ $BY_ACTIVITY == 0 ]]
+then
+    COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+    			  CREATE TABLE Misc.RelevantCoursesTmp
+    			  SELECT course_display_name, quarter, academic_year
+    			    FROM CourseInfo
+    			   WHERE quarter LIKE '"$QUARTER"'
+    			     AND academic_year LIKE '"$ACADEMIC_YEAR"';
+                             "
+else
+    COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+    			  CREATE TABLE Misc.RelevantCoursesTmp
+    			  SELECT course_display_name, quarter, academic_year
+                          FROM CourseInfo
+			  WHERE EXISTS(SELECT 1
+			               FROM EventXtract
+			  	      WHERE EventXtract.course_display_name = CourseInfo.course_display_name
+			   	       AND $TIME_CONSTRAINT
+			              );
+                          "
+fi			      
+
+#*************
+#echo "COURSE_NAME_CREATION_CMD: "$COURSE_NAME_CREATION_CMD
+#exit 0
+#*************
+
 # Use student_courseenrollment to compute enrollment
 # (summing students), and certificates_generatedcertificate
 # to count certs awarded in this course. Note, if provided
@@ -276,14 +361,16 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
            UNION
            SELECT 'OpenEdX',
                   SummedAwards.course_display_name,
-                  '"$QUARTER"',
-                  '"$ACADEMIC_YEAR"',
+                  SummedUsers.quarter,
+                  SummedUsers.academic_year,
 	          theSummedUsers AS enrollment,     
 	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
 	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
                   IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
 	   FROM (SELECT course_display_name, 
-                 COUNT(user_id) AS theSummedUsers
+                 COUNT(user_id) AS theSummedUsers,
+                 Misc.RelevantCoursesTmp.quarter AS quarter,
+                 Misc.RelevantCoursesTmp.academic_year AS academic_year
 	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.student_courseenrollment 
 	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.student_courseenrollment.course_id
 	         GROUP BY course_display_name "$ENROLLMENT_CONDITION"

@@ -29,12 +29,14 @@ import subprocess
 import sys
 import tempfile
 from threading import Timer
+import threading
 import time # @UnusedImport
 import zipfile
 
-from quarterlyReportExporter import QuarterlyReportExporter
 from engagement import EngagementComputer
 from pymysql_utils.pymysql_utils import MySQLDB
+
+from quarterlyReportExporter import QuarterlyReportExporter
 
 
 # Add json_to_relation source dir to $PATH
@@ -140,25 +142,7 @@ class CourseCSVServer(WebSocketHandler):
         self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
         #self.loglevel = CourseCSVServer.LOG_LEVEL_NONE
 
-        # Locate the makeCourseCSV.sh script:
-        self.thisScriptDir = os.path.dirname(__file__)
-        self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
-        self.courseInfoScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
-        self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')        
-        self.exportEmailListScript = os.path.join(self.thisScriptDir, '../scripts/makeEmailListCSV.sh')        
-        
-        # A dict into which the various exporting methods
-        # below will place instances of tempfile.NamedTemporaryFile().
-        # Those are used as comm buffers between shell scripts
-        # and this Python code: 
-        self.infoTmpFiles = {}
-        self.dbError = 'no error'
-        if testing:
-            self.currUser = 'unittest'
-        else:
-            self.currUser = getpass.getuser()
         self.ensureOpenMySQLDb()
-        self.currTimer = None
         
         # Interval between logging the sending of
         # the heartbeat:
@@ -211,8 +195,58 @@ class CourseCSVServer(WebSocketHandler):
                 self.logInfo("request received: %s" % str(message))
         except Exception as e:
             self.writeError("Bad JSON in request received at server: %s" % `e`)
+            
+        serverThread = DataServer(requestDict, self, self.testing)
+        serverThread.start()
 
+            
+    def logInfo(self, msg):
+        if self.loglevel >= CourseCSVServer.LOG_LEVEL_INFO:
+            print(str(datetime.datetime.now()) + ' info: ' + msg) 
+
+    def logErr(self, msg):
+        if self.loglevel >= CourseCSVServer.LOG_LEVEL_ERR:
+            print(str(datetime.datetime.now()) + ' error: ' + msg) 
+
+    def logDebug(self, msg):
+        if self.loglevel >= CourseCSVServer.LOG_LEVEL_DEBUG:
+            print(str(datetime.datetime.now()) + ' debug: ' + msg) 
+            
+class DataServer(threading.Thread):
+    
+    def __init__(self, requestDict, mainThread, testing=False):
         
+        threading.Thread.__init__(self)
+        
+        self.mainThread = mainThread
+        self.testing = testing
+        self.mySQLPwd = mainThread.mySQLPwd
+        
+        # Locate the makeCourseCSV.sh script:
+        self.thisScriptDir = os.path.dirname(__file__)
+        self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
+        self.courseInfoScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
+        self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')        
+        self.exportEmailListScript = os.path.join(self.thisScriptDir, '../scripts/makeEmailListCSV.sh')        
+        
+        # A dict into which the various exporting methods
+        # below will place instances of tempfile.NamedTemporaryFile().
+        # Those are used as comm buffers between shell scripts
+        # and this Python code: 
+        self.infoTmpFiles = {}
+        self.dbError = 'no error'
+        if testing:
+            self.currUser = 'unittest'
+        else:
+            self.currUser = getpass.getuser()
+        self.requestDict = requestDict
+        
+        self.currTimer = None
+        
+    def run(self):
+        self.serveOneDataRequest(self.requestDict)
+
+    def serveOneDataRequest(self, requestDict):        
         # Get the request name:
         try:
             requestName = requestDict['req']
@@ -223,6 +257,12 @@ class CourseCSVServer(WebSocketHandler):
 
             # Caller wants list of course names?
             if requestName == 'reqCourseNames':
+#                 #*********
+#                 self.mainThread.logInfo('Sleep-and-loop')
+#                 for i in range(10):
+#                     time.sleep(1)
+#                 self.mainThread.logInfo('Back to serving')
+#                 #*********
                 # For course name list requests, args is a 
                 # MySQL regex that returned course names are to match:
                 courseRegex = args.strip()
@@ -355,7 +395,7 @@ class CourseCSVServer(WebSocketHandler):
         except Exception as e:
             # Stop sending progress indicators to browser:
             self.cancelTimer()
-            self.logErr('Error while processing req: %s' % `e`)
+            self.mainThread.logErr('Error while processing req: %s' % `e`)
             # Need to escape double-quotes so that the 
             # browser-side JSON parser for this response
             # doesn't get confused:
@@ -474,13 +514,13 @@ class CourseCSVServer(WebSocketHandler):
         :param msg: error message to send to browser
         :type msg: String
         '''
-        self.logDebug("Sending err to browser: %s" % msg)
+        self.mainThread.logDebug("Sending err to browser: %s" % msg)
         if not self.testing:
             errMsg = '{"resp" : "error", "args" : "%s"}' % msg
             try:
-                self.write_message(errMsg)
+                self.mainThread.write_message(errMsg)
             except IOError as e:
-                self.logErr('IOError while writing error to browser; msg attempted to write; "%s" (%s)' % (msg, `e`))
+                self.mainThread.logErr('IOError while writing error to browser; msg attempted to write; "%s" (%s)' % (msg, `e`))
 
     def writeResult(self, responseName, args):
         '''
@@ -499,15 +539,15 @@ class CourseCSVServer(WebSocketHandler):
         :param args: any Python datastructure that can be turned into JSON
         :type args: {int | String | [String] | ...}
         '''
-        self.logDebug("Prep to send result to browser: %s" % responseName + ':' +  str(args))
+        self.mainThread.logDebug("Prep to send result to browser: %s" % responseName + ':' +  str(args))
         # The decode() is applied for safety: Forum strings
         # are notorious for bad unicode, which would then lead
         # to a UnicodeDecodeError during the dumps:
         jsonArgs = json.dumps(args.decode('utf-8', 'ignore') if type(args) == str else args)
         msg = '{"resp" : "%s", "args" : %s}' % (responseName, jsonArgs)
-        self.logDebug("Sending result to browser: %s" % msg)
+        self.mainThread.logDebug("Sending result to browser: %s" % msg)
         if not self.testing:
-            self.write_message(msg)
+            self.mainThread.write_message(msg)
 
     def exportClass(self, detailDict):
         '''
@@ -544,7 +584,7 @@ class CourseCSVServer(WebSocketHandler):
         scriptCmd.append(theCourseID)
         
         #************
-        self.logDebug("Script cmd is: %s" % str(scriptCmd))
+        self.mainThread.logDebug("Script cmd is: %s" % str(scriptCmd))
         #************
         
         # Call makeClassCSV.sh to export 
@@ -604,7 +644,7 @@ class CourseCSVServer(WebSocketHandler):
         try:
             courseId = detailDict['courseId']
         except KeyError:
-            self.logErr('In exportTimeEngagement: course ID was not included; could not compute engagement tables.')
+            self.mainThread.logErr('In exportTimeEngagement: course ID was not included; could not compute engagement tables.')
             return
         
         inclPII = self.str2bool(detailDict.get("inclPII", False))
@@ -723,7 +763,7 @@ class CourseCSVServer(WebSocketHandler):
                 infoXchangeFile.write(''.join(head))
             infoXchangeFile.write('herrgottzemenschnochamal!\n')            
         except IOError as e:
-            self.logErr('Could not write result sample lines: %s' % `e`)
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
                                   
         if inclPII:
             targetZipFileBasename = courseId.replace('/','_')
@@ -790,7 +830,7 @@ class CourseCSVServer(WebSocketHandler):
         try:
             courseDisplayName = detailDict['courseId']
         except KeyError:
-            self.logErr('In exportForum: course ID was not included; could not export forum data.')
+            self.mainThread.logErr('In exportForum: course ID was not included; could not export forum data.')
             return
         
         if len(courseDisplayName) == 0:     
@@ -828,7 +868,7 @@ class CourseCSVServer(WebSocketHandler):
         # Provide the script with a pwd with which to encrypt the 
         # .csv.zip file:
         if cryptoPwd is None or len(cryptoPwd) == 0:
-            self.logErr("Forum export needs to be encrypted, and therefore needs a crypto pwd to use.")
+            self.mainThread.logErr("Forum export needs to be encrypted, and therefore needs a crypto pwd to use.")
             return;
         scriptCmd.extend(['--cryptoPwd', cryptoPwd])
         
@@ -842,7 +882,7 @@ class CourseCSVServer(WebSocketHandler):
         scriptCmd.append(courseDisplayName)
         
         #************
-        self.logDebug("Script cmd is: %s" % str(scriptCmd))
+        self.mainThread.logDebug("Script cmd is: %s" % str(scriptCmd))
         #************
 
         # Call makeForumCSV.sh to export:
@@ -977,7 +1017,7 @@ class CourseCSVServer(WebSocketHandler):
                 infoXchangeFile.write(''.join(head))
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
         except IOError as e:
-            self.logErr('Could not write result sample lines: %s' % `e`)
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
         # zip-encrypt the Zip file:
         cryptoPwd = detailDict.get("cryptoPwd", '')
@@ -1070,7 +1110,7 @@ class CourseCSVServer(WebSocketHandler):
                 infoXchangeFile.write(''.join(head))
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
         except IOError as e:
-            self.logErr('Could not write result sample lines: %s' % `e`)
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
         # zip-encrypt the Zip file:
         cryptoPwd = detailDict.get("cryptoPwd", '')
@@ -1090,7 +1130,7 @@ class CourseCSVServer(WebSocketHandler):
         try:
             emailStartDate = detailDict['emailStartDate']
         except KeyError:
-            self.logErr('In exportEmailList: start date was not included; could not export email list.')
+            self.mainThread.logErr('In exportEmailList: start date was not included; could not export email list.')
             return
         
         # Check whether we are to delete any already existing
@@ -1118,7 +1158,7 @@ class CourseCSVServer(WebSocketHandler):
         # Provide the script with a pwd with which to encrypt the 
         # .csv.zip file:
         if cryptoPwd is None or len(cryptoPwd) == 0:
-            self.logErr("Email list export needs to be encrypted, and therefore needs a crypto pwd to use.")
+            self.mainThread.logErr("Email list export needs to be encrypted, and therefore needs a crypto pwd to use.")
             return;
         scriptCmd.extend(['--cryptoPwd', cryptoPwd])
         
@@ -1130,7 +1170,7 @@ class CourseCSVServer(WebSocketHandler):
         scriptCmd.append(emailStartDate)
         
         #************
-        self.logDebug("Script cmd is: %s" % str(scriptCmd))
+        self.mainThread.logDebug("Script cmd is: %s" % str(scriptCmd))
         #************
 
         # Call makeEmailListCSV.sh to export:
@@ -1165,15 +1205,15 @@ class CourseCSVServer(WebSocketHandler):
         try:
             quarter = detailDict['quarterRepQuarter']
         except KeyError:
-            self.logErr('In exportQuarterlyReport: quarter was not included; could not export quarterly report.')
+            self.mainThread.logErr('In exportQuarterlyReport: quarter was not included; could not export quarterly report.')
             return
         try:
             academic_year = detailDict['quarterRepYear']
         except KeyError:
-            self.logErr('In exportQuarterlyReport: academic year was not included; could not export quarterly reqport.')
+            self.mainThread.logErr('In exportQuarterlyReport: academic year was not included; could not export quarterly reqport.')
             return
         if academic_year == '%' or quarter == '%':
-            self.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
+            self.mainThread.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
             return
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd,)
         
@@ -1478,7 +1518,7 @@ class CourseCSVServer(WebSocketHandler):
         if self.mySQLPwd is not None:
             mySqlCmd.extend(['-w',self.mySQLPwd])
         mySqlCmd.extend([courseID])
-        self.logDebug("About to query for course names on regexp: '%s'" % mySqlCmd)
+        self.mainThread.logDebug("About to query for course names on regexp: '%s'" % mySqlCmd)
         
         try:
             pipeFromMySQL = subprocess.Popen(mySqlCmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout
@@ -1516,7 +1556,7 @@ class CourseCSVServer(WebSocketHandler):
             self.latestHeartbeatLogTime = time.time()
         elif time.time() - self.latestHeartbeatLogTime > CourseCSVServer.PROGRESS_LOGGING_INTERVAL:
             numHeartbeatsSent = int(CourseCSVServer.PROGRESS_LOGGING_INTERVAL / CourseCSVServer.PROGRESS_INTERVAL)
-            self.logDebug('Sent %d heartbeats.' % numHeartbeatsSent)
+            self.mainThread.logDebug('Sent %d heartbeats.' % numHeartbeatsSent)
             self.latestHeartbeatLogTime = time.time()
         
         msg = {"resp" : "progress", "args" : "."}
@@ -1554,7 +1594,7 @@ class CourseCSVServer(WebSocketHandler):
         if self.currTimer is not None:
             self.currTimer.cancel()
             self.currTimer = None
-            #self.logDebug('Cancelling progress timer')
+            #self.mainThread.logDebug('Cancelling progress timer')
         
     def str2bool(self, val):
         '''
@@ -1595,18 +1635,6 @@ class CourseCSVServer(WebSocketHandler):
                         shutil.copyfileobj(inFd, outFd)                    
         except (IOError, OSError) as e:
             raise IOError('Error trying to copy files %s to destination file %s: %s' % (srcFileNames, destFileName, `e`))
-            
-    def logInfo(self, msg):
-        if self.loglevel >= CourseCSVServer.LOG_LEVEL_INFO:
-            print(str(datetime.datetime.now()) + ' info: ' + msg) 
-
-    def logErr(self, msg):
-        if self.loglevel >= CourseCSVServer.LOG_LEVEL_ERR:
-            print(str(datetime.datetime.now()) + ' error: ' + msg) 
-
-    def logDebug(self, msg):
-        if self.loglevel >= CourseCSVServer.LOG_LEVEL_DEBUG:
-            print(str(datetime.datetime.now()) + ' debug: ' + msg) 
 
      
     # -------------------------------------------  Testing  ------------------
