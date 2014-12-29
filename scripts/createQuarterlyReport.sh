@@ -265,19 +265,29 @@ fi;
 # that quarter. Without both of these available, the 
 # start quarter in CourseInfo is used:
 
-if [[ $QUARTER != '%' && $ACADEMIC_YEAR != '%' ]]
-then
+#if [[ $QUARTER != '%' && $ACADEMIC_YEAR != '%' ]]
+#then
+    course_name_creation_cmd="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+			      CREATE TABLE Misc.RelevantCoursesTmp
+			      SELECT course_display_name
+			        FROM CourseInfo
+			       WHERE quarter LIKE '"$QUARTER"'
+			         AND academic_year LIKE "$ACADEMIC_YEAR";
+                             "
+# The following version found courses by looking for course activity.
+# That takes about 4hrs. So it was replaced by the above use of CourseInfo
     # Quarter and academic year of desired courses
     # were specified explicitly on the CL:
-    COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
-          CREATE TABLE Misc.RelevantCoursesTmp
-	  SELECT DISTINCT EdxTrackEvent.course_display_name
-	    FROM EdxTrackEvent
-	   WHERE EdxTrackEvent.course_display_name LIKE '%'
-    	     AND time BETWEEN makeLowQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
-                        AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR")
-             AND isEngagementEvent(event_type);
-    "
+    # COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
+    #       CREATE TABLE Misc.RelevantCoursesTmp
+    # 	  SELECT DISTINCT EdxTrackEvent.course_display_name
+    # 	    FROM EdxTrackEvent
+    # 	   WHERE EdxTrackEvent.course_display_name LIKE '%'
+    # 	     AND time BETWEEN makeLowQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR") 
+    #                     AND makeUpperQuarterDate('"$QUARTER"', "$ACADEMIC_YEAR")
+    #          AND isEngagementEvent(event_type);
+    # "
+
 #     COURSE_NAME_CREATION_CMD="DROP TABLE IF EXISTS Misc.RelevantCoursesTmp;
 #           CREATE TABLE Misc.RelevantCoursesTmp
 # 	  SELECT DISTINCT QualifyingCourseNames.course_display_name, 
@@ -357,7 +367,15 @@ then
 # 	  	 LEFT JOIN CourseInfo
 # 	  	 ON CourseInfo.course_display_name = QualifyingCourseNames.course_display_name;
 # 	  "
-fi
+#fi
+
+# Use student_courseenrollment to compute enrollment
+# (summing students), and certificates_generatedcertificate
+# to count certs awarded in this course. Note, if provided
+# with a quarter (-q) and an academic year (-y), this cmd
+# picks only courses that had at least one activity during
+# that quarter. Without both of these available, the 
+# start quarter in CourseInfo is used:
 
 MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','enrollment','num_certs', 'certs_ratio', 'is_internal'
            UNION
