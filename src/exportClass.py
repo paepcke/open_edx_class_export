@@ -1217,11 +1217,13 @@ class DataServer(threading.Thread):
             return
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd,)
         
-        doEnrollment = detailDict.get('quarterRepEnroll', False);
-        doEngagement = detailDict.get('quarterRepEngage', False);
+        doEnrollment = detailDict.get('quarterRepEnroll', False)
+        doEngagement = detailDict.get('quarterRepEngage', False)
+        minEnrollment = detailDict.get('quarterRepMinEnroll', None) # Use default in createQuarterlyReport.sh
+        byActivity   = detailDict.get('quarterRepByActivity', None)
         
         if doEnrollment:
-            resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False)
+            resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
             with open(resFileNameEnroll, 'r') as fd:
                 for line in fd:
                     self.writeResult('printTblInfo', line)
@@ -1552,16 +1554,16 @@ class DataServer(threading.Thread):
         #*******************
         
         # Only log heartbeat sending every so often:
-        if self.latestHeartbeatLogTime is None:
-            self.latestHeartbeatLogTime = time.time()
-        elif time.time() - self.latestHeartbeatLogTime > CourseCSVServer.PROGRESS_LOGGING_INTERVAL:
+        if self.mainThread.latestHeartbeatLogTime is None:
+            self.mainThread.latestHeartbeatLogTime = time.time()
+        elif time.time() - self.mainThread.latestHeartbeatLogTime > CourseCSVServer.PROGRESS_LOGGING_INTERVAL:
             numHeartbeatsSent = int(CourseCSVServer.PROGRESS_LOGGING_INTERVAL / CourseCSVServer.PROGRESS_INTERVAL)
             self.mainThread.logDebug('Sent %d heartbeats.' % numHeartbeatsSent)
-            self.latestHeartbeatLogTime = time.time()
+            self.mainThread.latestHeartbeatLogTime = time.time()
         
         msg = {"resp" : "progress", "args" : "."}
         if not self.testing:
-            self.write_message(msg)
+            self.mainThread.write_message(msg)
         self.setTimer(CourseCSVServer.PROGRESS_INTERVAL)
      
     def getDeliveryURL(self, courseId):

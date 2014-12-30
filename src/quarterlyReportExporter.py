@@ -47,19 +47,56 @@ class QuarterlyReportExporter(object):
         self.ensureOpenMySQLDb()
         
 
-    def enrollment(self, academicYear, quarter, outFile=None, printResultFilePath=True):
+    def enrollment(self, academicYear, quarter, minEnrollment=None, byActivity=None,outFile=None, printResultFilePath=True):
+        '''
+        Call Bash script createQuarterlyReport.sh, getting enrollment, cerfification, and internal/external
+        course information. 
+        :param academicYear: academic year for which information is wanted. MySQL wildcard ('%')
+                is acceptable
+        :type academicYear: {string | int}
+        :param quarter: the academic quarter within the given year(s) for 
+                which output is wanted ('fall', 'winter', 'spring', 'summer', or '%')
+        :type quarter: string
+        :param minEnrollment: by default, script createQuarterlyReport.sh requires a 
+                minimum enrollment for a course to be included in the output. Use
+                this keyword arg to specify another minimum, including 0.
+        :type minEnrollment: int
+        :param byActivity: normally the createQuarterlyReport.sh script uses the CourseInfo
+                table to find course names to include. But often courses get learner activity
+                after the official end of the course. If True, this parameter instead has the
+                script include all courses that had at least one action during the academicYear/quarter
+                for which info is requested.
+        :type byActivity: Boolean
+        :param outFile: file name to which to direct output. If none provided, a temp file is created.
+        :type outFile: {None | String}
+        :param printResultFilePath: if True, method will write to stdout a sentence saying where the
+                output was placed.
+        :type printResultFilePath: Boolean
+        '''
 
         if outFile is None:
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=False)
 
         if type(outFile) == str:
-            outFile = open(outFile, 'r')
+            outFile = open(outFile, 'w')
             
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment').
-        # '-e' says: "only produce enrollment numbers after each course name;
         # don't provide all the statistics, like awarded certificates.
-        shellCmd = [self.courseInfoScript,'-u',self.currUser, '-e', '--silent', '-q', quarter, '-y', str(academicYear)]
+        shellCmd = [self.courseInfoScript,'-u',self.currUser, '--silent', '-q', quarter, '-y', str(academicYear)]
+        
+        if minEnrollment is not None:
+            try:
+                # Ensure that the value is an int (or str of an int):
+                int(minEnrollment)
+                shellCmd.extend(['--minEnrollment', minEnrollment])
+            except ValueError:
+                self.mainThread.logErr('Value of minEnrollment must be int (or str of an int); was %s' % str(minEnrollment))
+            
+            
+        if byActivity is not None and byActivity == True:
+            shellCmd.extend(['--byActivity'])
+        
         if self.mySQLPwd is not None and self.mySQLPwd != '':
             shellCmd.extend(['-w',self.mySQLPwd])
         try:

@@ -206,6 +206,20 @@ function ExportClass() {
 	clrProgressDiv();
     }
 
+    // Not being called: should get control when one of 
+    // the Quarterly Report-->Details:enrollment checkmarks
+    // change:
+    this.evtEnrollOrEngageReqBoxChanged = function() {
+	if (document.getElementById('quarterRepEnroll').checked ||
+	    document.getElementById('quarterRepByActivity').checked ||
+	    document.getElementById('quarterRepEngage').checked
+	   ) {
+	    document.getElementById('quarterRep').checked = true;
+	} else {
+	    document.getElementById('quarterRep').checked = false;
+	}
+    }
+
     this.evtCryptoPwdSubmit = function() {
 	var pwdFld1 = document.getElementById('pwdFld1');
 	var pwdFld2 = document.getElementById('pwdFld2');
@@ -382,7 +396,11 @@ function ExportClass() {
 	var quarterRepQuarter = quarterRep && document.getElementById("quarterRepQuarter").value;
 	var quarterRepYear = quarterRep && document.getElementById("quarterRepYear").value;
 	var quarterRepEnroll = quarterRep && document.getElementById("quarterRepEnroll").checked;
+	var quarterRepMinEnroll = quarterRep && document.getElementById("quarterRepMinEnroll").value;
+	var quarterRepByActivity = quarterRep && document.getElementById("quarterRepByActivity").checked;
 	var quarterRepEngage = quarterRep && document.getElementById("quarterRepEngage").checked;
+
+
 
 	if (!basicData && 
 	    !engagementData &&
@@ -441,6 +459,8 @@ function ExportClass() {
 		      "quarterRepQuarter": quarterRepQuarter,
 		      "quarterRepYear": quarterRepYear,
 		      "quarterRepEnroll": quarterRepEnroll,
+		      "quarterRepMinEnroll": quarterRepMinEnroll,
+		      "quarterRepByActivity": quarterRepByActivity,
 		      "quarterRepEngage": quarterRepEngage,
 		     };
 	var req = buildRequest("getData", argObj);

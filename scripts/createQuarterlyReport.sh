@@ -345,7 +345,7 @@ else
 fi			      
 
 #*************
-#echo "COURSE_NAME_CREATION_CMD: "$COURSE_NAME_CREATION_CMD
+echo "COURSE_NAME_CREATION_CMD: "$COURSE_NAME_CREATION_CMD
 #exit 0
 #*************
 

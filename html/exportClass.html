@@ -62,6 +62,24 @@
        left: 305px    
     }
 
+    .formIndentation {
+       margin-left: 80px;
+    }
+
+    .formIndentationInner {
+       margin-left: 175px;
+    }
+
+    .tblExportControls {
+       margin-bottom: -50px;
+       width: 900px; 
+    }
+
+    .tinyPrint {
+       font-size: 10px;
+       color: red;
+    }
+
   </style>
   
 </head>
@@ -80,7 +98,7 @@
     <span id="spanTab">Course to export; may use MySQL wildcards;<br>
       examples: <i>DB%</i>, or <i>%CS144%</i>:
     </span>
-    <div width="600px">
+    <div class="tblExportControls">
     <form id=reqForm>
           <input type="text" id="courseID" size="35" autofocus="autofocus">
 	  <input type="button" value="List Matching Classes"id="listClassesBtn"><br>
@@ -165,6 +183,7 @@
 	    <option value="winter">Winter</option>
 	    <option value="spring">Spring</option>
 	    <option value="summer">Summer</option>
+	    <option value="all">All Quarters</option>
 	  </select>
 	  <select id="quarterRepYear">
 	    <option value="2012">2012</option>
@@ -178,15 +197,43 @@
 	    <option value="2020">2020</option>
 	  </select>
 
-	  <input type="checkbox" id="quarterRepEnroll" value="quarterRepEnroll" checked>
-	  <label class="long" for="quarterRepEnroll">
-	    Enrollment/Certs
-	  </label>
+	  <span class="tinyPrint">(for J&J: &hearts;)</span>
 
-	  <input type="checkbox" id="quarterRepEngage" value="quarterRepEngage">
-	  <label class="long" for="quarterRepEngage">
-	    Engagement
-	  </label>
+          <div class="formIndentation">
+
+	      <input type="checkbox" id="quarterRepEnroll" value="quarterRepEnroll" onclick="evtEnrollOrEngageReqBoxChanged();" checked/>
+	      <label class="long" for="quarterRepEnroll">
+	        Enrollment/Certs: 
+	      </label>
+
+	      <label class="long" for="quarterRepMinEnroll">
+	        Min enrollment: 
+	      </label>	  
+	      <select id="quarterRepMinEnroll">
+	        <option value="0">0</option>
+	        <option value="9" selected>9</option>
+	        <option value="10">10</option>
+	        <option value="15">15</option>
+	        <option value="20">20</option>
+	        <option value="100">100</option>
+	        <option value="1000">1000</option>
+	        <option value="50000">50000</option>
+	      </select>
+
+	      <div class="formIndentationInner">
+		      <label class="long" for="quarterRepByActivity">
+		        Include all courses with activity: 
+		      </label>	  
+		      <input type="checkbox" id="quarterRepByActivity" value="quarterRepByActivity">
+              </div>
+          </div>          
+
+	  <div class="formIndentation">
+	   	<input type="checkbox" id="quarterRepEngage" value="quarterRepEngage">
+	   	<label class="long" for="quarterRepEngage">
+	   	  Engagement
+	   	</label>
+          </div>
 
 	  <div id="pwdSolicitationDiv">
 	    <label class="short" for="pwdFld1">Crypto passwd (required):</label> <input id="pwdFld1" type="password"><br>
@@ -197,7 +244,6 @@
     </form>
     </div>
 	     
-    <p>
     <input type="button" 
 	   value="Get Data"
 	   id="getDataBtn">
