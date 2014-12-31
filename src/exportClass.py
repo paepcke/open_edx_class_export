@@ -678,6 +678,12 @@ class DataServer(threading.Thread):
         # Are we only to consider video events?
         engageVideoOnly = detailDict.get('engageVideoOnly', False)
         try:
+            #*****************
+            self.mainThread.logInfo("coursesStartYearsArr: '%s'" % startYearsArr)
+            self.mainThread.logInfo("mySQLUser: '%s'" % invokingUser)
+            self.mainThread.logInfo("courseToProfile: '%s'" % courseId)
+            self.mainThread.logInfo("videoOnly: '%s'" % False)
+            #*****************
             engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
                                         mySQLUser=invokingUser,                                                                                                    
                                         courseToProfile=courseId,
