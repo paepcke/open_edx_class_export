@@ -262,6 +262,22 @@ function ExportClass() {
 	}
     }
 
+    this.evtQuarterlyRepClicked = function() {
+	// If quarterly report is requested, reveal additional specs:
+	if (document.getElementById('quarterRep').checked) {
+	    classExporter.showQuarterlySpecs();
+	} else {
+	    classExporter.hideQuarterlySpecs();
+	}
+    }
+
+    this.inclCourseActivityClicked = function() {
+	if (document.getElementById('quarterRepByActivity').checked) {
+	    document.getElementById('quarterRepEnroll').checked = true;
+	}
+    }
+
+
     this.evtEmailListClicked = function() {
 	emailListChkBox = document.getElementById('emailList');
 	if (emailListChkBox.checked) {
@@ -415,6 +431,15 @@ function ExportClass() {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
 	}
+
+	// If quarterly report, ensure that at least one of the enrollment/engagement boxes
+        // is filled:
+	if (quarterRep &&
+	    !(quarterRepEnroll || quarterRepEngage)) {
+	    alert("If you check 'Quarterly Report' you need also to check 'Enrollment' or 'Engagement', or both.");
+	    return;
+	}
+
 
 	// Forum data and email lists must be encrypted:
 	if ((edxForum || piazzaForum || edcastForum || emailList || learnerPII) &&
@@ -602,7 +627,8 @@ function ExportClass() {
 	// the course name regex text field:
 
 	var pwdSolicitationDiv = document.getElementById('pwdSolicitationDiv');
-	pwdSolicitationDiv.style.visibility = "visible";
+	// pwdSolicitationDiv.style.visibility = "visible";
+	pwdSolicitationDiv.style.display = "block";
     }
     
     this.hideCryptoPwdSolicitation = function() {
@@ -611,9 +637,18 @@ function ExportClass() {
 	// parent, which is the column of widgets under the
 	// course regex text entry fld:
 	var pwdSolicitationDiv = document.getElementById('pwdSolicitationDiv');
-	pwdSolicitationDiv.style.visibility = "hidden";
+	pwdSolicitationDiv.style.display = "none";
     }
 
+    this.showQuarterlySpecs = function() {
+	var quarterlySpecsDiv = document.getElementById('quarterlySpecs');
+	quarterlySpecsDiv.style.display = "block";
+    }
+
+    this.hideQuarterlySpecs = function() {
+	var quarterlySpecsDiv = document.getElementById('quarterlySpecs');
+	quarterlySpecsDiv.style.display = "none";
+    }
 
 }
 
@@ -634,6 +669,8 @@ document.getElementById('piazzaForum').addEventListener('click', classExporter.e
 document.getElementById('edcastForum').addEventListener('click', classExporter.evtAnyForumClicked);
 document.getElementById('emailList').addEventListener('click', classExporter.evtEmailListClicked);
 document.getElementById('learnerPII').addEventListener('click', classExporter.evtLearnerPIIClicked);
+document.getElementById('quarterRep').addEventListener('click', classExporter.evtQuarterlyRepClicked);
+document.getElementById('quarterRepByActivity').addEventListener('click', classExporter.inclCourseActivityClicked);
 
 // The following is intended to make CR in 
 // course ID text field click the Get Course List
@@ -643,3 +680,9 @@ document.getElementById('courseID').addEventListener('onkeydown', classExporter.
 // Initially, we hide the solicitation for
 // a PII zip file encryption pwd:
 classExporter.hideCryptoPwdSolicitation();
+
+// Same for the quarterly specs:
+classExporter.hideQuarterlySpecs();
+
+// For now we permanently hide Edcast and Piazza:
+document.getElementById('piazzaAndEdcast').style.display = "none";

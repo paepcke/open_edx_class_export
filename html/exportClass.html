@@ -1,249 +1,259 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
 
-  <title>Datastage Class Data Export</title>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" type="text/css" href="calendar.css">
-  <style type="text/css">
-    body { background-color:#FFF8E8;}
+    <title>Datastage Class Data Export</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="calendar.css">
+    <style type="text/css">
+      body { background-color:#FFF8E8;}
 
-    label.long {
-    display: inline-block;
-    /*width: 400px;*/
-    }
+      label.long {
+      display: inline-block;
+      /*width: 400px;*/
+      }
 
-    label.short {
-    display: inline-block;
-    width: 150px;
-    }
+      label.short {
+      display: inline-block;
+      width: 150px;
+      }
 
-    H1 { 
-         text-align: center;
-         margin-bottom: 0cm;
-    }
-    H2 {
-       padding: 5px; 
-       margin: 0px;
-    }
-    #p {
-       margin-top: 0px; 
-       padding: 0px; 
-    } 
-    #subtitle {
-       text-align: center;
-       margin-top: 0cm;
-       font-size: 1.5em;
-       font-style: italic;
-    }
-    #spanTab {
-       margin-right: 1cm;
-    }
-    #spanBackTab {
-       margin-left: 1cm;
-    }
-    #reqForm {
-       margin-left: 2cm;
-    }
-    #tblExtract {
-       font-size: 10%;
-    }
+      H1 { 
+      text-align: center;
+      margin-bottom: 0cm;
+      }
+      H2 {
+      padding: 5px; 
+      margin: 0px;
+      }
+      #p {
+      margin-top: 0px; 
+      padding: 0px; 
+      } 
+      #subtitle {
+      text-align: center;
+      margin-top: 0cm;
+      font-size: 1.5em;
+      font-style: italic;
+      }
+      #spanTab {
+      margin-right: 1cm;
+      }
+      #spanBackTab {
+      margin-left: 1cm;
+      }
+      #reqForm {
+      margin-left: 2cm;
+      }
+      #tblExtract {
+      font-size: 10%;
+      }
 
-    .tab1_align {
-       position: relative;
-       left: 10px;
-    }
-    .tab2_align {
-       position: absolute;
-       left: 280px    
-    }
-    .tab3_align {
-       position: absolute;
-       left: 305px    
-    }
+      .tab1_align {
+      position: relative;
+      left: 10px;
+      }
+      .tab2_align {
+      position: absolute;
+      left: 280px    
+      }
+      .tab3_align {
+      position: absolute;
+      left: 305px    
+      }
 
-    .formIndentation {
-       margin-left: 80px;
-    }
+      .formIndentation {
+      margin-left: 80px;
+      }
 
-    .formIndentationInner {
-       margin-left: 175px;
-    }
+      .formIndentationInner {
+      margin-left: 175px;
+      }
 
-    .tblExportControls {
-       margin-bottom: -50px;
-       width: 900px; 
-    }
+      .tblExportControls {
+      margin-bottom: -50px;
+      width: 900px; 
+      }
 
-    .tinyPrint {
-       font-size: 10px;
-       color: red;
-    }
+      .tinyPrint {
+      font-size: 10px;
+      color: red;
+      }
 
-  </style>
-  
-</head>
-<body>
+      .spaceBelow {
+      margin-bottom: 50px;
+      }
 
-<!-- Empty table; used by the pop-up calendar of exportClass.js -->
-<table class="ds_box" cellpadding="0" cellspacing="0" id="ds_conclass" style="display: none;">
-<tr><td id="ds_calclass">
-</td></tr>
-</table>
+    </style>
+    
+  </head>
+  <body>
+
+    <!-- Empty table; used by the pop-up calendar of exportClass.js -->
+    <table class="ds_box" cellpadding="0" cellspacing="0" id="ds_conclass" style="display: none;">
+      <tr><td id="ds_calclass">
+      </td></tr>
+    </table>
 
 
-  <h1>Export One Class to CSV</h1>
-  <p id="subtitle">Log in as dbadmin</p>
+    <h1>Export One Class to CSV</h1>
+    <p id="subtitle">Log in as dbadmin</p>
 
     <span id="spanTab">Course to export; may use MySQL wildcards;<br>
       examples: <i>DB%</i>, or <i>%CS144%</i>:
     </span>
     <div class="tblExportControls">
-    <form id=reqForm>
-          <input type="text" id="courseID" size="35" autofocus="autofocus">
-	  <input type="button" value="List Matching Classes"id="listClassesBtn"><br>
+      <form id=reqForm>
+        <input type="text" id="courseID" size="35" autofocus="autofocus">
+	<input type="button" value="List Matching Classes" id="listClassesBtn"><br>
 
-          <input type="checkbox" id="fileAction" value="xpunge">
-	  <label class="long" for="fileAction">
-	    Remove any previous exports of same type
-	  </label>
-	  <br><br>
-	  <input type="checkbox" id="basicData" value="basicData" checked>
-	  <label class="long" for="basicData">
-	    Prepare basic course info
-	  </label>
-	  <br>
+        <input type="checkbox" id="fileAction" value="xpunge">
+	<label class="long" for="fileAction">
+	  Remove any previous exports of same type
+	</label>
+	<br><br>
+	<input type="checkbox" id="basicData" value="basicData" checked>
+	<label class="long" for="basicData">
+	  Prepare basic course info
+	</label>
+	<br>
 
-	  <input type="checkbox" id="engagementData" value="engagementData">
-	  <label class="long" for="engagementData">
-	    Prepare time on task data
-	  </label>
-	  <input type="checkbox" id="engageVideoOnly"
-		 name="engageVideoOnly" value="engageVideoOnly">
-	  <label for="engageVideoOnly"><i>Video events only</i></label>
-	  <br>
+	<input type="checkbox" id="engagementData" value="engagementData">
+	<label class="long" for="engagementData">
+	  Prepare time on task data
+	</label>
+	<input type="checkbox" id="engageVideoOnly"
+	       name="engageVideoOnly" value="engageVideoOnly">
+	<label for="engageVideoOnly"><i>Video events only</i></label>
+	<br>
 
-<!--
-	  <input type="checkbox" id="learnerPerf" value="learnerPerf">
-	  <label class="long" for="learnerPerf">
-	    Learner performance
-	  </label>
-	  <br>
--->
-	  <input type="checkbox" id="edxForum" value="edxForum">
-	  <label for="edxForum">
-	    Forum data:
-	  </label>
-	  <input type="radio" id="edxForumIsolated"  name="protection" value="edxForumIsolated" checked >
-	  <label for="edxForumIsolated"><i>Isolated</i></label>
-	  <input type="radio" id="edxForumRelatable" name="protection" value="edxForumRelatable">
-	  <label for="edxForumRelatable"><i>Relatable</i></label>
-	  <br>
+	<!--
+	<input type="checkbox" id="learnerPerf" value="learnerPerf">
+	<label class="long" for="learnerPerf">
+	  Learner performance
+	</label>
+	<br>
+	-->
+	<input type="checkbox" id="edxForum" value="edxForum">
+	<label for="edxForum">
+	  Forum data:
+	</label>
+	<input type="radio" id="edxForumIsolated"  name="protection" value="edxForumIsolated" checked >
+	<label for="edxForumIsolated"><i>Isolated</i></label>
+	<input type="radio" id="edxForumRelatable" name="protection" value="edxForumRelatable">
+	<label for="edxForumRelatable"><i>Relatable</i></label>
+	<br>
 
-	  <input type="checkbox" id="piazzaForum" value="piazzaForum" disabled="true">
+	<div id="piazzaAndEdcast">
+	  <input type="checkbox" id="piazzaForum" value="piazzaForum">
 	  <label for="piazzaForum">
 	    <font color="dimGray"> Piazza data:</font>
 	  </label>
 	  <input type="radio" id="piazzaIsolated"  name="piazzaProtection" value="piazzaIsolated" 
-		 disabled="true" checked>
+		 checked>
 	  <label for="piazzaIsolated"><i>Isolated</i></label>
-	  <input type="radio" id="piazzaRelatable" name="piazzaProtection" value="piazzaRelatable" disabled="true">
+	  <input type="radio" id="piazzaRelatable" name="piazzaProtection" value="piazzaRelatable">
 	  <label for="piazzaRelatable"><i>Relatable</i></label>
 	  <br>
 
-	  <input type="checkbox" id="edcastForum" value="edcastForum" disabled="true">
+	  <input type="checkbox" id="edcastForum" value="edcastForum">
 	  <label class="long" for="edcastForum">
 	    <font color="dimGray"> Edcast data:</font>
 	  </label>
 	  <input type="radio" id="edcastIsolated"  name="edcastProtection" value="edcastIsolated" 
-		 checked disabled="true">
+		 checked >
 	  <label for="edcastIsolated"><i>Isolated</i></label>
-	  <input type="radio" id="edcastRelatable" name="edcastProtection" value="edcastRelatable" disabled="true">
+	  <input type="radio" id="edcastRelatable" name="edcastProtection" value="edcastRelatable">
 	  <label for="edcastRelatable"><i>Relatable</i></label>
 	  <br>
+	</div>
 
-	  <input type="checkbox" id="emailList" value="emailList">
-	  <label class="long" for="emailList">Email mailing list; start date:</label>
-	  <!-- Text input with calendar popup: -->
-	  <input onclick="ds_sh(this); checkEmailOn()" id="emailDate"
-		 name="emailDate" readonly="readonly" 
-		 style="cursor: text position: relative;"/>
-	  <br>
+	<input type="checkbox" id="emailList" value="emailList">
+	<label class="long" for="emailList">Email mailing list; start date:</label>
+	<!-- Text input with calendar popup: -->
+	<input onclick="ds_sh(this); checkEmailOn()" id="emailDate"
+	       name="emailDate" readonly="readonly" 
+	       style="cursor: text position: relative;"/>
+	<br>
 
-	  <input type="checkbox" id="learnerPII" value="learnerPII">
-	  <label class="long" for="learnerPII">
-	    Learner personal information
-	  </label>
-	  <br>
+	<input type="checkbox" id="learnerPII" value="learnerPII">
+	<label class="long" for="learnerPII">
+	  Learner personal information
+	</label>
+	<br>
 
-	  <input type="checkbox" id="quarterRep" value="quarterRep">
-	  <label class="long" for="quarterRep">Quarterly report:</font></label>
-	  <select id="quarterRepQuarter">
-	    <option value="fall">Fall</option>
-	    <option value="winter">Winter</option>
-	    <option value="spring">Spring</option>
-	    <option value="summer">Summer</option>
-	    <option value="all">All Quarters</option>
-	  </select>
-	  <select id="quarterRepYear">
-	    <option value="2012">2012</option>
-	    <option value="2013">2013</option>
-	    <option value="2014" selected>2014</option>
-	    <option value="2015">2015</option>
-	    <option value="2016">2016</option>
-	    <option value="2017">2017</option>
-	    <option value="2018">2018</option>
-	    <option value="2019">2019</option>
-	    <option value="2020">2020</option>
-	  </select>
+	<input type="checkbox" id="quarterRep" value="quarterRep">
+	<label class="long" for="quarterRep">Quarterly report:</label>
+	<select id="quarterRepQuarter">
+	  <option value="fall">Fall</option>
+	  <option value="winter">Winter</option>
+	  <option value="spring">Spring</option>
+	  <option value="summer">Summer</option>
+	  <option value="all">All Quarters</option>
+	</select>
+	<select id="quarterRepYear">
+	  <option value="2012">2012</option>
+	  <option value="2013">2013</option>
+	  <option value="2014" selected>2014</option>
+	  <option value="2015">2015</option>
+	  <option value="2016">2016</option>
+	  <option value="2017">2017</option>
+	  <option value="2018">2018</option>
+	  <option value="2019">2019</option>
+	  <option value="2020">2020</option>
+	</select>
 
-	  <span class="tinyPrint">(for J&J: &hearts;)</span>
+	<span class="tinyPrint">(for J&amp;J: &hearts;)</span>
 
+	<div  id="quarterlySpecs">
           <div class="formIndentation">
 
-	      <input type="checkbox" id="quarterRepEnroll" value="quarterRepEnroll" onclick="evtEnrollOrEngageReqBoxChanged();" checked/>
-	      <label class="long" for="quarterRepEnroll">
-	        Enrollment/Certs: 
-	      </label>
+	    <input type="checkbox" id="quarterRepEnroll" value="quarterRepEnroll" checked/>
+	    <label class="long" for="quarterRepEnroll">
+	      Enrollment/Certs: 
+	    </label>
 
-	      <label class="long" for="quarterRepMinEnroll">
-	        Min enrollment: 
+	    <label class="long" for="quarterRepMinEnroll">
+	      Min enrollment: 
+	    </label>	  
+	    <select id="quarterRepMinEnroll">
+	      <option value="0">0</option>
+	      <option value="9" selected>9</option>
+	      <option value="10">10</option>
+	      <option value="15">15</option>
+	      <option value="20">20</option>
+	      <option value="100">100</option>
+	      <option value="1000">1000</option>
+	      <option value="50000">50000</option>
+	    </select>
+
+	    <div class="formIndentationInner">
+	      <label class="long" for="quarterRepByActivity">
+		Include all courses with activity: 
 	      </label>	  
-	      <select id="quarterRepMinEnroll">
-	        <option value="0">0</option>
-	        <option value="9" selected>9</option>
-	        <option value="10">10</option>
-	        <option value="15">15</option>
-	        <option value="20">20</option>
-	        <option value="100">100</option>
-	        <option value="1000">1000</option>
-	        <option value="50000">50000</option>
-	      </select>
+	      <input type="checkbox" id="quarterRepByActivity" value="quarterRepByActivity">
+            </div>
 
-	      <div class="formIndentationInner">
-		      <label class="long" for="quarterRepByActivity">
-		        Include all courses with activity: 
-		      </label>	  
-		      <input type="checkbox" id="quarterRepByActivity" value="quarterRepByActivity">
-              </div>
-          </div>          
+	    <div class="formIndentation">
+	      <input type="checkbox" id="quarterRepEngage" value="quarterRepEngage">
+	      <label class="long" for="quarterRepEngage">
+	   	Engagement
+	      </label>
+            </div>
+	  </div> <!-- end outer form indentation -->
+        </div> <!-- end quarterly specs  -->
 
-	  <div class="formIndentation">
-	   	<input type="checkbox" id="quarterRepEngage" value="quarterRepEngage">
-	   	<label class="long" for="quarterRepEngage">
-	   	  Engagement
-	   	</label>
-          </div>
+	<div id="pwdSolicitationDiv">
+	  <label class="short" for="pwdFld1">Crypto passwd (required):</label> <input id="pwdFld1" type="password"><br>
+	  <label class="short" for="pwdFld2">Please retype:</label> <input id="pwdFld2" type="password"><br>
+	  <label class="short" for="pwdOK"></label>        <input id="pwdOK" type="button" value="Set Password">
+	</div>
 
-	  <div id="pwdSolicitationDiv">
-	    <label class="short" for="pwdFld1">Crypto passwd (required):</label> <input id="pwdFld1" type="password"><br>
-	    <label class="short" for="pwdFld2">Please retype:</label> <input id="pwdFld2" type="password"><br>
-	    <label class="short" for="pwdOK"></label>        <input id="pwdOK" type="button" value="Set Password">
-	  </div>
-
-    </form>
+      </form>
     </div>
-	     
+    
+    <p class="spaceBelow"></p>
+
     <input type="button" 
 	   value="Get Data"
 	   id="getDataBtn">
@@ -260,13 +270,13 @@
       </span>
     </span>
 
-  <br>
-  <hr>
-  <div id="progress"></div>
+    <br>
+    <hr>
+    <div id="progress"></div>
 
-<script src="exportClass.js"></script>
-<script src="calendar.js"></script>
+    <script src="exportClass.js"></script>
+    <script src="calendar.js"></script>
 
 
-</body>
+  </body>
 </html>
