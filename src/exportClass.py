@@ -676,12 +676,15 @@ class DataServer(threading.Thread):
         # EngagementComputer will open its own MySQLDB instance:
         self.mysqlDb.close()
         # Are we only to consider video events?
-        videoEventsOnly = detailDict.get('engageVideoOnly', False)
+        if detailDict.get('engageVideoOnly', False) != False:
+            videoOnly = True
+        else:
+            videoOnly = False
         try:
             engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
                                         mySQLUser=invokingUser,                                                                                                    
                                         courseToProfile=courseId,
-                                        videoOnly=(True if videoEventsOnly else False)                                                                                             
+                                        videoOnly=videoOnly
                                         )                                                                                                                          
             engagementComp.run()
             (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
