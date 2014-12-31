@@ -142,27 +142,9 @@ class CourseCSVServer(WebSocketHandler):
         self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
         #self.loglevel = CourseCSVServer.LOG_LEVEL_NONE
 
-        self.ensureOpenMySQLDb()
-        
         # Interval between logging the sending of
         # the heartbeat:
         self.latestHeartbeatLogTime = None
-    
-    def ensureOpenMySQLDb(self):
-        try:
-            with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
-                self.mySQLPwd = fd.readline().strip()
-                self.mysqlDb = MySQLDB(user=self.currUser, passwd=self.mySQLPwd, db=self.defaultDb)
-        except Exception:
-            try:
-                # Try w/o a pwd:
-                self.mySQLPwd = None
-                self.mysqlDb = MySQLDB(user=self.currUser, db=self.defaultDb)
-            except Exception as e:
-                # Remember the error msg for later:
-                self.dbError = `e`;
-                self.mysqlDb = None
-        return self.mysqlDb
     
     def allow_draft76(self):
         '''
@@ -191,7 +173,13 @@ class CourseCSVServer(WebSocketHandler):
         #print message
         try:
             requestDict = json.loads(message)
-            if requestDict['req'] != 'keepAlive':
+            if requestDict['req'] == 'keepAlive':
+                # Could return live-ping here! But shouldn't
+                # need to, because sending the '.' periodically
+                # during long ops is enough. Sending that dot
+                # will cause the browser to send its keep-alive:
+                return
+            else:
                 self.logInfo("request received: %s" % str(message))
         except Exception as e:
             self.writeError("Bad JSON in request received at server: %s" % `e`)
@@ -220,7 +208,13 @@ class DataServer(threading.Thread):
         
         self.mainThread = mainThread
         self.testing = testing
-        self.mySQLPwd = mainThread.mySQLPwd
+        
+        if testing:
+            self.currUser = 'unittest'
+        else:
+            self.currUser = getpass.getuser()
+        
+        self.ensureOpenMySQLDb()
         
         # Locate the makeCourseCSV.sh script:
         self.thisScriptDir = os.path.dirname(__file__)
@@ -235,14 +229,26 @@ class DataServer(threading.Thread):
         # and this Python code: 
         self.infoTmpFiles = {}
         self.dbError = 'no error'
-        if testing:
-            self.currUser = 'unittest'
-        else:
-            self.currUser = getpass.getuser()
         self.requestDict = requestDict
         
         self.currTimer = None
-        
+
+    def ensureOpenMySQLDb(self):
+        try:
+            with open('/home/%s/.ssh/mysql' % self.currUser, 'r') as fd:
+                self.mySQLPwd = fd.readline().strip()
+                self.mysqlDb = MySQLDB(user=self.currUser, passwd=self.mySQLPwd, db=self.mainThread.defaultDb)
+        except Exception:
+            try:
+                # Try w/o a pwd:
+                self.mySQLPwd = None
+                self.mysqlDb = MySQLDB(user=self.currUser, db=self.defaultDb)
+            except Exception as e:
+                # Remember the error msg for later:
+                self.dbError = `e`;
+                self.mysqlDb = None
+        return self.mysqlDb
+    
     def run(self):
         self.serveOneDataRequest(self.requestDict)
 

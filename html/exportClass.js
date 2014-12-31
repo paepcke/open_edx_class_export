@@ -191,6 +191,15 @@ function ExportClass() {
 		return;
 	    }
 	}
+
+	// If quarterly report is request with engagement, warn that
+	// takes a long time:
+	if (document.getElementById('quarterRepEngage').checked &&
+	    confirm("Computing engagement for all courses in a quarter " +
+		    "takes a long time; example: about 5hrs for 45 courses. " +
+		    "Want to go ahead?") == false)
+	    return;
+
 	startProgressStream(fullCourseName);
     }
 
