@@ -31,6 +31,7 @@ import tempfile
 from threading import Timer
 import threading
 import time # @UnusedImport
+import traceback
 import zipfile
 
 from engagement import EngagementComputer
@@ -138,8 +139,8 @@ class CourseCSVServer(WebSocketHandler):
         self.testing = testing
         self.request = request;        
 
-        #self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
-        self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
+        self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
+        #self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
         #self.loglevel = CourseCSVServer.LOG_LEVEL_NONE
 
         # Interval between logging the sending of
@@ -401,7 +402,13 @@ class DataServer(threading.Thread):
         except Exception as e:
             # Stop sending progress indicators to browser:
             self.cancelTimer()
-            self.mainThread.logErr('Error while processing req: %s' % `e`)
+            #self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
+            if self.mainThread.loglevel == CourseCSVServer.LOG_LEVEL_NONE:
+                return
+            elif self.mainThread.loglevel == CourseCSVServer.LOG_LEVEL_INFO:
+                self.mainThread.logErr('Error while processing req: %s' % `e`)
+            elif self.mainThread.loglevel == CourseCSVServer.LOG_LEVEL_DEBUG:
+                self.mainThread.logErr('Error while processing req: %s' % traceback.print_exc())
             # Need to escape double-quotes so that the 
             # browser-side JSON parser for this response
             # doesn't get confused:
