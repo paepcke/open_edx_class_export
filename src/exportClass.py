@@ -681,11 +681,16 @@ class DataServer(threading.Thread):
         else:
             videoOnly = False
         try:
+#             engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
+#                                         mySQLUser=invokingUser,                                                                                                    
+#                                         courseToProfile=courseId,
+#                                         videoOnly=videoOnly
+#                                         )                        
             engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
                                         mySQLUser=invokingUser,                                                                                                    
-                                        courseToProfile=courseId,
-                                        videoOnly=videoOnly
+                                        courseToProfile=courseId
                                         )                                                                                                                          
+                                                                                                  
             engagementComp.run()
             (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
         finally:
