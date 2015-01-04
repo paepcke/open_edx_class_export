@@ -415,6 +415,11 @@ class DataServer(threading.Thread):
             #safeResp = json.dumps('(%s): %s)' % (requestDict['req']+str(requestDict['args']), `e`))
             #self.writeError("Server could not extract request name/args from %s" % safeResp)
             self.writeError("%s" % `e`)
+        finally:
+            try:
+                self.mysqlDb.close()
+            except Exception as e:
+                self.writeError("Error during MySQL driver close: '%s'" % `e`)
             
     def checkForOldOutputFiles(self, actions, mayDelete, courseDisplayName, emailStartDate):
         '''
