@@ -314,8 +314,8 @@ class DataServer(threading.Thread):
                 # That invocation produced an output file, and the
                 # "Remove any previous exports of same type' option
                 # was not checked.
-                self.writeError("Request '%s': table(s) for %s %s already existed, and Remove Previous Exports... was not checked." %\
-                                (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else ''))
+                self.writeError("Request '%s': table(s) for %s %s already existed, and Remove Previous Exports... was not checked. Pickup at %s." %\
+                                (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else '', self.getDeliveryURL(courseId)))
                 return None
                 
             courseList = None
