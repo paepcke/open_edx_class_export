@@ -48,6 +48,7 @@ HELP_TEXT="-u uid\t\t: the MySQL user id\r\n
                    \t\t\tDefault is all quarters.\n
            -y\t\t: academic year. Default is all years.\n
            -m\t\t: only include courses with at least minEnrollment learners\n
+	   -a\t\t: include all courses
            --silent\t: no column headers are output\n
            --byActivity\t: determine relevant course names by activity rather than course schedule\n
 "
@@ -257,7 +258,7 @@ if [[ $ALL_COURSES == 1 ]]
 then
     ENROLLMENT_CONDITION=""
 else
-    ENROLLMENT_CONDITION="HAVING theSummedUsers > $MIN_ENROLLMENT"
+    ENROLLMENT_CONDITION="WHERE theSummedUsers > $MIN_ENROLLMENT"
 fi;
 
 # The Quarter start and end dates:
@@ -380,12 +381,13 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
 	        (SELECT course_display_name, SUM(status = 'downloadable') AS theSummedAwards
 	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.certificates_generatedcertificate
 	             ON Misc.RelevantCoursesTmp.course_display_name = certificates_generatedcertificate.course_id
-	         GROUP BY course_display_name "$ENROLLMENT_CONDITION"
+	         GROUP BY course_display_name
 	        ) AS SummedAwards
 	       ON SummedUsers.course_display_name = SummedAwards.course_display_name
               LEFT JOIN
                 (SELECT course_display_name, is_internal FROM Edx.CourseInfo) AS IsInternalInfo
-               ON IsInternalInfo.course_display_name = SummedAwards.course_display_name;
+               ON IsInternalInfo.course_display_name = SummedAwards.course_display_name
+            "$ENROLLMENT_CONDITION";
            "
 
 #*************
