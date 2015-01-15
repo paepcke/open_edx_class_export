@@ -245,7 +245,7 @@ else
     MYSQL_AUTH="-u $USERNAME -p$PASSWD"
 fi
 
-# Use edxprod.student_coursenrollment to find courses
+# Use edxprod.true_coursenrollment to find courses
 # with enrollment greater than $MIN_ENROLLMENT. This constraint filters
 # some course entries whose names are misspelled. The
 # " AS '' " terms cause the column headers to be suppressed.
@@ -349,7 +349,7 @@ fi
 #exit 0
 #*************
 
-# Use student_courseenrollment to compute enrollment
+# Use true_courseenrollment to compute enrollment
 # (summing students), and certificates_generatedcertificate
 # to count certs awarded in this course. Note, if provided
 # with a quarter (-q) and an academic year (-y), this cmd
@@ -371,8 +371,8 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
                  COUNT(user_id) AS theSummedUsers,
                  Misc.RelevantCoursesTmp.quarter AS quarter,
                  Misc.RelevantCoursesTmp.academic_year AS academic_year
-	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.student_courseenrollment 
-	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.student_courseenrollment.course_id
+	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.true_courseenrollment 
+	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.true_courseenrollment.course_display_name
 	         GROUP BY course_display_name "$ENROLLMENT_CONDITION"
 	        ) AS SummedUsers
 	      LEFT JOIN
