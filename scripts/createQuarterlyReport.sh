@@ -357,6 +357,7 @@ fi
 # that quarter. Without both of these available, the 
 # start quarter in CourseInfo is used:
 
+
 MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','enrollment','num_certs', 'certs_ratio', 'is_internal'
            UNION
            SELECT 'OpenEdX',
@@ -367,19 +368,19 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
 	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
 	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
                   IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
-	   FROM (SELECT course_display_name, 
+	   FROM (SELECT Misc.RelevantCoursesTmp.course_display_name, 
                  COUNT(user_id) AS theSummedUsers,
                  Misc.RelevantCoursesTmp.quarter AS quarter,
                  Misc.RelevantCoursesTmp.academic_year AS academic_year
 	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.true_courseenrollment 
 	             ON Misc.RelevantCoursesTmp.course_display_name = edxprod.true_courseenrollment.course_display_name
-	         GROUP BY course_display_name "$ENROLLMENT_CONDITION"
+	         GROUP BY Misc.RelevantCoursesTmp.course_display_name
 	        ) AS SummedUsers
 	      LEFT JOIN
 	        (SELECT course_display_name, SUM(status = 'downloadable') AS theSummedAwards
 	           FROM Misc.RelevantCoursesTmp LEFT JOIN edxprod.certificates_generatedcertificate
 	             ON Misc.RelevantCoursesTmp.course_display_name = certificates_generatedcertificate.course_id
-	         GROUP BY course_display_name
+	         GROUP BY course_display_name "$ENROLLMENT_CONDITION"
 	        ) AS SummedAwards
 	       ON SummedUsers.course_display_name = SummedAwards.course_display_name
               LEFT JOIN
