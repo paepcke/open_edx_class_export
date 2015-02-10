@@ -1467,7 +1467,7 @@ class DataServer(threading.Thread):
         # /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv:)
         tableDir = os.path.basename(os.path.dirname(tableFileName))
         thisFullyQualDomainName = socket.getfqdn()
-        url = "https://%s/instructor/%s" % (thisFullyQualDomainName, tableDir)
+        url = "https://%s/researcher/%s" % (thisFullyQualDomainName, tableDir)
 
         return url
      
@@ -1531,7 +1531,7 @@ class DataServer(threading.Thread):
         :param courseID: Course name regular expression in MySQL syntax.
         :type courseID: String
         :param includeEnrollment: each result course name will be followed by its enrollment
-            as per the student_courseenrollment table.
+            as per the true_courseenrollment table.
         :type includeEnrollment: boolean
         :return: An array of matching course_display_name, which may
                  be empty. None if _init__() was unable to log into db.
@@ -1607,7 +1607,7 @@ class DataServer(threading.Thread):
         # Replace slashes in class by underscores, so that the
         # course ID can be used as part of a directory name:
         courseIdAsDirName = courseId.strip('/').replace('/','_')
-        url = "https://%s/instructor/%s" % (thisFullyQualDomainName, courseIdAsDirName)
+        url = "https://%s/researcher/%s" % (thisFullyQualDomainName, courseIdAsDirName)
         return url
                 
     def setTimer(self, time=None):

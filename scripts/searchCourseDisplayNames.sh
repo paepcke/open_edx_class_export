@@ -163,12 +163,12 @@ fi
 # manages its own UI. The most appropriate col headers would
 # be 'course_display_name', 'enrollment':
 
-MYSQL_CMD="SELECT course_id AS 'course_display_name', COUNT(user_id) AS 'enrollment'
-	   FROM student_courseenrollment
-	   WHERE course_id LIKE '"$COURSE_SUBSTR"'
-	   GROUP BY course_id 
+MYSQL_CMD="SELECT course_display_name, COUNT(user_id) AS 'enrollment'
+	   FROM true_courseenrollment
+	   WHERE course_display_name LIKE '"$COURSE_SUBSTR"'
+	   GROUP BY course_display_name 
            HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
-               OR course_id LIKE 'ohsx%';\G"
+               OR course_display_name LIKE 'ohsx%';\G"
 
 #*************
 #echo "MYSQL_CMD: $MYSQL_CMD"
