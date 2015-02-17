@@ -1607,7 +1607,10 @@ class DataServer(threading.Thread):
         # Replace slashes in class by underscores, so that the
         # course ID can be used as part of a directory name:
         courseIdAsDirName = courseId.strip('/').replace('/','_')
-        url = "https://%s/researcher/%s" % (thisFullyQualDomainName, courseIdAsDirName)
+        # Add timestamp and current number of microseconds as a UID
+        format = '%d-%b-%y_%I-%M_%f'
+        today = datetime.datetime.today().strftime(format)
+        url = "https://%s/researcher/%s_%s" % (thisFullyQualDomainName, courseIdAsDirName, today)
         return url
                 
     def setTimer(self, time=None):
