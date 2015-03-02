@@ -187,6 +187,12 @@ class CourseCSVServer(WebSocketHandler):
             
         serverThread = DataServer(requestDict, self, self.testing)
         serverThread.start()
+        # If we are testing the unittest needs to wait
+        # for the thread to finish, so that results can
+        # be checked. During production ops we return
+        # to the Tornado main loop as quickly as we can.
+        if self.testing:
+            serverThread.join()
 
             
     def logInfo(self, msg):
@@ -210,10 +216,13 @@ class DataServer(threading.Thread):
         self.mainThread = mainThread
         self.testing = testing
         
+
         if testing:
-            self.currUser = 'unittest'
+            self.currUser  = 'unittest'
+            self.defaultDb = 'unittest'
         else:
             self.currUser = getpass.getuser()
+            self.defaultD = 'Edx'
         
         self.ensureOpenMySQLDb()
         
@@ -353,6 +362,15 @@ class DataServer(threading.Thread):
                     else:
                         self.exportLearnerPerf(args)
 
+                if args.get('demographics', False):
+                    self.setTimer()
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportDemographics(args)
+                    else:
+                        self.exportDemographics(args)
+
                 if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
                     self.setTimer()
                     if courseList is not None:
@@ -460,6 +478,15 @@ class DataServer(threading.Thread):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*allData.csv')) +\
                                     glob.glob(os.path.join(self.fullTargetDir,'*summary.csv')) +\
                                     glob.glob(os.path.join(self.fullTargetDir,'*weeklyEffort.csv'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Time on task'))
+        
+                if (action == 'demographics'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*demographics.csv'))
                     if len(existingFiles) > 0:
                         if mayDelete:
                             for fileName in existingFiles:
@@ -1056,6 +1083,113 @@ class DataServer(threading.Thread):
         
         return outFilePIIName + '.zip'
 
+    def exportDemographics(self, detailDict):
+        '''
+        Exports demographic information for each learner in a given
+        course. Places name of result file into self.mainThread.latestDemographicsFilename,
+        so that unittests can find it. The output table will include
+        the following:
+            anon_screen_name, gender, year_of_birth, level_of_education, country_three_letters, country_name
+        
+        :param detailDict: dict of arguments; expected: 'courseId'
+        :type detailDict: {String : String}
+        :return full path of outputfile
+        :rtype String
+        '''
+        if self.mysqlDb is None:
+            self.writeError('In exportDemographics: Database is disconnected; have to give up.')
+            return
+        
+        try:
+            courseId = detailDict['courseId']
+        except KeyError:
+            self.writeError('In exportDemographics: course ID was not included; could not construct lerner performance table.')
+            return
+        
+        if courseId is not None:
+            courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+        else:
+            courseNameNoSpaces = 'allCourses'
+
+        # File name for eventual final result:
+        outFileDemographicsName = os.path.join(self.fullTargetDir, '%s_demographics.csv' % courseNameNoSpaces)
+        
+        #*************
+        print("outFileDemographicsName: '%s'" % outFileDemographicsName)
+        #*************
+
+        # Get tmp file name for MySQL to write its 
+        # result table to. Can't use built-in tempfile module,
+        # b/c it creates a file, which then has MySQL 
+        # complain.
+        # Create a random num sequence seeded with
+        # this instance object:
+        random.seed(self)
+        tmpFileForDemographics =  '/tmp/classExportDemographicsTmp' + str(time.time()) + str(random.randint(1,10000)) + '.csv'
+        # Ensure the file doesn't exist (highly unlikely):
+        try:
+            os.remove(tmpFileForDemographics)
+        except OSError:
+            pass
+        
+        try:
+            with open(tmpFileForDemographics, 'a') as tmpFd:
+                for courseName in self.queryCourseNameList(courseId):
+                    if self.testing:
+                        courseName = 'CME/MedStats/2013-2015'
+                    mySqlCmd = ' '.join([
+    							  "SELECT Demographics.anon_screen_name," +\
+    							         "Demographics.gender," +\
+    							         "CAST(Demographics.year_of_birth AS CHAR)," +\
+    							         "Demographics.level_of_education," +\
+    							         "Demographics.country_three_letters," +\
+    							         "Demographics.country_name " +\
+    							         "FROM " + ('unittest' if self.testing else 'EdxPrivate') + ".UserGrade LEFT JOIN Demographics " +\
+    							  "ON " + ('unittest' if self.testing else 'EdxPrivate') + ".UserGrade.anon_screen_name = Demographics.anon_screen_name " +\
+    							  "WHERE UserGrade.course_id = '" + courseName + "';"
+    							                                       ])
+                    for learnerDemographicsResultLine in self.mysqlDb.query(mySqlCmd):
+                        tmpFd.write(','.join(learnerDemographicsResultLine) + '\n')
+        
+                # Create the final output file, prepending the column 
+                # name header:
+                with open(outFileDemographicsName, 'w') as fd:
+                    fd.write('anon_screen_name,gender,year_of_birth,level_of_education,country_three_letters,country_name\n')
+                tmpFd.flush()
+                self.catFiles(outFileDemographicsName, tmpFileForDemographics, mode='a')
+            
+        finally:
+            try:
+                os.remove(tmpFileForDemographics)
+            except OSError:
+                pass    
+        # Save information for printTableInfo() method to find:
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportDemographics'] = infoXchangeFile
+
+        infoXchangeFile.write(outFileDemographicsName + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(outFileDemographicsName)) + '\n')
+
+        # Add sample lines:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(outFileDemographicsName, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        except IOError as e:
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+
+
+        # Allow unit tests to find the result file:
+        self.mainThread.latestDemographicsFilename = outFileDemographicsName
+
+        return outFileDemographicsName
+
     def exportLearnerPerf(self, detailDict):
         #***** To be completed:
         if self.mysqlDb is None:
@@ -1441,6 +1575,8 @@ class DataServer(threading.Thread):
                         tblName = 'PIIMappings'
                     elif tableFileName.find('enrollment') > -1:
                         tblName = 'Enrollment'
+                    elif tableFileName.find('demographics') > -1:
+                        tblName = 'Demographics'
                     else:
                         tblName = 'unknown table name'
                     

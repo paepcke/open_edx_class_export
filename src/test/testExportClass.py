@@ -91,6 +91,17 @@ class ExportClassTest(unittest.TestCase):
                           ('My/RealCourse/2013-2015', '2013-09-01 03:27:00', '2013-10-30 03:27:00')
                           ]
     
+    userGradeData =    [
+                          ('CME/MedStats/2013-2015', 'abc'),
+                          ('My/RealCourse/Summer2014', 'def'),
+                          ('CME/MedStats/2013-2015', 'def')
+                        ]
+    
+    demographicsData = [
+                          ('abc', 'f', 1988, 'hs', 'USA', "United States"),
+                          ('def', 'm', 1990, 'ph', 'FRG', "Germany")
+                          ]
+    
     twoStudentsOneClassTestData = [
       ('CME/MedStats/2013-2015','abc','page_close','2013-08-30 03:27:00',0),   
       ('CME/MedStats/2013-2015','abc','load_video','2013-08-30 03:27:20',1),
@@ -258,7 +269,6 @@ class ExportClassTest(unittest.TestCase):
             self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,1,15\n', allWeeklyLines[2])
             self.assertEqual('OpenEdX,My/RealCourse/2013-2015,def,3,15\n', allWeeklyLines[3])
  
- 
         os.remove(self.courseServer.latestResultSummaryFilename)
         os.remove(self.courseServer.latestResultDetailFilename)
         os.remove(self.courseServer.latestResultWeeklyEffortFilename)
@@ -314,6 +324,24 @@ class ExportClassTest(unittest.TestCase):
         self.courseServer.on_message(jsonMsg)
         os.path.exists(self.courseServer.latestForumFilename)
 
+    #****@unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    def testDemographics(self):
+        self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "demographics" : "True", "wipeExisting" : "True", "relatable" : "False", "cryptoPwd" : "foobar"}}'
+        self.courseServer.on_message(jsonMsg)
+        with open(self.courseServer.latestDemographicsFilename, 'r') as fd:
+            # Read and discard the csv file's header line:
+            fd.readline()
+            #print(courseSummaryLine)
+            # Read the rest of the summary lines, and
+            # sort them just to ensure that we compare each
+            # line to its ground truth:
+            allDemographicsLines = fd.readlines()
+            allDemographicsLines.sort()
+            # abc,f,1988,hs,USA,United States
+            self.assertEqual('abc,f,1988,hs,USA,United States', allDemographicsLines[0].strip())
+            self.assertEqual('def,m,1990,ph,FRG,Germany', allDemographicsLines[1].strip())
+        os.remove(self.courseServer.latestDemographicsFilename)
 
     @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testZipFiles(self):
@@ -370,6 +398,32 @@ class ExportClassTest(unittest.TestCase):
         colNames = ['course_display_name','course_start_date','course_end_date']
         colValues = ExportClassTest.courseRuntimesData
         self.mysqldb.bulkInsert('CourseRuntimes', colNames, colValues)
+        
+        # UserGrade:
+        schema = OrderedDict([('course_id','varchar(255)'),
+                              ('anon_screen_name', 'varchar(40)')
+                              ])
+        self.mysqldb.dropTable('unittest.UserGrade')
+        self.mysqldb.createTable('unittest.UserGrade', schema)
+        colNames = ['course_id','anon_screen_name']
+        colValues = ExportClassTest.userGradeData
+        self.mysqldb.bulkInsert('UserGrade', colNames, colValues)
+        
+        # Demographics
+        schema = OrderedDict([('anon_screen_name', 'varchar(40)'),
+                              ('gender','varchar(255)'),
+                              ('year_of_birth', 'int(11)'),
+                              ('level_of_education', 'varchar(42)'),
+                              ('country_three_letters', 'varchar(3)'),
+                              ('country_name', 'varchar(255)')
+                              ])
+        self.mysqldb.dropTable('unittest.Demographics')
+        self.mysqldb.execute('DROP VIEW IF EXISTS unittest.Demographics')
+        self.mysqldb.createTable('unittest.Demographics', schema)
+        colNames = ['anon_screen_name','gender', 'year_of_birth', 'level_of_education', 'country_three_letters', 'country_name']
+        colValues = ExportClassTest.demographicsData
+        self.mysqldb.bulkInsert('Demographics', colNames, colValues)
+        
         
         # Forum table:
         # This tables gets loaded via a .sql file imported into mysql.
