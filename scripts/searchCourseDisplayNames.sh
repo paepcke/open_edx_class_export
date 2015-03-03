@@ -192,7 +192,7 @@ MYSQL_CMD="SELECT course_display_name, COUNT(user_id) AS 'enrollment'
 # headers in the output:
 if $SILENT
 then
-    COURSE_NAMES=`echo $MYSQL_CMD | mysql --skip-column-names $MYSQL_AUTH edxprod`
+    COURSE_NAMES=`echo $MYSQL_CMD | mysql $MYSQL_AUTH --skip-column-names edxprod`
 else
     COURSE_NAMES=`echo $MYSQL_CMD | mysql $MYSQL_AUTH edxprod`
 fi
