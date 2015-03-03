@@ -24,6 +24,15 @@
 
 USAGE="Usage: "`basename $0`" [-u user][-p password][-w mysqlpwd][-c cryptoPwd][-d destDir][-x xpunge][-i infoDest][-r relatable][-t testing] courseNamePattern"
 
+# Get MySQL version on this machine
+MYSQL_VERSION=$(mysql --version | sed -ne 's/.*Distrib \([0-9][.][0-9]\).*/\1/p')
+if [[ $MYSQL_VERSION > 5.5 ]]
+then 
+    MYSQL_VERSION='5.6+'
+else 
+    MYSQL_VERSION='5.5'
+fi
+
 # ----------------------------- Process CLI Parameters -------------
 
 if [ $# -lt 1 ]
@@ -318,12 +327,17 @@ trap "rm -f $FORUM_HEADER_FILE, $PREVIEW_TMP_FILE" EXIT
 FORUM_VALUES_FNAME=`mktemp -u -p /tmp`
 
 # Auth part for the subsequent three mysql calls:
-if [ -z $PASSWD ]
+if [[ $MYSQL_VERSION == '5.6+' ]]
 then
-    # Password empty...
-    MYSQL_AUTH="-u $USERNAME"
+    MYSQL_AUTH="--login-path=root"
 else
-    MYSQL_AUTH="-u $USERNAME -p$PASSWD"
+    if [ -z $PASSWD ]
+    then
+        # Password empty...
+        MYSQL_AUTH="-u $USERNAME"
+    else
+        MYSQL_AUTH="-u $USERNAME -p$PASSWD"
+    fi
 fi
 
 # Start the Forum dump file by adding the column name header row:

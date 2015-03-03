@@ -53,6 +53,16 @@ HELP_TEXT="-u uid\t\t: the MySQL user id\r\n
            --byActivity\t: determine relevant course names by activity rather than course schedule\n
 "
 
+# Get MySQL version on this machine
+MYSQL_VERSION=$(mysql --version | sed -ne 's/.*Distrib \([0-9][.][0-9]\).*/\1/p')
+if [[ $MYSQL_VERSION > 5.5 ]]
+then 
+    MYSQL_VERSION='5.6+'
+else 
+    MYSQL_VERSION='5.5'
+fi
+
+
 # ----------------------------- Process CLI Parameters -------------
 
 USERNAME=`whoami`
@@ -238,13 +248,20 @@ fi
 #*************
 
 # Auth part for the subsequent mysql call:
-if [ -z $PASSWD ]
+if [[ $MYSQL_VERSION == '5.6+' ]]
 then
-    # Password empty...
-    MYSQL_AUTH="-u $USERNAME"
+    MYSQL_AUTH="--login-path=root"
 else
-    MYSQL_AUTH="-u $USERNAME -p$PASSWD"
+    if [ -z $PASSWD ]
+    then
+        # Password empty...
+        MYSQL_AUTH="-u $USERNAME"
+    else
+        MYSQL_AUTH="-u $USERNAME -p$PASSWD"
+    fi
 fi
+
+
 
 # Use edxprod.true_coursenrollment to find courses
 # with enrollment greater than $MIN_ENROLLMENT. This constraint filters

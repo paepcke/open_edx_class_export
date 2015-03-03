@@ -22,6 +22,15 @@
 
 USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent] [courseNamePattern]"
 
+# Get MySQL version on this machine
+MYSQL_VERSION=$(mysql --version | sed -ne 's/.*Distrib \([0-9][.][0-9]\).*/\1/p')
+if [[ $MYSQL_VERSION > 5.5 ]]
+then 
+    MYSQL_VERSION='5.6+'
+else 
+    MYSQL_VERSION='5.5'
+fi
+
 # ----------------------------- Process CLI Parameters -------------
 
 USERNAME=`whoami`
@@ -147,12 +156,17 @@ fi
 #*************
 
 # Auth part for the subsequent mysql call:
-if [ -z $PASSWD ]
+if [[ $MYSQL_VERSION == '5.6+' ]]
 then
-    # Password empty...
-    MYSQL_AUTH="-u $USERNAME"
+    MYSQL_AUTH="--login-path=root"
 else
-    MYSQL_AUTH="-u $USERNAME -p$PASSWD"
+    if [ -z $PASSWD ]
+    then
+        # Password empty...
+        MYSQL_AUTH="-u $USERNAME"
+    else
+        MYSQL_AUTH="-u $USERNAME -p$PASSWD"
+    fi
 fi
 
 # Use edxprod.student_coursenrollment to find courses
