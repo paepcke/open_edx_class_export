@@ -1134,7 +1134,7 @@ class DataServer(threading.Thread):
         
         try:
             #***************
-            with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'w') as errFd:
+            with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
                 errFd.write("queryCourseNameList result: '%s'" % str(self.queryCourseNameList(courseId)))
             #***************
             with open(tmpFileForDemographics, 'a') as tmpFd:
@@ -1152,6 +1152,10 @@ class DataServer(threading.Thread):
     							  "ON " + ('unittest' if self.testing else 'EdxPrivate') + ".UserGrade.anon_screen_name = Demographics.anon_screen_name " +\
     							  "WHERE UserGrade.course_id = '" + courseName + "';"
     							                                       ])
+                    #***************
+                    with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
+                        errFd.write("mySqlCmd: '%s'" % str(mySqlCmd))
+                    #***************
                     for learnerDemographicsResultLine in self.mysqlDb.query(mySqlCmd):
                         tmpFd.write(','.join(learnerDemographicsResultLine) + '\n')
         
