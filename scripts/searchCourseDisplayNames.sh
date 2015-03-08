@@ -204,6 +204,6 @@ fi
 # line up to the ': '. Together this next line creates
 # two (still tab-separated) columns: course-name and number of 
 # course mentions:
-NAME_ACTIVITY_LINES=`echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d' | sed 's/[^:]*: //'`
+echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d' | sed 's/[^:]*: //'
 
 exit 0
