@@ -181,9 +181,9 @@ MYSQL_CMD="SELECT course_display_name, COUNT(user_id) AS 'enrollment'
 	   FROM true_courseenrollment
 	   WHERE course_display_name LIKE '"$COURSE_SUBSTR"'
 	   GROUP BY course_display_name 
-           HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
-               OR course_display_name LIKE 'ohsx%'
-              AND isTrueCourseName(course_display_name);\G"
+           HAVING (COUNT(user_id) > "$MIN_ENROLLMENT"
+                   OR course_display_name LIKE 'ohsx%')
+              AND isTrueCourseName(course_display_name) = 1;\G"
 
 # --skip-column-names suppresses the col name 
 # headers in the output:
