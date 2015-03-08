@@ -182,11 +182,8 @@ MYSQL_CMD="SELECT course_display_name, COUNT(user_id) AS 'enrollment'
 	   WHERE course_display_name LIKE '"$COURSE_SUBSTR"'
 	   GROUP BY course_display_name 
            HAVING COUNT(user_id) > "$MIN_ENROLLMENT"
-               OR course_display_name LIKE 'ohsx%';\G"
-
-#*************
-#echo "MYSQL_CMD: $MYSQL_CMD"
-#*************
+               OR course_display_name LIKE 'ohsx%'
+              AND isTrueCourseName(course_display_name);\G"
 
 # --skip-column-names suppresses the col name 
 # headers in the output:
@@ -209,8 +206,4 @@ fi
 # course mentions:
 NAME_ACTIVITY_LINES=`echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d' | sed 's/[^:]*: //'`
 
-# Now throw out all lines that are clearly 
-# bad course names stemming from people creating
-# test courses without adhering to any naming pattern:
-echo "${NAME_ACTIVITY_LINES}" | $currScriptsDir/filterCourseNames.sh
 exit 0
