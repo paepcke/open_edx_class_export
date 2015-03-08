@@ -638,6 +638,7 @@ fi
  # echo "EXPORT_EventXtract_CMD: $EXPORT_EventXtract_CMD"
  # echo "EXPORT_ActivityGrade_CMD: $EXPORT_ActivityGrade_CMD"
  # echo "EXPORT_VideoInteraction_CMD: $EXPORT_VideoInteraction_CMD"
+ # echo "MYSQL_AUTH: $MYSQL_AUTH"
  # exit 0
 #********************
 

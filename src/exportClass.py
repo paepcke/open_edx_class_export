@@ -1133,6 +1133,9 @@ class DataServer(threading.Thread):
             pass
         
         try:
+            #***************
+            self.mainThread.logDebug("queryCourseNameList result: '%s'" % str(self.queryCourseNameList(courseId)))
+            #***************
             with open(tmpFileForDemographics, 'a') as tmpFd:
                 for courseName in self.queryCourseNameList(courseId):
                     if self.testing:
