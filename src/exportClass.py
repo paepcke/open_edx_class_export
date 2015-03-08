@@ -492,7 +492,7 @@ class DataServer(threading.Thread):
                             for fileName in existingFiles:
                                 os.remove(fileName)
                         else:
-                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Time on task'))
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Demographics'))
         
                 if (action == 'edxForumRelatable') or (action == 'edxForumIsolated'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*forum.csv.zip'))
