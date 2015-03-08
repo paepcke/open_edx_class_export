@@ -1115,7 +1115,7 @@ class DataServer(threading.Thread):
         outFileDemographicsName = os.path.join(self.fullTargetDir, '%s_demographics.csv' % courseNameNoSpaces)
         
         #*************
-        print("outFileDemographicsName: '%s'" % outFileDemographicsName)
+        #print("outFileDemographicsName: '%s'" % outFileDemographicsName)
         #*************
 
         # Get tmp file name for MySQL to write its 
@@ -1134,8 +1134,8 @@ class DataServer(threading.Thread):
         
         try:
             #***************
-            with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
-                errFd.write("queryCourseNameList result: '%s'" % str(self.queryCourseNameList(courseId)))
+            #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
+            #    errFd.write("queryCourseNameList result: '%s'\n" % str(self.queryCourseNameList(courseId)))
             #***************
             with open(tmpFileForDemographics, 'a') as tmpFd:
                 for courseName in self.queryCourseNameList(courseId):
@@ -1153,8 +1153,8 @@ class DataServer(threading.Thread):
     							  "WHERE UserGrade.course_id = '" + courseName + "';"
     							                                       ])
                     #***************
-                    with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
-                        errFd.write("mySqlCmd: '%s'" % str(mySqlCmd))
+                    #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
+                    #    errFd.write("mySqlCmd: '%s'\n" % str(mySqlCmd))
                     #***************
                     try:
                         for learnerDemographicsResultLine in self.mysqlDb.query(mySqlCmd):
@@ -1164,7 +1164,7 @@ class DataServer(threading.Thread):
                         with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
                             exc_type, exc_value, exc_traceback = sys.exc_info()
                             traceback.print_tb(exc_traceback, file=errFd)
-                            errFd.write("MySQL query failed: '%s'" % `e`)
+                            errFd.write("********MySQL query failed: '%s'\n" % `e`)
                         #***************
                         
         
