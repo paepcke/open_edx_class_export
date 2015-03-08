@@ -1162,6 +1162,8 @@ class DataServer(threading.Thread):
                     except Exception as e:
                         #***************
                         with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+                            traceback.print_tb(exc_traceback, file=errFd)
                             errFd.write("MySQL query failed: '%s'" % `e`)
                         #***************
                         
