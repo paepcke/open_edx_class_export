@@ -1144,7 +1144,7 @@ class DataServer(threading.Thread):
                     mySqlCmd = ' '.join([
     							  "SELECT Demographics.anon_screen_name," +\
     							         "Demographics.gender," +\
-    							         "CAST(Demographics.year_of_birth AS CHAR)," +\
+    							         "CAST(Demographics.year_of_birth AS CHAR) AS year_of_birth," +\
     							         "Demographics.level_of_education," +\
     							         "Demographics.country_three_letters," +\
     							         "Demographics.country_name " +\
@@ -1156,8 +1156,15 @@ class DataServer(threading.Thread):
                     with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
                         errFd.write("mySqlCmd: '%s'" % str(mySqlCmd))
                     #***************
-                    for learnerDemographicsResultLine in self.mysqlDb.query(mySqlCmd):
-                        tmpFd.write(','.join(learnerDemographicsResultLine) + '\n')
+                    try:
+                        for learnerDemographicsResultLine in self.mysqlDb.query(mySqlCmd):
+                            tmpFd.write(','.join(learnerDemographicsResultLine) + '\n')
+                    except Exception as e:
+                        #***************
+                        with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
+                            errFd.write("MySQL query failed: '%s'" % `e`)
+                        #***************
+                        
         
                 # Create the final output file, prepending the column 
                 # name header:
