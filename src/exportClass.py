@@ -1140,19 +1140,27 @@ class DataServer(threading.Thread):
             with open(tmpFileForDemographics, 'a') as tmpFd:
                 for courseName in self.queryCourseNameList(courseId):
                     if self.testing:
-                        courseName = 'CME/MedStats/2013-2015'
+                        courseName   = 'CME/MedStats/2013-2015'
+                        userGradeDb  = 'unittest'
+                        trueEnrollDb = 'unittest'
+                    else:
+                        userGradeDb  = 'EdxPrivate'
+                        trueEnrollDb = 'edxprod'
                     mySqlCmd = ' '.join([
-    							  "SELECT Demographics.anon_screen_name," +\
-    							         "Demographics.gender," +\
-    							         "CAST(Demographics.year_of_birth AS CHAR) AS year_of_birth," +\
-    							         "Demographics.level_of_education," +\
-    							         "Demographics.country_three_letters," +\
-    							         "Demographics.country_name " +\
-    							         "FROM " + ('unittest' if self.testing else 'EdxPrivate') + ".UserGrade LEFT JOIN Demographics " +\
-    							  "ON " + ('unittest' if self.testing else 'EdxPrivate') + ".UserGrade.anon_screen_name = Demographics.anon_screen_name " +\
-    							  "WHERE UserGrade.course_id = '" + courseName + "';"
-    							                                       ])
+                                    "SELECT Demographics.anon_screen_name," +\
+                                    "Demographics.gender," +\
+                                    "CAST(Demographics.year_of_birth AS CHAR) AS year_of_birth," +\
+                                    "Demographics.level_of_education," +\
+                                    "Demographics.country_three_letters," +\
+                                    "Demographics.country_name " +\
+                                    "FROM (SELECT anon_screen_name" +\
+                                    "        FROM " + trueEnrollDb + ".true_courseenrollment LEFT JOIN " + userGradeDb + ".UserGrade" +\
+                                    "      ON user_int_id = user_id" +\
+                                    "        WHERE " + trueEnrollDb + ".true_courseenrollment.course_display_name = '" + courseName + "') AS Students " +\
+                                    "LEFT JOIN Demographics" +\
+                                    "  ON Demographics.anon_screen_name = Students.anon_screen_name;"    							                                       ])
                     #***************
+                    print("mySqlCmd: %s" % mySqlCmd)
                     #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
                     #    errFd.write("mySqlCmd: '%s'\n" % str(mySqlCmd))
                     #***************

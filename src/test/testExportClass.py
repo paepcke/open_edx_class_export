@@ -92,15 +92,20 @@ class ExportClassTest(unittest.TestCase):
                           ]
     
     userGradeData =    [
-                          ('CME/MedStats/2013-2015', 'abc'),
-                          ('My/RealCourse/Summer2014', 'def'),
-                          ('CME/MedStats/2013-2015', 'def')
+                          (10, 'CME/MedStats/2013-2015', 'abc'),
+                          (20, 'My/RealCourse/Summer2014', 'def'),
+                          (30, 'CME/MedStats/2013-2015', 'def')
                         ]
     
     demographicsData = [
                           ('abc', 'f', 1988, 'hs', 'USA', "United States"),
                           ('def', 'm', 1990, 'ph', 'FRG', "Germany")
                           ]
+    
+    true_courseenrollmentData = [
+                                 (10, 'CME/MedStats/2013-2015', '2013-08-30 03:27:00', 'nomode'),
+                                 (30, 'CME/MedStats/2013-2015', '2014-08-30 03:27:00', 'yesmode'),
+                                 ]
     
     twoStudentsOneClassTestData = [
       ('CME/MedStats/2013-2015','abc','page_close','2013-08-30 03:27:00',0),   
@@ -400,14 +405,27 @@ class ExportClassTest(unittest.TestCase):
         self.mysqldb.bulkInsert('CourseRuntimes', colNames, colValues)
         
         # UserGrade:
-        schema = OrderedDict([('course_id','varchar(255)'),
+        schema = OrderedDict([('user_int_id', 'int'), 
+                              ('course_id','varchar(255)'),
                               ('anon_screen_name', 'varchar(40)')
                               ])
         self.mysqldb.dropTable('unittest.UserGrade')
         self.mysqldb.createTable('unittest.UserGrade', schema)
-        colNames = ['course_id','anon_screen_name']
+        colNames = ['user_int_id', 'course_id','anon_screen_name']
         colValues = ExportClassTest.userGradeData
         self.mysqldb.bulkInsert('UserGrade', colNames, colValues)
+        
+        # true_courseenrollment
+        schema = OrderedDict([('user_id', 'int'), 
+                              ('course_display_name','varchar(255)'),
+                              ('created', 'datetime'),
+                              ('mode', 'varchar(10)')
+                              ])
+        self.mysqldb.dropTable('unittest.true_courseenrollment')
+        self.mysqldb.createTable('unittest.true_courseenrollment', schema)
+        colNames = ['user_id', 'course_display_name','created', 'mode']
+        colValues = ExportClassTest.true_courseenrollmentData
+        self.mysqldb.bulkInsert('unittest.true_courseenrollment', colNames, colValues)
         
         # Demographics
         schema = OrderedDict([('anon_screen_name', 'varchar(40)'),
