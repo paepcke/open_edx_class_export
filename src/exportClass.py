@@ -1134,7 +1134,7 @@ class DataServer(threading.Thread):
                             "Demographics.level_of_education," +\
                             "Demographics.country_three_letters," +\
                             "Demographics.country_name " +\
-                            "INTO OUTFILE '" + outFileDemographicsName + "' FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n' "
+                            "INTO OUTFILE '" + outFileDemographicsName + "' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n' "
                             "FROM (SELECT anon_screen_name" +\
                             "        FROM " + trueEnrollDb + ".true_courseenrollment LEFT JOIN " + userGradeDb + ".UserGrade" +\
                             "      ON user_int_id = user_id" +\
@@ -1147,7 +1147,8 @@ class DataServer(threading.Thread):
             #    errFd.write("mySqlCmd: '%s'\n" % str(mySqlCmd))
             #***************
             try:
-                self.mysqlDb.query(mySqlCmd)
+                resIterator = self.mysqlDb.query(mySqlCmd)
+                resIterator.next()
             except Exception as e:
                 #***************
                 with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
@@ -1446,6 +1447,10 @@ class DataServer(threading.Thread):
             return (self.fullTargetDir, PreExisted.EXISTED)
         else:
             os.makedirs(self.fullTargetDir)
+            # Default Unix tends to be no WRITE for
+            # OTHER. But for MySQL to write its file,
+            # the target dir must be write-open:
+            os.chmod(self.fullTargetDir, 0o777)
             return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
     
     def constructEmailListDeliveryDir(self, emailListStartDate):
