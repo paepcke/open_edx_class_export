@@ -1142,7 +1142,7 @@ class DataServer(threading.Thread):
                             "LEFT JOIN Demographics" +\
                             "  ON Demographics.anon_screen_name = Students.anon_screen_name;"    							                                       ])
             #***************
-            print("mySqlCmd: %s" % mySqlCmd)
+            self.mainThread.logDebug("mySqlCmd: %s" % mySqlCmd)
             #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
             #    errFd.write("mySqlCmd: '%s'\n" % str(mySqlCmd))
             #***************
