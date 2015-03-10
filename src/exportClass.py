@@ -1117,77 +1117,44 @@ class DataServer(threading.Thread):
         #*************
         #print("outFileDemographicsName: '%s'" % outFileDemographicsName)
         #*************
-
-        # Get tmp file name for MySQL to write its 
-        # result table to. Can't use built-in tempfile module,
-        # b/c it creates a file, which then has MySQL 
-        # complain.
-        # Create a random num sequence seeded with
-        # this instance object:
-        random.seed(self)
-        tmpFileForDemographics =  '/tmp/classExportDemographicsTmp' + str(time.time()) + str(random.randint(1,10000)) + '.csv'
-        # Ensure the file doesn't exist (highly unlikely):
-        try:
-            os.remove(tmpFileForDemographics)
-        except OSError:
-            pass
-        
-        try:
+        for courseName in self.queryCourseNameList(courseId):
+            if self.testing:
+                courseName   = 'CME/MedStats/2013-2015'
+                userGradeDb  = 'unittest'
+                trueEnrollDb = 'unittest'
+            else:
+                userGradeDb  = 'EdxPrivate'
+                trueEnrollDb = 'edxprod'
+            mySqlCmd = ' '.join([
+                            "SELECT 'anon_screen_name','gender','year_of_birth','level_of_education','country_three_letters','country_name' " +\
+                            "UNION " +\
+                            "SELECT Demographics.anon_screen_name," +\
+                            "Demographics.gender," +\
+                            "CAST(Demographics.year_of_birth AS CHAR) AS year_of_birth," +\
+                            "Demographics.level_of_education," +\
+                            "Demographics.country_three_letters," +\
+                            "Demographics.country_name " +\
+                            "INTO OUTFILE '" + outFileDemographicsName + "' FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n' "
+                            "FROM (SELECT anon_screen_name" +\
+                            "        FROM " + trueEnrollDb + ".true_courseenrollment LEFT JOIN " + userGradeDb + ".UserGrade" +\
+                            "      ON user_int_id = user_id" +\
+                            "        WHERE " + trueEnrollDb + ".true_courseenrollment.course_display_name = '" + courseName + "') AS Students " +\
+                            "LEFT JOIN Demographics" +\
+                            "  ON Demographics.anon_screen_name = Students.anon_screen_name;"    							                                       ])
             #***************
+            print("mySqlCmd: %s" % mySqlCmd)
             #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
-            #    errFd.write("queryCourseNameList result: '%s'\n" % str(self.queryCourseNameList(courseId)))
+            #    errFd.write("mySqlCmd: '%s'\n" % str(mySqlCmd))
             #***************
-            with open(tmpFileForDemographics, 'a') as tmpFd:
-                for courseName in self.queryCourseNameList(courseId):
-                    if self.testing:
-                        courseName   = 'CME/MedStats/2013-2015'
-                        userGradeDb  = 'unittest'
-                        trueEnrollDb = 'unittest'
-                    else:
-                        userGradeDb  = 'EdxPrivate'
-                        trueEnrollDb = 'edxprod'
-                    mySqlCmd = ' '.join([
-                                    "SELECT Demographics.anon_screen_name," +\
-                                    "Demographics.gender," +\
-                                    "CAST(Demographics.year_of_birth AS CHAR) AS year_of_birth," +\
-                                    "Demographics.level_of_education," +\
-                                    "Demographics.country_three_letters," +\
-                                    "Demographics.country_name " +\
-                                    "FROM (SELECT anon_screen_name" +\
-                                    "        FROM " + trueEnrollDb + ".true_courseenrollment LEFT JOIN " + userGradeDb + ".UserGrade" +\
-                                    "      ON user_int_id = user_id" +\
-                                    "        WHERE " + trueEnrollDb + ".true_courseenrollment.course_display_name = '" + courseName + "') AS Students " +\
-                                    "LEFT JOIN Demographics" +\
-                                    "  ON Demographics.anon_screen_name = Students.anon_screen_name;"    							                                       ])
-                    #***************
-                    print("mySqlCmd: %s" % mySqlCmd)
-                    #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
-                    #    errFd.write("mySqlCmd: '%s'\n" % str(mySqlCmd))
-                    #***************
-                    try:
-                        for learnerDemographicsResultLine in self.mysqlDb.query(mySqlCmd):
-                            tmpFd.write(','.join(learnerDemographicsResultLine) + '\n')
-                    except Exception as e:
-                        #***************
-                        with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
-                            exc_type, exc_value, exc_traceback = sys.exc_info()
-                            traceback.print_tb(exc_traceback, file=errFd)
-                            errFd.write("********MySQL query failed: '%s'\n" % `e`)
-                        #***************
-                        
-        
-                # Create the final output file, prepending the column 
-                # name header:
-                with open(outFileDemographicsName, 'w') as fd:
-                    fd.write('anon_screen_name,gender,year_of_birth,level_of_education,country_three_letters,country_name\n')
-                tmpFd.flush()
-                self.catFiles(outFileDemographicsName, tmpFileForDemographics, mode='a')
-            
-        finally:
             try:
-                os.remove(tmpFileForDemographics)
-            except OSError:
-                pass    
+                self.mysqlDb.query(mySqlCmd)
+            except Exception as e:
+                #***************
+                with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_tb(exc_traceback, file=errFd)
+                    errFd.write("********MySQL query failed: '%s'\n" % `e`)
+                #***************
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportDemographics'] = infoXchangeFile
