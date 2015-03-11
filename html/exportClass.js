@@ -404,6 +404,8 @@ function ExportClass() {
 	var fileAction = document.getElementById("fileAction").checked;
 	//var inclPII    = document.getElementById("piiPolicy").checked;
 	var basicData  = document.getElementById("basicData").checked;
+	var basicDataCalYear = document.getElementById("courseCalYear").value;
+	var basicDataQuarter = document.getElementById("courseQuarter").value;
 	var engagementData = document.getElementById("engagementData").checked;
 	var engageVideoOnly = document.getElementById("engageVideoOnly").checked;
 	//*****var learnerPerf = document.getElementById("learnerPerf").checked;
@@ -451,8 +453,30 @@ function ExportClass() {
 	    return;
 	}
 
-
-	// Forum data and email lists must be encrypted:
+        // If basic tables, ensure that either both or none of
+	// the quarter/year info are blank, and convert cal year
+	// to academic year:
+	if (basicData &&
+	    (
+		(basicDataQuarter == 'blank' && basicDataCalYear != 'blank') ||
+		    (basicDataQuarter != 'blank' && basicDataCalYear == 'blank'))) {
+	    alert("Either choose 'blank' for both quarter and calendar year, or for none of the two.");
+	    return;
+	} else {
+	    // Convert to academic year:
+	    if (basicDataQuarter != 'blank') {
+		if ((basicDataQuarter == 'winter') ||
+		    (basicDataQuarter == 'spring') ||
+		    (basicDataQuarter == 'summer')) { 
+			basicDataAcademicYear = basicDataCalYear - 1;
+		    } else {
+			basicDataAcademicYear = basicDataCalYear;
+		    }
+	    } else { // quarter field is blank
+		basicDataAcademicYear = '';
+	    }
+	}
+	    // Forum data and email lists must be encrypted:
 	if ((edxForum || piazzaForum || edcastForum || emailList || learnerPII) &&
 	    encryptionPwd.length == 0) {
 		alert('Forum, email, and learner PII data must be encrypted; please supply a password for the .zip file encryption.');
@@ -479,6 +503,8 @@ function ExportClass() {
 		      //"inclPII" : inclPII, 
 		      "cryptoPwd" : encryptionPwd,
 		      "basicData" : basicData,
+		      "basicDataQuarter" : basicDataQuarter,
+		      "basicDataAcademicYear" : basicDataAcademicYear,
 		      "engagementData" : engagementData,
 		      "engageVideoOnly" : engageVideoOnly,
 		      //******"learnerPerf": learnerPerf,

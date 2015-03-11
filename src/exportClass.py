@@ -612,6 +612,14 @@ class DataServer(threading.Thread):
         inclPII = self.str2bool(detailDict.get("inclPII", False))
         cryptoPWD = detailDict.get("cryptoPwd", '')
         
+        courseQuarter = detailDict.get('basicDataQuarter', None)
+        courseAcademicYear = detailDict.get('basicDataAcademicYear', None)
+        if (courseQuarter is None) or (courseAcademicYear is None) or \
+            (courseQuarter == 'blank') or (courseAcademicYear == 'blank'):
+            quarter = None
+        else:
+            quarter = "%s%s" % (courseQuarter,courseAcademicYear)
+        
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportClass'] = infoXchangeFile
             
@@ -627,6 +635,9 @@ class DataServer(threading.Thread):
         if inclPII:
             scriptCmd.extend(['-c',cryptoPWD])
         scriptCmd.append(theCourseID)
+        
+        if quarter is not None:
+            scriptCmd.extend(['-q', quarter])
         
         #************
         self.mainThread.logDebug("Script cmd is: %s" % str(scriptCmd))

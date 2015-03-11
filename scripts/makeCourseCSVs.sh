@@ -26,6 +26,9 @@
 # its content is used as a MySQL password, else no password is used 
 # for running MySQL.
 #
+# If running on version MySQL 5.6+ then the scripts tries to access
+# MySQL via --login-path=root.
+#
 # The -i option, if provided, must be an absolute file path to which
 # the script will write the full path of each table it has produced.
 # This is useful when this script is called from the Web, and the 
@@ -40,7 +43,7 @@
 # the The second line will hold the number of bytes in the (uncompressed) 
 # Forum file. 
 #
-# Five following lines contain the first five lines of the forum file.
+# Five following lines contain the first five lines of the data file.
 # Those lines can be used by callers to provide a few sample entries
 # to users. 
 #
@@ -51,9 +54,14 @@
 #
 # The -c option, if provided, must specify a password. That pwd will
 # be used to encrypt the output table files into a single .zip file.
+#
+# The -q option allows callers to supply the quarter in which a course
+# ran. Format is <quarter><academic_year>, such as summer2013, which
+# would have run in the Summer of 2014 (*academic* year 2013).
+# This option is used only when accessing the EdxTrackEvent table, which
+# is partitioned over quarter.
 
-
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-d destDirPath][-x xpunge][-i infoDest][-c cryptoPwd] courseNamePattern"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-d destDirPath][-x xpunge][-i infoDest][-c cryptoPwd][-q quarter] courseNamePattern"
 
 # Get MySQL version on this machine
 MYSQL_VERSION=$(mysql --version | sed -ne 's/.*Distrib \([0-9][.][0-9]\).*/\1/p')
@@ -83,9 +91,10 @@ DEST_DIR='/home/dataman/Data/CustomExcerpts'
 INFO_DEST=''
 pii=false
 ENCRYPT_PWD=''
+QUARTER=''
 
 # Execute getopt
-ARGS=`getopt -o "u:pw:xd:i:c:n" -l "user:,password,mysqlpwd:,xpunge,destDir:infoDest:,cryptoPwd:" \
+ARGS=`getopt -o "u:pw:q:xd:i:c:n" -l "user:,password,mysqlpwd:,quarter:,xpunge,destDir:infoDest:,cryptoPwd:" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -138,6 +147,17 @@ do
       then
         DEST_DIR=$1
 	destDirGiven=true
+        shift
+      else
+	echo $USAGE
+	exit 1
+      fi;;
+    -q|--quarter)
+      shift
+      # Grab the quarter value:
+      if [ -n "$1" ]
+      then
+        QUARTER=$1
         shift
       else
 	echo $USAGE
@@ -546,7 +566,10 @@ fi
 # If the course substring contains wildcards, or
 # if the course does not exist, then result will 
 # be an empty string:
-QUARTER=$(mysql $MYSQL_AUTH --skip-column-names Edx -e "SELECT CONCAT(quarter,academic_year) FROM CourseInfo WHERE course_display_name = '$COURSE_SUBSTR';")
+# The following works, but is commented, b/c self-paced
+# courses return somewhat random values. So script was
+# changed to take quarter as an optional input.
+# QUARTER=$(mysql $MYSQL_AUTH --skip-column-names Edx -e "SELECT CONCAT(quarter,academic_year) FROM CourseInfo WHERE course_display_name = '$COURSE_SUBSTR';")
 
 if $pii
 then
@@ -695,9 +718,9 @@ echo "Done exporting class $COURSE_SUBSTR to CSV<br>"
 # ----------------------- If PII then Zip and Encrypt -------------
 
 #***************8
-echo "ll EVENT_EXTRACT_FNAME: "`ls -l $EVENT_EXTRACT_FNAME`
-echo "ll ACTIVITY_GRADE_FNAME: "`ls -l $ACTIVITY_GRADE_FNAME`
-echo "ll VIDEO_FNAME: "`ls -l $VIDEO_FNAME`
+# echo "ll EVENT_EXTRACT_FNAME: "`ls -l $EVENT_EXTRACT_FNAME`
+# echo "ll ACTIVITY_GRADE_FNAME: "`ls -l $ACTIVITY_GRADE_FNAME`
+# echo "ll VIDEO_FNAME: "`ls -l $VIDEO_FNAME`
 #***************8
 
 # Write table names and sizes to $INFO_DEST if desired:
