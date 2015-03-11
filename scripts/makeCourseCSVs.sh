@@ -370,7 +370,7 @@ else
 fi
 
 
-ACTIVITY_GRADE_HEADER=`mysql --batch $MYSQL_AUTH -e "
+ACTIVITY_GRADE_HEADER=`mysql $MYSQL_AUTH --batch -e "
               SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
 	      FROM information_schema.COLUMNS 
 	      WHERE TABLE_SCHEMA = 'Edx' 
@@ -390,7 +390,7 @@ else
     echo "$ACTIVITY_GRADE_HEADER" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $ActivityGrade_HEADER_FILE
 fi
 
-VIDEO_INTERACTION_HEADER=`mysql --batch $MYSQL_AUTH -e "
+VIDEO_INTERACTION_HEADER=`mysql $MYSQL_AUTH --batch -e "
               SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
 	      FROM information_schema.COLUMNS 
 	      WHERE TABLE_SCHEMA = 'Edx' 
@@ -411,7 +411,7 @@ else
     echo "$VIDEO_INTERACTION_HEADER" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $VideoInteraction_HEADER_FILE
 fi
 
-EVENT_XTRACT_HEADER=`mysql --batch $MYSQL_AUTH -e "
+EVENT_XTRACT_HEADER=`mysql $MYSQL_AUTH --batch -e "
               SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
 	      FROM information_schema.COLUMNS 
 	      WHERE TABLE_SCHEMA = 'Edx' 

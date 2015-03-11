@@ -341,7 +341,7 @@ else
 fi
 
 # Start the Forum dump file by adding the column name header row:
-FORUM_HEADER=`mysql --batch $MYSQL_AUTH -e "
+FORUM_HEADER=`mysql $MYSQL_AUTH --batch -e "
               SELECT GROUP_CONCAT(CONCAT('\"',information_schema.COLUMNS.COLUMN_NAME,'\"')) 
 	      FROM information_schema.COLUMNS 
 	      WHERE TABLE_SCHEMA = '$FORUM_DB' 
