@@ -601,7 +601,7 @@ then
 else
   EXPORT_EventXtract_CMD=" \
   USE Edx;
-   SELECT DISTINCT anon_screen_name,event_type,ip_country,time, \
+   SELECT DISTINCT anon_screen_name,event_type,ip_country,time, quarter, \
 		   course_display_name,resource_display_name,success, \
 		   video_code, video_current_time, video_speed, video_old_time, \
 		   video_new_time, video_seek_type, video_new_speed, video_old_speed, \
