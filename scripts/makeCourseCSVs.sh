@@ -542,6 +542,12 @@ fi
 # will write the table values. Two variants for each table:
 # with or without personally identifiable information:
 
+# Get the course quarter in the form summer2014.
+# If the course substring contains wildcards, or
+# if the course does not exist, then result will 
+# be an empty string:
+QUARTER=$(mysql $MYSQL_AUTH --skip-column-names Edx -e "SELECT CONCAT(quarter,academic_year) FROM CourseInfo WHERE course_display_name = '$COURSE_SUBSTR';")
+
 if $pii
 then
   EXPORT_EventXtract_CMD=" \
@@ -557,7 +563,16 @@ then
    FROM Edx.EventXtract \
    LEFT JOIN PIITable
    ON  Edx.EventXtract.anon_screen_name = PIITable.anon_screen_name
-   WHERE Edx.EventXtract.course_display_name LIKE '"$COURSE_SUBSTR"'
+   WHERE Edx.EventXtract.course_display_name LIKE '"$COURSE_SUBSTR"' "
+
+  #Splice in the quarter condition if we have it:
+  if [[ ! -z $QUARTER ]]
+  then
+      EXPORT_EventXtract_CMD="${EXPORT_EventXtract_CMD} AND quarter = '"$QUARTER"' "
+  fi
+
+  # Finish the command:
+   EXPORT_EventXtract_CMD="${EXPORT_EventXtract_CMD} \
      AND Edx.EventXtract.anon_screen_name != '9c1185a5c5e9fc54612808977ee8f548b2258d31';
    DROP VIEW PIITable;"
 else
@@ -572,7 +587,16 @@ else
     FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
     LINES TERMINATED BY '\r\n' \
   FROM Edx.EventXtract \
-  WHERE Edx.EventXtract.course_display_name LIKE '"$COURSE_SUBSTR"'
+  WHERE Edx.EventXtract.course_display_name LIKE '"$COURSE_SUBSTR"' "
+
+  #Splice in the quarter condition if we have it:
+  if [[ ! -z $QUARTER ]]
+  then
+      EXPORT_EventXtract_CMD="${EXPORT_EventXtract_CMD} AND quarter = '"$QUARTER"' "
+  fi
+
+  # Finish the command:
+  EXPORT_EventXtract_CMD="${EXPORT_EventXtract_CMD} \
     AND Edx.EventXtract.anon_screen_name != '9c1185a5c5e9fc54612808977ee8f548b2258d31';"
 fi
 
@@ -630,16 +654,25 @@ EXPORT_VideoInteraction_CMD=" \
     FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
     LINES TERMINATED BY '\r\n' \
   FROM Edx.VideoInteraction \
-  WHERE Edx.VideoInteraction.course_display_name LIKE '"$COURSE_SUBSTR"'
+  WHERE Edx.VideoInteraction.course_display_name LIKE '"$COURSE_SUBSTR"' "
+
+  #Splice in the quarter condition if we have it:
+  if [[ ! -z $QUARTER ]]
+  then
+      EXPORT_VideoInteraction_CMD="${EXPORT_VideoInteraction_CMD} AND quarter = '"$QUARTER"' "
+  fi
+
+  # Finish the command:
+  EXPORT_VideoInteraction_CMD="${EXPORT_VideoInteraction_CMD} \
     AND Edx.VideoInteraction.anon_screen_name != '9c1185a5c5e9fc54612808977ee8f548b2258d31';"
 fi
 
 #********************
- # echo "EXPORT_EventXtract_CMD: $EXPORT_EventXtract_CMD"
- # echo "EXPORT_ActivityGrade_CMD: $EXPORT_ActivityGrade_CMD"
- # echo "EXPORT_VideoInteraction_CMD: $EXPORT_VideoInteraction_CMD"
- # echo "MYSQL_AUTH: $MYSQL_AUTH"
- # exit 0
+#echo "EXPORT_EventXtract_CMD: $EXPORT_EventXtract_CMD"
+# echo "EXPORT_ActivityGrade_CMD: $EXPORT_ActivityGrade_CMD"
+#echo "EXPORT_VideoInteraction_CMD: $EXPORT_VideoInteraction_CMD"
+# echo "MYSQL_AUTH: $MYSQL_AUTH"
+#exit 0
 #********************
 
 # ----------------------------- Execute the Main MySQL Commands -------------
