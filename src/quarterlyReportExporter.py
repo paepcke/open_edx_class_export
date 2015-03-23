@@ -77,6 +77,11 @@ class QuarterlyReportExporter(object):
         '''
 
         if outFile is None:
+	    # Use NamedTemporaryFile to create a temp name. 
+	    # We need to remove the file, else MySQL further down
+	    # will vomit that its out file already exists. This
+	    # deletion does intoduce a race condition with other
+	    # processes that use NamedTemporaryFile:
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=True)
             resFileName = outFile.name
             outFile.close()
@@ -114,7 +119,7 @@ class QuarterlyReportExporter(object):
             self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,resFileName))
 
         #*************
-        self.parent.writeResult('progress', "resFileName is: %s\n" % str(resFileName))
+        # self.parent.writeResult('progress', "resFileName is: %s\n" % str(resFileName))
         #**********
 
         return resFileName
