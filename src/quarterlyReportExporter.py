@@ -78,8 +78,10 @@ class QuarterlyReportExporter(object):
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=False)
             resFileName = outFile.name
             outFile.close()
+        else:
+            resFileName = outFile
 
-        if type(outFile) != str:
+        if type(resFileName) != str:
             self.output('Value for outFile, if given, must be a string; was %s' % str(outFile))
             return None
             
@@ -103,7 +105,7 @@ class QuarterlyReportExporter(object):
         if self.mySQLPwd is not None and self.mySQLPwd != '':
             shellCmd.extend(['-w',self.mySQLPwd])
         try:
-            subprocess.call(shellCmd, stdout=outFile)
+            subprocess.call(shellCmd)
         except Exception as e:
             self.output('Error while searching for course names: %s' % `e`)
             return None
