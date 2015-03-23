@@ -1387,7 +1387,7 @@ class DataServer(threading.Thread):
 
         # Create a Web accessible delivery directory early to check
         # whether target overwrite warning must be issued:
-        pickupDirNameRoot = 'QuarterlyRep_%s%s' % (quarter,self.getCalendarYear(academic_year))
+        pickupDirNameRoot = 'QuarterlyRep_%s%s' % (quarter,self.getCalendarYear(quarter, academic_year))
         (pickupDir, existed) = self.constructCourseSpecificDeliveryDir('QuarterlyRep_%s%s' % pickupDirNameRoot)
         pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName) 
 
