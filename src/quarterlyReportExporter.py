@@ -80,7 +80,7 @@ class QuarterlyReportExporter(object):
             outFile.close()
 
         if type(outFile) != str:
-            self.mainThread.logErr('Value for outFile, if given, must be a string; was %s' % str(outFile))
+            self.output('Value for outFile, if given, must be a string; was %s' % str(outFile))
             return None
             
         # The --silent suppresses a column header line
@@ -94,7 +94,7 @@ class QuarterlyReportExporter(object):
                 int(minEnrollment)
                 shellCmd.extend(['--minEnrollment', minEnrollment])
             except ValueError:
-                self.mainThread.logErr('Value of minEnrollment must be int (or str of an int); was %s' % str(minEnrollment))
+                self.output('Value of minEnrollment must be int (or str of an int); was %s' % str(minEnrollment))
                 return None
             
         if byActivity is not None and byActivity == True:
