@@ -1024,27 +1024,27 @@ class DataServer(threading.Thread):
             for courseName in self.queryCourseNameList(courseId):
                 mySqlCmd = ' '.join([
                 'SELECT EdxPrivate.idInt2Anon(Enrollment.user_int_id) AS anon_screen_name, ',
-				'       Enrollment.user_int_id, ',
-				'       auth_user.username AS screen_name, ',
-				'       EdxPrivate.idInt2Forum(auth_user.id) AS forum_id, ',
-				'       auth_user.email, ',
-				'       edxprod.student_anonymoususerid.anonymous_user_id as external_lti_id, ',
-				'       auth_user.date_joined, ',
-				'       Enrollment.course_display_name  ',
-        		'INTO OUTFILE "%s"' % tmpFileForPII,
-        		'FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
-        		'LINES TERMINATED BY "\n"',
-				'FROM edxprod.auth_user, ',
-				'     edxprod.student_anonymoususerid,',
-				'     ( SELECT user_id as user_int_id, ',
-				'              EdxPrivate.idInt2Anon(user_id) as anon_screen_name, ',
-				'          course_id AS course_display_name  ',
-				'       FROM edxprod.student_courseenrollment  ',
-				'       WHERE EdxPrivate.idInt2Anon(user_id) != "9c1185a5c5e9fc54612808977ee8f548b2258d31"  ',
-				'       AND course_id="%s"' % courseName,
-				'     ) AS Enrollment',
-				'WHERE edxprod.student_anonymoususerid.user_id = Enrollment.user_int_id',
-				'  AND edxprod.auth_user.id = Enrollment.user_int_id;'  
+                '       Enrollment.user_int_id, ',
+                '       auth_user.username AS screen_name, ',
+                '       EdxPrivate.idInt2Forum(auth_user.id) AS forum_id, ',
+                '       auth_user.email, ',
+                '       edxprod.student_anonymoususerid.anonymous_user_id as external_lti_id, ',
+                '       auth_user.date_joined, ',
+                '       Enrollment.course_display_name  ',
+                'INTO OUTFILE "%s"' % tmpFileForPII,
+                'FIELDS TERMINATED BY "," OPTIONALLY ENCLOSED BY \'"\'',
+                'LINES TERMINATED BY "\n"',
+                'FROM edxprod.auth_user, ',
+                '     edxprod.student_anonymoususerid,',
+                '     ( SELECT user_id as user_int_id, ',
+                '              EdxPrivate.idInt2Anon(user_id) as anon_screen_name, ',
+                '          course_id AS course_display_name  ',
+                '       FROM edxprod.student_courseenrollment  ',
+                '       WHERE EdxPrivate.idInt2Anon(user_id) != "9c1185a5c5e9fc54612808977ee8f548b2258d31"  ',
+                '       AND course_id="%s"' % courseName,
+                '     ) AS Enrollment',
+                'WHERE edxprod.student_anonymoususerid.user_id = Enrollment.user_int_id',
+                '  AND edxprod.auth_user.id = Enrollment.user_int_id;'  
                 ])
     
             for piiResultLine in self.mysqlDb.query(mySqlCmd):
@@ -1151,7 +1151,7 @@ class DataServer(threading.Thread):
                             "      ON user_int_id = user_id" +\
                             "        WHERE " + trueEnrollDb + ".true_courseenrollment.course_display_name = '" + courseName + "') AS Students " +\
                             "LEFT JOIN Demographics" +\
-                            "  ON Demographics.anon_screen_name = Students.anon_screen_name;"    							                                       ])
+                            "  ON Demographics.anon_screen_name = Students.anon_screen_name;"                                                                       ])
             #***************
             self.mainThread.logDebug("mySqlCmd: %s" % mySqlCmd)
             #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
@@ -1233,8 +1233,8 @@ class DataServer(threading.Thread):
                 mySqlCmd = ' '.join([
                                      "SELECT  anon_screen_name," +\
                                               "COUNT(DISTINCT module_id) AS num_problems," +\
-    								    	  "AVG(percent_grade) AS avg_problem_grade,"+\
-    								    	  "AVG(num_attempts) AS avg_num_attempts" +\
+                                              "AVG(percent_grade) AS avg_problem_grade,"+\
+                                              "AVG(num_attempts) AS avg_num_attempts" +\
                                      "FROM ActivityGrade " +\
                                      "WHERE num_attempts > -1 " +\
                                        "AND course_display_name = '" + courseName + "' " +\
@@ -1366,6 +1366,9 @@ class DataServer(threading.Thread):
     def exportQuarterlyReport(self, detailDict):
         
         try:
+            # Get the *academic* year (not the calendar year; 
+            # JavaScript on other end is required to do any 
+            # conversions):
             quarter = detailDict['quarterRepQuarter']
         except KeyError:
             self.mainThread.logErr('In exportQuarterlyReport: quarter was not included; could not export quarterly report.')
@@ -1378,7 +1381,26 @@ class DataServer(threading.Thread):
         if academic_year == '%' or quarter == '%':
             self.mainThread.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
             return
+        
+        mayOverwrite = detailDict.get('wipeExisting', False)
+        enrollmentFileName = 'enrollment_%s%s' % (quarter, self.getCalendarYear(quarter, academic_year))
 
+        # Create a Web accessible delivery directory early to check
+        # whether target overwrite warning must be issued:
+        pickupDirNameRoot = 'QuarterlyRep_%s%s' % (quarter,self.getCalendarYear(academic_year))
+        (pickupDir, existed) = self.constructCourseSpecificDeliveryDir('QuarterlyRep_%s%s' % pickupDirNameRoot)
+        pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName) 
+
+        if existed == PreExisted.EXISTED and not mayOverwrite:
+            # Did enrollment file exist (or maybe just engagement):
+            if os.path.exists(pickupEnrollmentPath):
+                self.writeError("Quarterly report for %s%s already existed, and Remove Previous Exports... was not checked." %\
+                                (quarter, self.getCalendarYear(quarter,academic_year)))
+                return
+
+        # Create a file that printTableInfo can understand:
+        infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
+        
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self)
         
         doEnrollment = detailDict.get('quarterRepEnroll', False)
@@ -1387,16 +1409,16 @@ class DataServer(threading.Thread):
         byActivity   = detailDict.get('quarterRepByActivity', None)
         
         if doEnrollment:
-    	    self.writeResult('progress', "Starting enrollment computations\n")
+            self.writeResult('progress', "Starting enrollment computations\n")
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
             if resFileNameEnroll is None:
                 self.writeError('Call to quarterly exporter for enrollment failed. See error log.')
                 return
-      	    self.writeResult('progress', "Finished enrollment computations\n")
-
-	    #************* 
-	    # Move to pickup place here.
-	    #*************
+            self.writeResult('progress', "Finished enrollment computations\n")
+            shutil.copyfile(resFileNameEnroll, pickupEnrollmentPath)
+            # Note the file name and size in the print table info:
+            infoXchangeFile.write(pickupEnrollmentPath + '\n')
+            infoXchangeFile.write(self.getNumFileLines(pickupEnrollmentPath) + '\n')
         
         #*****needs three-file return? (maybe just does summary)    
         if doEngagement:
@@ -1404,6 +1426,20 @@ class DataServer(threading.Thread):
             #resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
             # If we did enrollment, insert the separator:
 
+        # Write up to five lines into the print table file:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(pickupEnrollmentPath, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+        except IOError as e:
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+    
     def getNumFileLines(self, fileFdOrPath):
         '''
         Given either a file descriptor or a file path string,
@@ -1440,6 +1476,42 @@ class DataServer(threading.Thread):
         zipCmd.extend(filePathsToZip)
         subprocess.call(zipCmd)
     
+    def getCalendarYear(self, quarter, academicYear):
+        '''
+        Given quarter and academic year, return the calendar
+        year in which the quarter ran.
+        
+        :param quarter: quarter in which some course ran
+        :type quarter: string: {fall|winter|spring|summer}; case insensitive
+        :param academicYear: academic year in which course ran
+        :type academicYear: int
+        :return: calendar year in which course ran
+        :rtype: int
+        '''
+        
+        if quarter.lower() == 'fall':
+            return academicYear
+        else:
+            return academicYear + 1
+    
+    def getAcademicYear(self, quarter, calendarYear):
+        '''
+        Given quarter and calendar year, return the academic
+        year in which the quarter ran.
+        
+        :param quarter: quarter in which some course ran
+        :type quarter: string: {fall|winter|spring|summer}; case insensitive
+        :param calendarYear: calendar year in which course ran
+        :type calendarYear: int
+        :return: academic year in which course ran
+        :rtype: int
+        '''
+        
+        if quarter.lower() == 'fall':
+            return calendarYear
+        else:
+            return calendarYear - 1
+    
     def constructCourseSpecificDeliveryDir(self, courseName):
         '''
         Given a course name, construct a directory name where result
@@ -1449,7 +1521,7 @@ class DataServer(threading.Thread):
 
         :param courseName: course name for which results will be deposited in the dir
         :type courseName: String
-        :return: Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if 
+        :return: Two-tuple: the directory path, and flag PreExisted.EXISTED if 
                  the directory already existed. Method does nothing in this case. 
                  If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
                  are returned. Creation includes all intermediate subdirectories.

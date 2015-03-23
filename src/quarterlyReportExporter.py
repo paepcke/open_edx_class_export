@@ -5,7 +5,6 @@ Created on Sep 1, 2014
 '''
 
 import argparse
-from collections import OrderedDict
 import getpass
 import os
 import subprocess
@@ -27,15 +26,28 @@ class QuarterlyReportExporter(object):
                  mySQLUser=None, 
                  mySQLPwd=None,
                  testing=False,
-		 parent=None
+                 parent=None
                  ):
         '''
-        Constructor
+        Constructor. 
+        
+        :param dbHost: host where MySQL server runs
+        :type dbHost: string
+        :param mySQLUser: user under whom to log into MySQL
+        :type mySQLUser: string
+        :param mySQLPwd: MySQL password to use
+        :type mySQLPwd: string
+        :param testing: if True, caller is a unittest
+        :type testing: boolean
+        :param parent: a calling object. Used when calling from exportClass. 
+                       The quantitiy is then needed to know where to write error
+                       or info output.
+        :type parent: object
         '''
         self.dbHost = dbHost
         self.mySQLUser = mySQLUser
         self.mySQLPwd = mySQLPwd
-	self.parent   = parent
+        self.parent   = parent
 
         if testing:
             self.currUser = 'unittest'
@@ -77,11 +89,11 @@ class QuarterlyReportExporter(object):
         '''
 
         if outFile is None:
-	    # Use NamedTemporaryFile to create a temp name. 
-	    # We need to remove the file, else MySQL further down
-	    # will vomit that its out file already exists. This
-	    # deletion does intoduce a race condition with other
-	    # processes that use NamedTemporaryFile:
+        # Use NamedTemporaryFile to create a temp name. 
+        # We need to remove the file, else MySQL further down
+        # will vomit that its out file already exists. This
+        # deletion does intoduce a race condition with other
+        # processes that use NamedTemporaryFile:
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=True)
             resFileName = outFile.name
             outFile.close()
@@ -90,7 +102,7 @@ class QuarterlyReportExporter(object):
 
         if not (isinstance(resFileName, str) or isinstance(resFileName, unicode)):
             raise ValueError("Value for outFile, if given, must be a string; was %s; type: %s" % (str(resFileName), str(type(resFileName))))
-	                
+                    
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment').
         # don't provide all the statistics, like awarded certificates.
@@ -140,8 +152,17 @@ class QuarterlyReportExporter(object):
         :rtype string 
         '''
         
-        if outFile is None:
-            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement_summaries.csv' % (academicYear, quarter), delete=False)
+        if outFile is None:                                                                                                                                                                 
+            # Use NamedTemporaryFile to create a temp name.                                                                                                                                 
+            # We need to remove the file, else MySQL further down                                                                                                                           
+            # will vomit that its out file already exists. This                                                                                                                             
+            # deletion does intoduce a race condition with other                                                                                                                            
+            # processes that use NamedTemporaryFile:                                                                                                                                        
+            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=True)                                                          
+            resFileName = outFile.name                                                                                                                                                      
+            outFile.close()                                                                                                                                                                 
+        else:                                                                                                                                                                               
+            resFileName = outFile             
 
         if isinstance(resFileName, str) or isinstance(resFileName, unicode):
             outFile = open(outFile, 'r')
@@ -365,4 +386,3 @@ if __name__ == '__main__':
     if args.enrollment:
         myReporter.output('-------------------------------------')
         myReporter.enrollment(args.academicYear, args.quarter)
-
