@@ -1389,7 +1389,7 @@ class DataServer(threading.Thread):
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
             with open(resFileNameEnroll, 'r') as fd:
                 for line in fd:
-                    self.writeResult('printTblInfo', line)
+                    self.writeResult('printTblInfo', str(line))
         
         #*****needs three-file return? (maybe just does summary)    
         if doEngagement:
