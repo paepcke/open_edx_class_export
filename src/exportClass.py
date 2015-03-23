@@ -1394,9 +1394,9 @@ class DataServer(threading.Thread):
                 return
       	    self.writeResult('progress', "Finished enrollment computations\n")
 
-            with open(resFileNameEnroll, 'r') as fd:
-                for line in fd:
-                    self.writeResult('printTblInfo', str(line))
+	    #************* 
+	    # Move to pickup place here.
+	    #*************
         
         #*****needs three-file return? (maybe just does summary)    
         if doEngagement:

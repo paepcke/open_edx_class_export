@@ -77,7 +77,7 @@ class QuarterlyReportExporter(object):
         '''
 
         if outFile is None:
-            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=False)
+            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=True)
             resFileName = outFile.name
             outFile.close()
         else:
@@ -112,6 +112,11 @@ class QuarterlyReportExporter(object):
         
         if printResultFilePath:
             self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,resFileName))
+
+        #*************
+        self.parent.writeResult('progress', "resFileName is: %s\n" % str(resFileName))
+        #**********
+
         return resFileName
             
     def engagement(self, academicYear, quarter, outFile=None, printResultFilePath=True):

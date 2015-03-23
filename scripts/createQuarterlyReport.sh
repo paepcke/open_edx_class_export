@@ -337,7 +337,7 @@ else
     elif [[ $QUARTER == '%' ]]
     then
        TIME_CONSTRAINT="(time BETWEEN '${ACADEMIC_YEAR}${FALL_START}' AND ${ACADEMIC_YEAR}${FALL_END}' \
-                      OR time BETWEEN '${CAL_YEAR}${WINTER_START}' AND '${CAL_YEAR}${WINTER_END}' \
+                      OR time BETWEEN '${ACADEMIC_YEAR}${WINTER_START}' AND '${CAL_YEAR}${WINTER_END}' \
                       OR time BETWEEN '${CAL_YEAR}${SPRING_START}' AND '${CAL_YEAR}${SPRING_END}' \
                       OR time BETWEEN '${CAL_YEAR}${SUMMER_START}' AND '${CAL_YEAR}${SUMMER_END}' \
                         )"
@@ -345,7 +345,7 @@ else
     fi
 fi
 #****************
-#echo "Time constraint: '"$TIME_CONSTRAINT"'"
+# echo "Time constraint: '"$TIME_CONSTRAINT"'"
 #exit 0
 #****************
 
@@ -360,7 +360,7 @@ else
 fi
 
 #****************
-#echo "Output file spec: '"$MYSQL_OUTPUT_SPEC"'"
+# echo "Output file spec: '"$MYSQL_OUTPUT_SPEC"'"
 #exit 0
 #****************
 
@@ -449,23 +449,24 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
 echo $COURSE_NAME_CREATION_CMD | mysql $MYSQL_AUTH Edx
 
 # --skip-column-names suppresses the col name 
-# headers in the output. If OUTPUT_FILENAME is
-# given on the CL, then the result goes into a file,
-# which we look at further down. In that case
-# the pipes do nothing. But if output goes to stdout,
-# then the first pipe turns tabs to commas, and the 
-# second removes lines with bad course names:
-
-if $SILENT
-then
-    echo $MYSQL_CMD | mysql --skip-column-names $MYSQL_AUTH edxprod | sed "s/\t/,/g" | $currScriptsDir/filterCourseNames.sh 
-else
-    echo $MYSQL_CMD | mysql $MYSQL_AUTH edxprod | sed "s/\t/,/g" | $currScriptsDir/filterCourseNames.sh 
-fi
+# headers in the output. If OUTFILE_NAME is
+# given on the CL, then MySQL puts result into a file,
+# and we do any further work on that file.
+# If no outfile is given, we turn tabs into commas
+# (sed expression), and then filter out lines with
+# bad course names.
 
 if [[ -z $OUTFILE_NAME ]]
 then
+    if $SILENT
+    then
+        echo $MYSQL_CMD | mysql --skip-column-names $MYSQL_AUTH edxprod | sed "s/\t/,/g" | $currScriptsDir/filterCourseNames.sh 
+    else
+        echo $MYSQL_CMD | mysql $MYSQL_AUTH edxprod | sed "s/\t/,/g" | $currScriptsDir/filterCourseNames.sh 
+    fi
     exit 0
+else
+    echo $MYSQL_CMD | mysql $MYSQL_AUTH edxprod
 fi
 
 # Query result went to a file. Pipe that file through
@@ -475,8 +476,8 @@ TMP_FILE=$(mktemp -t tmpQuarterlyRepXXXXXXXXXX)
 
 #*********
 #echo 'test/sandbox/foobar' >> $OUTFILE_NAME
-#cat $OUTFILE_NAME
 #echo "Tmpfile: $TMP_FILE"
+#exit 0
 #*********
 
 cat ${OUTFILE_NAME} | $currScriptsDir/filterCourseNames.sh > $TMP_FILE
