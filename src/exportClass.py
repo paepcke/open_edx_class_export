@@ -426,7 +426,7 @@ class DataServer(threading.Thread):
             elif self.mainThread.loglevel == CourseCSVServer.LOG_LEVEL_INFO:
                 self.mainThread.logErr('Error while processing req: %s' % `e`)
             elif self.mainThread.loglevel == CourseCSVServer.LOG_LEVEL_DEBUG:
-                self.mainThread.logErr('Error while processing req: %s' % traceback.print_exc())
+                self.mainThread.logErr('Error while processing req: %s' % str(traceback.print_exc()))
             # Need to escape double-quotes so that the 
             # browser-side JSON parser for this response
             # doesn't get confused:

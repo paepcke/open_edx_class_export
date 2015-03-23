@@ -82,7 +82,7 @@ class QuarterlyReportExporter(object):
             resFileName = outFile
 
         if type(resFileName) != str:
-            self.output('Value for outFile, if given, must be a string; was %s' % str(outFile))
+            self.output('Value for outFile, if given, must be a string; was %s' % str(resFileName))
             return None
             
         # The --silent suppresses a column header line
