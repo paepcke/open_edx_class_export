@@ -76,14 +76,17 @@ class QuarterlyReportExporter(object):
 
         if outFile is None:
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=False)
+            resFileName = outFile.name
+            outFile.close()
 
-        if type(outFile) == str:
-            outFile = open(outFile, 'w')
+        if type(outFile) != str:
+            self.mainThread.logErr('Value for outFile, if given, must be a string; was %s' % str(outFile))
+            return None
             
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment').
         # don't provide all the statistics, like awarded certificates.
-        shellCmd = [self.courseInfoScript,'-u',self.currUser, '--silent', '-q', quarter, '-y', str(academicYear)]
+        shellCmd = [self.courseInfoScript,'-u',self.currUser, '--silent', '-q', quarter, '-y', str(academicYear), 'o', resFileName]
         
         if minEnrollment is not None:
             try:
@@ -92,7 +95,7 @@ class QuarterlyReportExporter(object):
                 shellCmd.extend(['--minEnrollment', minEnrollment])
             except ValueError:
                 self.mainThread.logErr('Value of minEnrollment must be int (or str of an int); was %s' % str(minEnrollment))
-            
+                return None
             
         if byActivity is not None and byActivity == True:
             shellCmd.extend(['--byActivity'])
@@ -105,10 +108,8 @@ class QuarterlyReportExporter(object):
             self.output('Error while searching for course names: %s' % `e`)
             return None
         
-        resFileName = outFile.name;
         if printResultFilePath:
             self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,resFileName))
-        outFile.close()
         return resFileName
             
     def engagement(self, academicYear, quarter, outFile=None, printResultFilePath=True):

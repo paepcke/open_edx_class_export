@@ -39,7 +39,7 @@
 # This script may be used from the command line. It is also used
 # by exportClass.py in open_edx_class_export.
 
-USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent][-q quarter][-y academicYear][-m minEnrollment][-a allCourses][-b byActivity][courseNamePattern]"
+USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][--silent][-q quarter][-y academicYear][-m minEnrollment][-a allCourses][-b byActivity][-o outfileName][courseNamePattern]"
 
 HELP_TEXT="-u uid\t\t: the MySQL user id\r\n
            -p\t\t: ask for MySQL pwd\n
@@ -48,7 +48,8 @@ HELP_TEXT="-u uid\t\t: the MySQL user id\r\n
                    \t\t\tDefault is all quarters.\n
            -y\t\t: academic year. Default is all years.\n
            -m\t\t: only include courses with at least minEnrollment learners\n
-	   -a\t\t: include all courses
+	   -a\t\t: include all courses\n
+           -o\t\t: name of file into which to output\n
            --silent\t: no column headers are output\n
            --byActivity\t: determine relevant course names by activity rather than course schedule\n
 "
@@ -74,6 +75,7 @@ ACADEMIC_YEAR='%'
 BY_ACTIVITY=0
 ALL_COURSES=0
 needPasswd=false
+OUTFILE_NAME=''
 
 # Get directory in which this script is running,
 # and where its support scripts therefore live:
@@ -84,7 +86,7 @@ currScriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MIN_ENROLLMENT=9
 
 # Execute getopt
-ARGS=`getopt -o "hu:pw:sq:y:m:ab" -l "help,user:,password,mysqlpwd:,silent,quarter:,academicYear:,minEnrollment:,allCourses,byActivity" \
+ARGS=`getopt -o "hu:pw:sq:y:m:abo:" -l "help,user:,password,mysqlpwd:,silent,quarter:,academicYear:,minEnrollment:,allCourses,byActivity,outfileName:" \
       -n "getopt.sh" -- "$@"`
  
 #Bad arguments
@@ -191,6 +193,18 @@ do
 	exit 1
       fi;;
 
+    -o|--outfileName)
+      shift
+      # Grab the file name: value
+      # unless it's null:
+      if [ -n "$1" ]
+      then
+        OUTFILE_NAME=$1
+        shift
+      else
+	echo $USAGE
+	exit 1
+      fi;;
     --)
       shift
       break;;
@@ -243,6 +257,7 @@ fi
 # else
 #     echo "PWD full"
 # fi
+# echo "Output File: $OUTFILE_NAME"
 # echo "COURSE_SUBSTR: $COURSE_SUBSTR"
 # exit 0
 #*************
@@ -330,7 +345,22 @@ else
     fi
 fi
 #****************
-#echo $TIME_CONSTRAINT
+#echo "Time constraint: '"$TIME_CONSTRAINT"'"
+#exit 0
+#****************
+
+# Create a SQL snippet that outputs MySQL into a file,
+# if outFileName was provided on CL:
+
+if [[ -z $OUTFILE_NAME ]]
+then
+    MYSQL_OUTPUT_SPEC=''
+else
+    MYSQL_OUTPUT_SPEC="INTO OUTFILE '"$OUTFILE_NAME"' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'"
+fi
+
+#****************
+#echo "Output file spec: '"$MYSQL_OUTPUT_SPEC"'"
 #exit 0
 #****************
 
@@ -386,6 +416,7 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
 	          IF(theSummedAwards IS NULL,0,theSummedAwards) AS num_certs,
 	          IF(theSummedAwards IS NULL,0,100*theSummedAwards/theSummedUsers) AS certs_ratio_perc,
                   IF(is_internal IS NULL,'n/a', IF(is_internal = 0,'no','yes')) AS is_internal
+           "$MYSQL_OUTPUT_SPEC"
 	   FROM (SELECT Misc.RelevantCoursesTmp.course_display_name, 
                  COUNT(user_id) AS theSummedUsers,
                  Misc.RelevantCoursesTmp.quarter AS quarter,
@@ -418,31 +449,39 @@ MYSQL_CMD="SELECT 'platform','course_display_name','quarter', 'academic_year','e
 echo $COURSE_NAME_CREATION_CMD | mysql $MYSQL_AUTH Edx
 
 # --skip-column-names suppresses the col name 
-# headers in the output:
+# headers in the output. If OUTPUT_FILENAME is
+# given on the CL, then the result goes into a file,
+# which we look at further down. In that case
+# the pipes do nothing. But if output goes to stdout,
+# then the first pipe turns tabs to commas, and the 
+# second removes lines with bad course names:
 
 if $SILENT
 then
-    COURSE_NAMES=`echo $MYSQL_CMD | mysql --skip-column-names $MYSQL_AUTH edxprod`
+    echo $MYSQL_CMD | mysql --skip-column-names $MYSQL_AUTH edxprod | sed "s/\t/,/g" | $currScriptsDir/filterCourseNames.sh 
 else
-    COURSE_NAMES=`echo $MYSQL_CMD | mysql $MYSQL_AUTH edxprod`
+    echo $MYSQL_CMD | mysql $MYSQL_AUTH edxprod | sed "s/\t/,/g" | $currScriptsDir/filterCourseNames.sh 
 fi
 
-#*************
-#echo "COURSE_NAMES: "$COURSE_NAMES
-#exit 0
-#*************
+if [[ -z $OUTFILE_NAME ]]
+then
+    exit 0
+fi
 
-# In the following the first 'sed' call removes the
-# line: "********** 1. row *********" and following rows.
-# The second 'sed' call removes everything of the second
-# line up to the ': '. Together this next line creates
-# four (still tab-separated) columns.
-# course mentions:
-NAME_ACTIVITY_LINES=`echo "$COURSE_NAMES" | sed '/[*]*\s*[0-9]*\. row\s*[*]*$/d' | sed 's/[^:]*: //'`
+# Query result went to a file. Pipe that file through
+# script filterCourseNames.sh to remove bad course names:
 
-# Now throw out all lines that are clearly 
-# bad course names stemming from people creating
-# test courses without adhering to any naming pattern;
-# On the way, replace tabs with commas:
-echo "${NAME_ACTIVITY_LINES}" | sed "s/\t/,/g"  | $currScriptsDir/filterCourseNames.sh
+TMP_FILE=$(mktemp -t tmpQuarterlyRepXXXXXXXXXX)
+
+#*********
+#echo 'test/sandbox/foobar' >> $OUTFILE_NAME
+#cat $OUTFILE_NAME
+#echo "Tmpfile: $TMP_FILE"
+#*********
+
+cat ${OUTFILE_NAME} | $currScriptsDir/filterCourseNames.sh > $TMP_FILE
+# Note: cannot use mv now, b/c OUTFILE_NAME is owned
+# by MySQL:
+cp ${TMP_FILE} ${OUTFILE_NAME}
+rm ${TMP_FILE}
 exit 0
