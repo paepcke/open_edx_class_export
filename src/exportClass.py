@@ -1378,7 +1378,8 @@ class DataServer(threading.Thread):
         if academic_year == '%' or quarter == '%':
             self.mainThread.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
             return
-        exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd,)
+
+        exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self)
         
         doEnrollment = detailDict.get('quarterRepEnroll', False)
         doEngagement = detailDict.get('quarterRepEngage', False)
@@ -1386,10 +1387,13 @@ class DataServer(threading.Thread):
         byActivity   = detailDict.get('quarterRepByActivity', None)
         
         if doEnrollment:
+    	    self.writeResult('progress', "Starting enrollment computations\n")
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
             if resFileNameEnroll is None:
                 self.writeError('Call to quarterly exporter for enrollment failed. See error log.')
                 return
+      	    self.writeResult('progress', "Finished enrollment computations\n")
+
             with open(resFileNameEnroll, 'r') as fd:
                 for line in fd:
                     self.writeResult('printTblInfo', str(line))

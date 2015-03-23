@@ -26,7 +26,8 @@ class QuarterlyReportExporter(object):
                  dbHost='localhost', 
                  mySQLUser=None, 
                  mySQLPwd=None,
-                 testing=False 
+                 testing=False,
+		 parent=None
                  ):
         '''
         Constructor
@@ -34,6 +35,7 @@ class QuarterlyReportExporter(object):
         self.dbHost = dbHost
         self.mySQLUser = mySQLUser
         self.mySQLPwd = mySQLPwd
+	self.parent   = parent
 
         if testing:
             self.currUser = 'unittest'
@@ -81,14 +83,13 @@ class QuarterlyReportExporter(object):
         else:
             resFileName = outFile
 
-        if type(resFileName) != str:
-            self.output('Value for outFile, if given, must be a string; was %s' % str(resFileName))
-            return None
-            
+        if not (isinstance(resFileName, str) or isinstance(resFileName, unicode)):
+            raise ValueError("Value for outFile, if given, must be a string; was %s; type: %s" % (str(resFileName), str(type(resFileName))))
+	                
         # The --silent suppresses a column header line
         # from being displayed ('course_display_name' and 'enrollment').
         # don't provide all the statistics, like awarded certificates.
-        shellCmd = [self.courseInfoScript,'-u',self.currUser, '--silent', '-q', quarter, '-y', str(academicYear), 'o', resFileName]
+        shellCmd = [self.courseInfoScript,'-u',self.currUser, '--silent', '-q', quarter, '-y', str(academicYear), '-o', resFileName]
         
         if minEnrollment is not None:
             try:
@@ -96,8 +97,8 @@ class QuarterlyReportExporter(object):
                 int(minEnrollment)
                 shellCmd.extend(['--minEnrollment', minEnrollment])
             except ValueError:
-                self.output('Value of minEnrollment must be int (or str of an int); was %s' % str(minEnrollment))
-                return None
+                raise ValueError('Value of minEnrollment must be int (or str of an int); was %s' % str(minEnrollment))
+                
             
         if byActivity is not None and byActivity == True:
             shellCmd.extend(['--byActivity'])
@@ -107,8 +108,7 @@ class QuarterlyReportExporter(object):
         try:
             subprocess.call(shellCmd)
         except Exception as e:
-            self.output('Error while searching for course names: %s' % `e`)
-            return None
+            raise ValueError('Error while searching for course names: %s' % `e`)
         
         if printResultFilePath:
             self.output('Enrollment numbers for %s%s are in %s' % (academicYear,quarter,resFileName))
@@ -133,7 +133,7 @@ class QuarterlyReportExporter(object):
         if outFile is None:
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement_summaries.csv' % (academicYear, quarter), delete=False)
 
-        if type(outFile) == str:
+        if isinstance(resFileName, str) or isinstance(resFileName, unicode):
             outFile = open(outFile, 'r')
 
         colHeaderGrabbed = False
@@ -306,7 +306,7 @@ if __name__ == '__main__':
         args.academicYear = '%' 
     else:
         # If not 'all', then year must be an int:
-        if not type(args.academicYear) == int:
+        if not isinstance(args.academicYear, int):
             raise ValueError("The academic_year parameter must be 'all', or an integer year > 2011.")
         if args.academicYear < 2012:
             raise ValueError('Data only available for academic year 2012 onwards.')
