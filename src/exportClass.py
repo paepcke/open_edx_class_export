@@ -1387,6 +1387,9 @@ class DataServer(threading.Thread):
         
         if doEnrollment:
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
+            if resFileNameEnroll is None:
+                self.writeError('Call to quarterly exporter for enrollment failed. See error log.')
+                return
             with open(resFileNameEnroll, 'r') as fd:
                 for line in fd:
                     self.writeResult('printTblInfo', str(line))
