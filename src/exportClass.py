@@ -1400,6 +1400,7 @@ class DataServer(threading.Thread):
 
         # Create a file that printTableInfo can understand:
         infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
+        self.tableInfoDict['QuarterlyReport'] = infoXchangeFile
         
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self)
         
@@ -1664,6 +1665,8 @@ class DataServer(threading.Thread):
                         tblName = 'Enrollment'
                     elif tableFileName.find('demographics') > -1:
                         tblName = 'Demographics'
+                    elif tableFileName.find('QuarterlyReport') > -1:
+                        tblName = 'Quarterly'
                     else:
                         tblName = 'unknown table name'
                     
