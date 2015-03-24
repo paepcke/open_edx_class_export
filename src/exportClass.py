@@ -1400,7 +1400,7 @@ class DataServer(threading.Thread):
 
         # Create a file that printTableInfo can understand:
         infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
-        self.tableInfoDict['QuarterlyReport'] = infoXchangeFile
+        self.infoTmpFiles['QuarterlyReport'] = infoXchangeFile
         
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self)
         
