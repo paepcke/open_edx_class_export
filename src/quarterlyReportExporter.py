@@ -19,7 +19,14 @@ class QuarterlyReportExporter(object):
     '''
     classdocs
     '''
-
+    FALL_START='-09-01'
+    FALL_END='-11-30'
+    WINTER_START='-12-01'
+    WINTER_END='-02-28'
+    SPRING_START='-03-01'
+    SPRING_END='-05-31'
+    SUMMER_START='-06-01'
+    SUMMER_END='-08-31'
 
     def __init__(self,
                  dbHost='localhost', 
@@ -61,7 +68,7 @@ class QuarterlyReportExporter(object):
         self.ensureOpenMySQLDb()
         
 
-    def enrollment(self, academicYear, quarter, minEnrollment=None, byActivity=None,outFile=None, printResultFilePath=True):
+    def enrollment(self, academicYear, quarter, minEnrollment=None, byActivity=False, outFile=None, printResultFilePath=True):
         '''
         Call Bash script createQuarterlyReport.sh, getting enrollment, cerfification, and internal/external
         course information. 
@@ -117,7 +124,7 @@ class QuarterlyReportExporter(object):
                 raise ValueError('Value of minEnrollment must be int (or str of an int); was %s' % str(minEnrollment))
                 
             
-        if byActivity is not None and byActivity == True:
+        if byActivity == True:
             shellCmd.extend(['--byActivity'])
         
         if self.mySQLPwd is not None and self.mySQLPwd != '':
@@ -136,13 +143,19 @@ class QuarterlyReportExporter(object):
 
         return resFileName
             
-    def engagement(self, academicYear, quarter, outFile=None, printResultFilePath=True):
+    def engagement(self, academicYear, quarter, byActivity=False, outFile=None, printResultFilePath=True):
         '''
                 
         :param academicYear:
         :type academicYear:
         :param quarter:
         :type quarter:
+        :param byActivity: normally the createQuarterlyReport.sh script uses the CourseInfo
+                table to find course names to include. But often courses get learner activity
+                after the official end of the course. If True, this parameter instead has the
+                script include all courses that had at least one action during the academicYear/quarter
+                for which info is requested.
+        :type byActivity: Boolean
         :param outFile:
         :type outFile:
         :param printResultFilePath: whether or not to print msg to stdout about where 
@@ -160,18 +173,40 @@ class QuarterlyReportExporter(object):
             # processes that use NamedTemporaryFile:                                                                                                                                        
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=True)                                                          
             resFileName = outFile.name                                                                                                                                                      
-            outFile.close()                                                                                                                                                                 
         else:                                                                                                                                                                               
-            resFileName = outFile             
-
-        if isinstance(resFileName, str) or isinstance(resFileName, unicode):
-            outFile = open(outFile, 'r')
-
+            resFileName = outFile
+            try:
+                outFile = open(resFileName, 'w')
+            except Exception as e:
+                raise ValueError("Method enrollment(): argument '%s' cannot be used as file name (%s)" % (resFileName, `e`))
+                
         colHeaderGrabbed = False
-        for courseName in self.mysqlDb.query("SELECT course_display_name " +\
+        if byActivity:
+            if quarter == '%':
+                # All quarters of given year:
+                timeConstraint = "(time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('fall', academicYear) +\
+                                 " time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('winter', academicYear) +\
+                                 " time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('spring', academicYear) +\
+                                 " time BETWEEN '%s' AND '%s')"  % self.getQuarterCalendarStartEndDates('summer', academicYear)
+                               
+            else:
+                (quarterStartDate, quarterEndDate) = self.getQuarterCalendarStartEndDates(quarter, academicYear) 
+                timeConstraint = "time BETWEEN '%s' AND '%s' " % (quarterStartDate, quarterEndDate)
+             
+            courseNameIt = self.mysqlDb.query("SELECT course_display_name, quarter, academic_year " +\
+                                              "FROM CourseInfo " +\
+			                                  "WHERE EXISTS(SELECT 1 " +\
+			                                  "               FROM EventXtract " +\
+			  	                              "              WHERE EventXtract.course_display_name = CourseInfo.course_display_name " +\
+			   	                              "                AND %s);" % timeConstraint
+                                         % (str(academicYear), quarter))
+        else:
+            courseNameIt = self.mysqlDb.query("SELECT course_display_name " +\
                                              "FROM Edx.CourseInfo " +\
                                              "WHERE academic_year LIKE '%s' AND quarter LIKE '%s';"\
-                                             % (str(academicYear), quarter)):
+                                             % (str(academicYear), quarter))
+        
+        for courseName in courseNameIt:
             # Query results come in tuples, like ('myUniversity/CS101/me',). Grab
             # the name itself:
             courseName = courseName[0]
@@ -200,12 +235,45 @@ class QuarterlyReportExporter(object):
                 except IOError:
                     self.output('No rows in %s' % summaryFile)
                     continue
-        resFileName = outFile.name;
         if printResultFilePath:
             self.output('Engagement summaries for %s%s are in %s' % (academicYear,quarter,resFileName))
         outFile.close()
         return resFileName
 
+    def getQuarterCalendarStartEndDates(self, quarter, academic_year):
+        '''
+        Returns 2-tuple: start and end calendar date of given quarter
+        in given academic year. Example: 'fall','2014' would return
+        ("2014-09-01", "2014-11-30"). Whereas 'winter, '2014' would
+        return ("2014-12-01", "2015-02-28")
+        
+        :param quarter: the academic quarter to date; case insensitive
+        :type quarter: string
+        :param academic_year: the academic year in which the quarter occurred.
+        :type academic_year: {int|str}
+        '''
+        try:
+            academic_year = int(academic_year)
+        except ValueError:
+            raise ValueError("getQuarterCalendarStartEndDates: Academic year must be a string or an int.")
+        if not isinstance(quarter, str):
+            raise ValueError("getQuarterCalendarStartEndDates: Quarter must be a string; was '%s'" % str(quarter))
+        quarter  = quarter.lower()
+        calYear  = academic_year + 1 
+        if quarter == 'fall':
+            return(str(academic_year) + QuarterlyReportExporter.FALL_START,
+                   str(academic_year) + QuarterlyReportExporter.FALL_END)
+        if quarter == 'winter':
+            return(str(calYear) + QuarterlyReportExporter.WINTER_START,
+                   str(calYear) + QuarterlyReportExporter.WINTER_END)
+        if quarter == 'spring':
+            return(str(calYear) + QuarterlyReportExporter.SPRING_START,
+                   str(calYear) + QuarterlyReportExporter.SPRING_END)
+        if quarter == 'summer':
+            return(str(calYear) + QuarterlyReportExporter.SUMMER_START,
+                   str(calYear) + QuarterlyReportExporter.SUMMER_END)
+        raise ValueError("getQuarterCalendarStartEndDates: Illegal value for academic quarter: '%s'; legal values: fall,winter,spring,summer." % str(quarter))
+            
     
     def ensureOpenMySQLDb(self):
 

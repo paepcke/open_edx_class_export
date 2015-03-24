@@ -1421,25 +1421,41 @@ class DataServer(threading.Thread):
             infoXchangeFile.write(pickupEnrollmentPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEnrollmentPath)) + '\n')
         
-        #*****needs three-file return? (maybe just does summary)    
         if doEngagement:
-            self.writeError('Engagement not implemented; is on the way.')
-            #resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
-            # If we did enrollment, insert the separator:
+            resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
+            infoXchangeFile.write(resFileNameEngage + '\n')
+            infoXchangeFile.write(str(self.getNumFileLines(resFileNameEngage)) + '\n')
 
-        # Write up to five lines into the print table file:
+        # Write up to five lines into the print table file,
+        # with the special line separator between the filename/filesize
+        # info written above, and the samples, and between each
+        # sample:
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
-        try:
-            with open(pickupEnrollmentPath, 'r') as fd:
-                head = []
-                for lineNum,line in enumerate(fd):
-                    head.append(line)
-                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        break
-                infoXchangeFile.write(''.join(head))
-        except IOError as e:
-            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+        if doEnrollment:
+            try:
+                with open(pickupEnrollmentPath, 'r') as fd:
+                    head = []
+                    for lineNum,line in enumerate(fd):
+                        head.append(line)
+                        if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                            break
+                    infoXchangeFile.write(''.join(head))
+            except IOError as e:
+                self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        if doEngagement:
+            try:
+                with open(resFileNameEngage, 'r') as fd:
+                    head = []
+                    for lineNum,line in enumerate(fd):
+                        head.append(line)
+                        if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                            break
+                    infoXchangeFile.write(''.join(head))
+            except IOError as e:
+                self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            
     
     def getNumFileLines(self, fileFdOrPath):
         '''
