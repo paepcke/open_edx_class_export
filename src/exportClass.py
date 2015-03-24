@@ -1388,7 +1388,7 @@ class DataServer(threading.Thread):
         # Create a Web accessible delivery directory early to check
         # whether target overwrite warning must be issued:
         pickupDirNameRoot = 'QuarterlyRep_%s%s' % (quarter,self.getCalendarYear(quarter, academic_year))
-        (pickupDir, existed) = self.constructCourseSpecificDeliveryDir('QuarterlyRep_%s%s' % pickupDirNameRoot)
+        (pickupDir, existed) = self.constructCourseSpecificDeliveryDir('QuarterlyRep_%s' % pickupDirNameRoot)
         pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName) 
 
         if existed == PreExisted.EXISTED and not mayOverwrite:
@@ -1418,7 +1418,7 @@ class DataServer(threading.Thread):
             shutil.copyfile(resFileNameEnroll, pickupEnrollmentPath)
             # Note the file name and size in the print table info:
             infoXchangeFile.write(pickupEnrollmentPath + '\n')
-            infoXchangeFile.write(self.getNumFileLines(pickupEnrollmentPath) + '\n')
+            infoXchangeFile.write(str(self.getNumFileLines(pickupEnrollmentPath)) + '\n')
         
         #*****needs three-file return? (maybe just does summary)    
         if doEngagement:
