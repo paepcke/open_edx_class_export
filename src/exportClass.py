@@ -1410,19 +1410,21 @@ class DataServer(threading.Thread):
         byActivity   = detailDict.get('quarterRepByActivity', None)
         
         if doEnrollment:
-            self.writeResult('progress', "Starting enrollment computations\n")
+            self.writeResult('progress', "Starting enrollment computations...")
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
             if resFileNameEnroll is None:
                 self.writeError('Call to quarterly exporter for enrollment failed. See error log.')
                 return
-            self.writeResult('progress', "Finished enrollment computations\n")
+            self.writeResult('progress', "Finished enrollment computations<br>")
             shutil.copyfile(resFileNameEnroll, pickupEnrollmentPath)
             # Note the file name and size in the print table info:
             infoXchangeFile.write(pickupEnrollmentPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEnrollmentPath)) + '\n')
         
         if doEngagement:
+            self.writeResult('progress', "Start engagement computation...")
             resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
+            self.writeResult('progress', "Done engagement computation...")
             infoXchangeFile.write(resFileNameEngage + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(resFileNameEngage)) + '\n')
 
