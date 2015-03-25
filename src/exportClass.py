@@ -721,12 +721,6 @@ class DataServer(threading.Thread):
         # Are we only to consider video events?
         engageVideoOnly = detailDict.get('engageVideoOnly', False)
         try:
-            #*****************
-            print("coursesStartYearsArr: '%s'" % startYearsArr)
-            print("mySQLUser: '%s'" % invokingUser)
-            print("courseToProfile: '%s'" % courseId)
-            print("videoOnly: '%s'" % False)
-            #*****************
             engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
                                         mySQLUser=invokingUser,                                                                                                    
                                         courseToProfile=courseId,
@@ -1382,21 +1376,31 @@ class DataServer(threading.Thread):
             self.mainThread.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
             return
         
+        doEnrollment = detailDict.get('quarterRepEnroll', False)
+        doEngagement = detailDict.get('quarterRepEngage', False)
+        
         mayOverwrite = detailDict.get('wipeExisting', False)
         enrollmentFileName = 'enrollment_%s%s' % (quarter, self.getCalendarYear(quarter, academic_year))
+        engagementFileName = 'engagement_%s%s' % (quarter, self.getCalendarYear(quarter, academic_year))
 
         # Create a Web accessible delivery directory early to check
         # whether target overwrite warning must be issued:
         pickupDirNameRoot = 'QuarterlyRep_%s%s' % (quarter,self.getCalendarYear(quarter, academic_year))
-        (pickupDir, existed) = self.constructCourseSpecificDeliveryDir('%s' % pickupDirNameRoot)
+        (pickupDir, existed) = self.constructCourseSpecificDeliveryDir(pickupDirNameRoot) #@UnusedVariable
         pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName) 
+        pickupEngagementPath = os.path.join(pickupDir, engagementFileName)
 
-        if existed == PreExisted.EXISTED and not mayOverwrite:
+        if doEnrollment and os.path.exists(pickupEnrollmentPath) and not mayOverwrite:
             # Did enrollment file exist (or maybe just engagement):
-            if os.path.exists(pickupEnrollmentPath):
-                self.writeError("Quarterly report for %s%s already existed, and Remove Previous Exports... was not checked." %\
-                                (quarter, self.getCalendarYear(quarter,academic_year)))
-                return
+            self.writeError("Quarterly report enrollment result for %s%s already existed, and Remove Previous Exports... was not checked." %\
+                            (quarter, self.getCalendarYear(quarter,academic_year)))
+            return
+
+        if doEngagement and os.path.exists(pickupEngagementPath) and not mayOverwrite:
+            # Did enrollment file exist (or maybe just engagement):
+            self.writeError("Quarterly report engagement result for %s%s already existed, and Remove Previous Exports... was not checked." %\
+                            (quarter, self.getCalendarYear(quarter,academic_year)))
+            return
 
         # Create a file that printTableInfo can understand:
         infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
@@ -1404,8 +1408,6 @@ class DataServer(threading.Thread):
         
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self)
         
-        doEnrollment = detailDict.get('quarterRepEnroll', False)
-        doEngagement = detailDict.get('quarterRepEngage', False)
         minEnrollment = detailDict.get('quarterRepMinEnroll', None) # Use default in createQuarterlyReport.sh
         byActivity   = detailDict.get('quarterRepByActivity', None)
         
@@ -1425,8 +1427,9 @@ class DataServer(threading.Thread):
             self.writeResult('progress', "Start engagement computation...")
             resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
             self.writeResult('progress', "Done engagement computation...")
-            infoXchangeFile.write(resFileNameEngage + '\n')
-            infoXchangeFile.write(str(self.getNumFileLines(resFileNameEngage)) + '\n')
+            shutil.copyfile(resFileNameEngage, pickupEnrollmentPath)
+            infoXchangeFile.write(pickupEngagementPath + '\n')
+            infoXchangeFile.write(str(self.getNumFileLines(pickupEngagementPath)) + '\n')
 
         # Write up to five lines into the print table file,
         # with the special line separator between the filename/filesize
