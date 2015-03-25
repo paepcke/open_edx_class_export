@@ -171,14 +171,14 @@ class QuarterlyReportExporter(object):
             # will vomit that its out file already exists. This                                                                                                                             
             # deletion does intoduce a race condition with other                                                                                                                            
             # processes that use NamedTemporaryFile:                                                                                                                                        
-            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_enrollment.csv' % (academicYear, quarter), delete=True)                                                          
+            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement.csv' % (academicYear, quarter), delete=True)                                                          
             resFileName = outFile.name                                                                                                                                                      
         else:                                                                                                                                                                               
             resFileName = outFile
             try:
                 outFile = open(resFileName, 'w')
             except Exception as e:
-                raise ValueError("Method enrollment(): argument '%s' cannot be used as file name (%s)" % (resFileName, `e`))
+                raise ValueError("Method engagement(): argument '%s' cannot be used as file name (%s)" % (resFileName, `e`))
                 
         colHeaderGrabbed = False
         if byActivity:
@@ -354,7 +354,7 @@ if __name__ == '__main__':
     
     # -------------- Manage Input Parameters ---------------
     
-    usage = 'Usage: quarterlyReportExporter.py [-u <MySQL user>] [-p<MySQL pwd>] [-w <MySQL pwd>] <academic_year-as-YYYY> quarter\n'
+    usage = 'Usage: quarterlyReportExporter.py [-u <MySQL user>] [-p<MySQL pwd>] [-w <MySQL pwd>] quarter <academic_year-as-YYYY>\n'
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]), formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-u', '--user',
@@ -395,7 +395,7 @@ if __name__ == '__main__':
     args = parser.parse_args();
     
     if args.quarter not in ['fall', 'winter', 'spring', 'summer', 'all']:
-        raise ValueError('Quarter must be fall, winter, spring, summer, or all.')
+        raise ValueError('Quarter must be fall, winter, spring, summer, or all; was %s' % args.quarter)
     
     # Replace 'all' by MySQL wildcard: 
     if args.quarter == 'all':
@@ -405,9 +405,11 @@ if __name__ == '__main__':
         args.academicYear = '%' 
     else:
         # If not 'all', then year must be an int:
-        if not isinstance(args.academicYear, int):
-            raise ValueError("The academic_year parameter must be 'all', or an integer year > 2011.")
-        if args.academicYear < 2012:
+        try:
+            academicYearIntOrPercentSign = int(args.academicYear)
+        except ValueError:
+            raise ValueError("The academic_year parameter must be 'all', or an integer year > 2011; was %s" % args.academicYear)
+        if academicYearIntOrPercentSign < 2012:
             raise ValueError('Data only available for academic year 2012 onwards.')
     
     if args.user is None:
@@ -445,12 +447,12 @@ if __name__ == '__main__':
     # If neither enrollment nor engagement were specifically
     # requested, then both are supplied:
     if not (args.engagement or args.enrollment):
-        args.engagement = True
+        args.enrollment = True
         args.engagement = True
     
     myReporter = QuarterlyReportExporter(mySQLUser=user, mySQLPwd=pwd)
     if args.engagement:
-        myReporter.engagement(args.academicYear, args.quarter)
+        myReporter.engagement(academicYearIntOrPercentSign, args.quarter)
     if args.enrollment:
         myReporter.output('-------------------------------------')
-        myReporter.enrollment(args.academicYear, args.quarter)
+        myReporter.enrollment(academicYearIntOrPercentSign, args.quarter)
