@@ -8,17 +8,57 @@ import argparse
 import getpass
 import os
 import subprocess
-import sys
 import tempfile
+import sys
+import multiprocessing
+import functools
 
 from engagement import EngagementComputer
 from pymysql_utils.pymysql_utils import MySQLDB
 
 
+#*****def computeEngagementMulticore(quarterlyReportExporterObj, courseName):
+def computeEngagementMulticore(dbHost, mySQLUser, mySQLPwd, courseName):
+    '''
+    Computes engagement for one course.
+    This function is used in a pool.map() statement to 
+    launch engagement computations across multiple cores.
+    In Python 2.7 only a function will work. Instance methods
+    don't. We get around this by taking a QuarterlyReportExporter
+    obj and a course name. In the engagement() method we
+    curry this function to take the QuarterlyReportExporter as
+    a constant. This is necessary, b/c at least in Python 2.7,
+    map functions can only take one arg, as I understand it. 
+    
+    :param quarterlyReportExporterObj: an QuarterlyReportExporter object that will be called
+              on to do the actual work.
+    :type quarterlyReportExporterObj: QuarterlyReportExporter
+    :param courseName: name of course whose engagement is to be computed
+    :type courseName: str
+    :return one file name that contains the summary engagement of just
+            the given course (i.e. a one-row csv file with column header).
+    :rtype str
+    '''
+  
+    comp = EngagementComputer(dbHost=dbHost, 
+                              mySQLUser=mySQLUser, 
+                              mySQLPwd=mySQLPwd, 
+                              courseToProfile=courseName)
+ 
+    comp.run()
+    (summaryFile, detailFile, weeklyEffortFile) = comp.writeResultsToDisk() #@UnusedVariable
+    return summaryFile
+    
 class QuarterlyReportExporter(object):
     '''
     classdocs
     '''
+    
+    # We use 2/3 of available cores to compute
+    # engagement for courses simultaneously (rounded up):
+
+    NUM_OF_CORES_TO_USE = int(round(0.5 + 2*multiprocessing.cpu_count()/3))
+    
     FALL_START='-09-01'
     FALL_END='-11-30'
     WINTER_START='-12-01'
@@ -171,7 +211,7 @@ class QuarterlyReportExporter(object):
             # will vomit that its out file already exists. This                                                                                                                             
             # deletion does intoduce a race condition with other                                                                                                                            
             # processes that use NamedTemporaryFile:                                                                                                                                        
-            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement.csv' % (academicYear, quarter), delete=True)                                                          
+            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement.csv' % (academicYear, quarter), delete=False)                                                          
             resFileName = outFile.name                                                                                                                                                      
         else:                                                                                                                                                                               
             resFileName = outFile
@@ -206,13 +246,12 @@ class QuarterlyReportExporter(object):
                                              "WHERE academic_year LIKE '%s' AND quarter LIKE '%s';"\
                                              % (str(academicYear), quarter))
         
-        for courseName in courseNameIt:
-            # Query results come in tuples, like ('myUniversity/CS101/me',). Grab
-            # the name itself:
-            courseName = courseName[0]
-            comp = EngagementComputer(dbHost=self.dbHost, mySQLUser=self.mySQLUser, mySQLPwd=self.mySQLPwd, courseToProfile=courseName)
-            comp.run()
-            (summaryFile, detailFile, weeklyEffortFile) = comp.writeResultsToDisk() #@UnusedVariable
+        
+        allCourseNames = [name[0] for name in courseNameIt]
+        pool = multiprocessing.Pool(QuarterlyReportExporter.NUM_OF_CORES_TO_USE)
+        partial_computeEngagementMulticore = functools.partial(computeEngagementMulticore, self.dbHost, self.mySQLUser, self.mySQLPwd)
+        summaryFiles = pool.map(partial_computeEngagementMulticore, allCourseNames)
+        for summaryFile in summaryFiles:
             # Pull the summary data from the engagement summary
             # file, grabbing the col header only from the first
             # file:
@@ -239,6 +278,7 @@ class QuarterlyReportExporter(object):
             self.output('Engagement summaries for %s%s are in %s' % (academicYear,quarter,resFileName))
         outFile.close()
         return resFileName
+
 
     def getQuarterCalendarStartEndDates(self, quarter, academic_year):
         '''
