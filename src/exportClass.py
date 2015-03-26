@@ -1684,6 +1684,8 @@ class DataServer(threading.Thread):
                         tblName = 'PIIMappings'
                     elif tableFileName.find('enrollment') > -1:
                         tblName = 'Enrollment'
+                    elif tableFileName.find('engagement') > -1:
+                        tblName = 'Engagement'
                     elif tableFileName.find('demographics') > -1:
                         tblName = 'Demographics'
                     elif tableFileName.find('QuarterlyReport') > -1:
