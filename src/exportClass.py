@@ -1450,7 +1450,7 @@ class DataServer(threading.Thread):
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
         if doEngagement:
             try:
-                with open(resFileNameEngage, 'r') as fd:
+                with open(pickupEngagementPath, 'r') as fd:
                     head = []
                     for lineNum,line in enumerate(fd):
                         head.append(line)
