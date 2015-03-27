@@ -7,7 +7,7 @@ Created on Jan 14, 2014
 Web service partner to exportClass.html. Uses Tornado to listen to
 port 8080 under SSL protocol. Accepts requests for exporting
 the data of one class. Can export just anonymized part of the
-class info, or more, i.e. data that includes potentially 
+class info, or more, i.e. data that includes potentially
 personally identifiable information (PII). If PII is involved,
 data is encrypted into a .zip file. Either way the data is
 deposited in /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv.
@@ -68,57 +68,57 @@ class ExistingOutFile(Exception):
         self.actionRequest = theActionRequest
 
 class CourseCSVServer(WebSocketHandler):
-    
+
     LOG_LEVEL_NONE  = 0
     LOG_LEVEL_ERR   = 1
     LOG_LEVEL_INFO  = 2
     LOG_LEVEL_DEBUG = 3
-    
+
     # Time interval after which a 'dot' or other progress
     # indicator is sent to the calling browser as heartbeat:
     PROGRESS_INTERVAL = 3 # seconds
-    
+
     # Time interval after which heartbeat sending is
     # written to the debug log:
     PROGRESS_LOGGING_INTERVAL = 30 # seconds
-    
+
     # Max number of lines from each csv table to output
-    # as samples to the calling browser for human sanity 
+    # as samples to the calling browser for human sanity
     # checking:
     NUM_OF_TABLE_SAMPLE_LINES = 5
-    
+
     # MySQL database on local server where the support tables
     # are stored (see header comments):
     SUPPORT_TABLES_DB = 'Misc'
-    
+
     # Root of directory where computed tables are dropped.
     # The tables are in DELIVERY_HOME/<course_name>, where course_name
     # is the name of the course with slashes replaced by underscores:
     DELIVERY_HOME = '/home/dataman/Data/CustomExcerpts'
-    
+
     # Regex to chop the front off a filename like:
     # '/tmp/tmpvOBuB1_engagement_CME_MedStats_2013-2015_weeklyEffort.csv'
-    # group(0) will contain 'engagement...' to the end: 
+    # group(0) will contain 'engagement...' to the end:
     #ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'[^_]*_(.*)')
     ENGAGEMENT_FILE_CHOPPER_PATTERN = re.compile(r'(engage.*)')
 
     # Bogus course name elimination pattern. This pattern is
     # to find course names that are just for demos or trials:
-    # Sandbox, sandbox, /demo, and /Demo... The '?:' just 
+    # Sandbox, sandbox, /demo, and /Demo... The '?:' just
     # causes the parenthesized expression to not be captured.
     # Would be no harm to let the parens be a capture group
     # as well, by elminiating the ?:.
     BOGUS_COURSE_NAME_PATTERN = re.compile(r'(?:[sS]andbox|/[dD]emo)')
-    
+
     # Regex to chop the front off a filename like:
     # '/tmp/tmpvOBuB1_forum_CME_MedStats_2013-2015.csv'
-    # group(0) will contain 'forum...' to the end: 
+    # group(0) will contain 'forum...' to the end:
     FORUM_FILE_CHOPPER_PATTERN = re.compile(r'(forum.*)')
-    
-    # Regex to separate first col from second 
+
+    # Regex to separate first col from second
     # col in something like 'foo bar': returns 'foo':
     COURSE_NAME_SEP_PATTERN = re.compile(r'([^\s]*)')
-    
+
     def __init__(self, application, request, testing=False ):
         '''
         Invoked when browser accesses this server via ws://...
@@ -137,7 +137,7 @@ class CourseCSVServer(WebSocketHandler):
         else:
             self.defaultDb = 'unittest'
         self.testing = testing
-        self.request = request;        
+        self.request = request;
 
         self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
         #self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
@@ -146,7 +146,7 @@ class CourseCSVServer(WebSocketHandler):
         # Interval between logging the sending of
         # the heartbeat:
         self.latestHeartbeatLogTime = None
-    
+
     def allow_draft76(self):
         '''
         Allow WebSocket connections via the old Draft-76 protocol. It has some
@@ -154,15 +154,15 @@ class CourseCSVServer(WebSocketHandler):
         don't implement the new protocols yet. Overriding this method, and
         returning True will allow those connections.
         '''
-        return True    
-    
+        return True
+
     def open(self): #@ReservedAssignment
         '''
         Called by WebSocket/tornado when a client connects. Method must
         be named 'open'
         '''
         self.logDebug("Open called")
-    
+
     def on_message(self, message):
         '''
         Connected browser requests action: "<actionType>:<actionArg(s)>,
@@ -184,7 +184,7 @@ class CourseCSVServer(WebSocketHandler):
                 self.logInfo("request received: %s" % str(message))
         except Exception as e:
             self.writeError("Bad JSON in request received at server: %s" % `e`)
-            
+
         serverThread = DataServer(requestDict, self, self.testing)
         serverThread.start()
         # If we are testing the unittest needs to wait
@@ -194,28 +194,28 @@ class CourseCSVServer(WebSocketHandler):
         if self.testing:
             serverThread.join()
 
-            
+
     def logInfo(self, msg):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_INFO:
-            print(str(datetime.datetime.now()) + ' info: ' + msg) 
+            print(str(datetime.datetime.now()) + ' info: ' + msg)
 
     def logErr(self, msg):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_ERR:
-            print(str(datetime.datetime.now()) + ' error: ' + msg) 
+            print(str(datetime.datetime.now()) + ' error: ' + msg)
 
     def logDebug(self, msg):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_DEBUG:
-            print(str(datetime.datetime.now()) + ' debug: ' + msg) 
-            
+            print(str(datetime.datetime.now()) + ' debug: ' + msg)
+
 class DataServer(threading.Thread):
-    
+
     def __init__(self, requestDict, mainThread, testing=False):
-        
+
         threading.Thread.__init__(self)
-        
+
         self.mainThread = mainThread
         self.testing = testing
-        
+
 
         if testing:
             self.currUser  = 'unittest'
@@ -223,24 +223,24 @@ class DataServer(threading.Thread):
         else:
             self.currUser = getpass.getuser()
             self.defaultD = 'Edx'
-        
+
         self.ensureOpenMySQLDb()
-        
+
         # Locate the makeCourseCSV.sh script:
         self.thisScriptDir = os.path.dirname(__file__)
         self.exportCSVScript = os.path.join(self.thisScriptDir, '../scripts/makeCourseCSVs.sh')
         self.courseInfoScript = os.path.join(self.thisScriptDir, '../scripts/searchCourseDisplayNames.sh')
-        self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')        
-        self.exportEmailListScript = os.path.join(self.thisScriptDir, '../scripts/makeEmailListCSV.sh')        
-        
+        self.exportForumScript = os.path.join(self.thisScriptDir, '../scripts/makeForumCSV.sh')
+        self.exportEmailListScript = os.path.join(self.thisScriptDir, '../scripts/makeEmailListCSV.sh')
+
         # A dict into which the various exporting methods
         # below will place instances of tempfile.NamedTemporaryFile().
         # Those are used as comm buffers between shell scripts
-        # and this Python code: 
+        # and this Python code:
         self.infoTmpFiles = {}
         self.dbError = 'no error'
         self.requestDict = requestDict
-        
+
         self.currTimer = None
 
     def ensureOpenMySQLDb(self):
@@ -258,11 +258,11 @@ class DataServer(threading.Thread):
                 self.dbError = `e`;
                 self.mysqlDb = None
         return self.mysqlDb
-    
+
     def run(self):
         self.serveOneDataRequest(self.requestDict)
 
-    def serveOneDataRequest(self, requestDict):        
+    def serveOneDataRequest(self, requestDict):
         # Get the request name:
         try:
             requestName = requestDict['req']
@@ -279,13 +279,13 @@ class DataServer(threading.Thread):
 #                     time.sleep(1)
 #                 self.mainThread.logInfo('Back to serving')
 #                 #*********
-                # For course name list requests, args is a 
+                # For course name list requests, args is a
                 # MySQL regex that returned course names are to match:
                 courseRegex = args.strip()
                 self.handleCourseNamesReq(requestName, courseRegex)
                 return
             # JavaScript at the browser 'helpfully' adds a newline
-            # after course id that is checked by user. If the 
+            # after course id that is checked by user. If the
             # arguments include a 'courseId' key, then strip its
             # value of any trailing newlines:
             try:
@@ -296,22 +296,22 @@ class DataServer(threading.Thread):
                 # Arguments either doesn't have a courseId key
                 # (KeyError), or args isn't a dict in the first
                 # place; both legitimate requests:
-                courseIdWasPresent = False 
+                courseIdWasPresent = False
                 pass
 
             # Ensure that email start date is present if
             # email export is requested:
             emailStartDate = args.get('emailStartDate', None)
-            if emailStartDate is None and requestName == 'emailList': 
+            if emailStartDate is None and requestName == 'emailList':
                 self.writeErr('In on_message: start date was not included; could not export email list.')
                 return
 
-            # Check whether any of the requests 
-            # were previously issued, and output files 
+            # Check whether any of the requests
+            # were previously issued, and output files
             # were therefore created. If so, then delete
             # those if allowed ('Remove any previous...'
             # box is checked in the UI). Else return error
-            # to browser: 
+            # to browser:
             try:
                 xpungeExisting = self.str2bool(args.get("wipeExisting", False))
                 self.checkForOldOutputFiles([action for action in args.keys() if args[action] == True],
@@ -326,7 +326,7 @@ class DataServer(threading.Thread):
                 self.writeError("Request '%s': table(s) for %s %s already existed, and Remove Previous Exports... was not checked. Pickup at %s." %\
                                 (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else '', self.getDeliveryURL(courseId)))
                 return None
-                
+
             courseList = None
 
             if requestName == 'getData':
@@ -335,7 +335,7 @@ class DataServer(threading.Thread):
                     # Need list of all courses, b/c we'll do
                     # engagement analysis for all; use MySQL wildcard:
                     courseList = self.queryCourseNameList('%')
-                
+
                 if args.get('basicData', False):
                     self.setTimer()
                     if courseList is not None:
@@ -352,7 +352,7 @@ class DataServer(threading.Thread):
                             self.exportTimeEngagement(args)
                     else:
                         self.exportTimeEngagement(args)
-                        
+
                 if args.get('learnerPerf', False):
                     self.setTimer()
                     if courseList is not None:
@@ -379,7 +379,7 @@ class DataServer(threading.Thread):
                             self.exportForum(args)
                     else:
                         self.exportForum(args)
-                        
+
                 if args.get('learnerPII', False):
                     self.setTimer()
                     if courseList is not None:
@@ -396,20 +396,20 @@ class DataServer(threading.Thread):
                 if args.get('quarterRep', False):
                     self.setTimer()
                     self.exportQuarterlyReport(args)
-                        
+
                 self.cancelTimer()
                 endTime = datetime.datetime.now() - startTime
 
                 deliveryUrl = self.printTableInfo()
-                
+
                 # Get a timedelta object with the microsecond
                 # component subtracted to be 0, so that the
-                # microseconds won't get printed:        
+                # microseconds won't get printed:
                 duration = endTime - datetime.timedelta(microseconds=endTime.microseconds)
                 self.writeResult('progress', "<br>Runtime: %s<br>" % str(duration))
-                                
+
                 # Add an example client letter,
-                # unless export method wrote directly to 
+                # unless export method wrote directly to
                 # the browser, rather than writing to
                 # a file:
                 if deliveryUrl is not None:
@@ -427,7 +427,7 @@ class DataServer(threading.Thread):
                 self.mainThread.logErr('Error while processing req: %s' % `e`)
             elif self.mainThread.loglevel == CourseCSVServer.LOG_LEVEL_DEBUG:
                 self.mainThread.logErr('Error while processing req: %s' % str(traceback.print_exc()))
-            # Need to escape double-quotes so that the 
+            # Need to escape double-quotes so that the
             # browser-side JSON parser for this response
             # doesn't get confused:
             #safeResp = json.dumps('(%s): %s)' % (requestDict['req']+str(requestDict['args']), `e`))
@@ -438,20 +438,20 @@ class DataServer(threading.Thread):
                 self.mysqlDb.close()
             except Exception as e:
                 self.writeError("Error during MySQL driver close: '%s'" % `e`)
-            
+
     def checkForOldOutputFiles(self, actions, mayDelete, courseDisplayName, emailStartDate):
         '''
         Given an action requested by the end user (e.g. 'basicData', 'engagementData', etc.)
         check whether any output files already exist for that type
         of request. If so, then the passed-in mayDelete controls
         whether the method may delete the found files. If not allowed
-        to delete, raises IOError, else deletes the respective file(s) 
-        
+        to delete, raises IOError, else deletes the respective file(s)
+
         :param actions: list of output requests (e.g. 'basicData', 'engagementData', etc.)
         :type actions: String
         :param mayDelete: whether or not method may delete prior output files it finds.
         :type mayDelete: Boolean
-        :param courseDisplayName: name of course for which data is being exported. 
+        :param courseDisplayName: name of course for which data is being exported.
             None if no specific course is involved, as for email address export.
         :type courseDisplayName: {String | None}
         :param emailStartDate: start date for email export, or None if no email export.
@@ -484,7 +484,7 @@ class DataServer(threading.Thread):
                                 os.remove(fileName)
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Time on task'))
-        
+
                 if (action == 'demographics'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*demographics.csv'))
                     if len(existingFiles) > 0:
@@ -493,7 +493,7 @@ class DataServer(threading.Thread):
                                 os.remove(fileName)
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Demographics'))
-        
+
                 if (action == 'edxForumRelatable') or (action == 'edxForumIsolated'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*forum.csv.zip'))
                     if len(existingFiles) > 0:
@@ -502,7 +502,7 @@ class DataServer(threading.Thread):
                                 os.remove(fileName)
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Forum data'))
-        
+
                 if (action == 'learnerPII'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*piiData.*'))
                     if len(existingFiles) > 0:
@@ -512,7 +512,7 @@ class DataServer(threading.Thread):
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Learner PII'))
 
-        # If email export requested, an export start date 
+        # If email export requested, an export start date
         # will have been provided:
         if emailStartDate is not None:
             (self.fullEmailTargetDir, dirExisted) = self.constructEmailListDeliveryDir(emailStartDate)
@@ -523,14 +523,14 @@ class DataServer(threading.Thread):
                         os.remove(fileName)
                 else:
                     raise(ExistingOutFile('File(s) for action %s already exist in %s' % ('getEmailAddresses', self.fullEmailTargetDir), 'Email addresses'))
-        
+
         return True
-    
+
     def handleCourseNamesReq(self, requestName, courseRegex):
         '''
         Given a MySQL type regex in return a list of course
         names that match the regex.
-        
+
         :param requestName:
         :type requestName:
         :param courseRegex:
@@ -539,7 +539,7 @@ class DataServer(threading.Thread):
         try:
             courseRegex = courseRegex
             courseNamesAndEnrollments = self.queryCourseNameList(courseRegex, includeEnrollment=True)
-            # Check whether __init__() method was unable to log into 
+            # Check whether __init__() method was unable to log into
             # the db:
             if courseNamesAndEnrollments is None:
                 self.writeError('Server could not log into database: %s' % self.dbError)
@@ -549,7 +549,7 @@ class DataServer(threading.Thread):
             return
         self.writeResult('progress', '')
         self.writeResult('courseList', courseNamesAndEnrollments)
-        
+
     def writeError(self, msg):
         '''
         Writes a response to the JS running in the browser
@@ -571,9 +571,9 @@ class DataServer(threading.Thread):
         '''
         Write a JSON formatted result back to the browser.
         Format will be::
-        
+
         {"resp" : "<respName>", "args" : "<jsonizedArgs>"}
-        
+
         That is, the args will be turned into JSON that is
         in the response's "args" value. The responseName parameter
         tells the browser what type of msg is coming back;
@@ -599,11 +599,11 @@ class DataServer(threading.Thread):
         Export basic info about one class: EventXtract, VideoInteraction, and ActivityGrade.
         {courseId : <the courseID>, wipeExisting : <true/false wipe existing class tables files>}
 
-        :param detailDict: Dict with all info necessary to export standard class info. 
+        :param detailDict: Dict with all info necessary to export standard class info.
         :type detailDict: {String : String, String : Boolean}
         '''
         theCourseID = detailDict.get('courseId', '').strip()
-        if len(theCourseID) == 0:     
+        if len(theCourseID) == 0:
             self.writeError('Please fill in the course ID field.')
             return False
         # Check whether we are to delete any already existing
@@ -611,7 +611,7 @@ class DataServer(threading.Thread):
         xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
         inclPII = self.str2bool(detailDict.get("inclPII", False))
         cryptoPWD = detailDict.get("cryptoPwd", '')
-        
+
         courseQuarter = detailDict.get('basicDataQuarter', None)
         courseAcademicYear = detailDict.get('basicDataAcademicYear', None)
         if (courseQuarter is None) or (courseAcademicYear is None) or \
@@ -619,10 +619,10 @@ class DataServer(threading.Thread):
             quarter = None
         else:
             quarter = "%s%s" % (courseQuarter,courseAcademicYear)
-        
+
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportClass'] = infoXchangeFile
-            
+
         # Build the CL command for script makeCourseCSV.sh
         scriptCmd = [self.exportCSVScript,'-u',self.currUser]
         if self.mySQLPwd is not None:
@@ -635,22 +635,22 @@ class DataServer(threading.Thread):
         if inclPII:
             scriptCmd.extend(['-c',cryptoPWD])
         scriptCmd.append(theCourseID)
-        
+
         if quarter is not None:
             scriptCmd.extend(['-q', quarter])
-        
+
         #************
         self.mainThread.logDebug("Script cmd is: %s" % str(scriptCmd))
         #************
-        
-        # Call makeClassCSV.sh to export 
+
+        # Call makeClassCSV.sh to export
         # The  script will place a list of three
         # alternating file names and file sizes (in lines)
         # into infoXchangeFile. The files are csv file paths
-        # of export results. After these six lines will 
+        # of export results. After these six lines will
         # be up to five sample lines from each file. The
         # sample batches will be separated by the string
-        # "herrgottzemenschnochamal!" 
+        # "herrgottzemenschnochamal!"
         try:
             #pipeFromScript = subprocess.Popen(scriptCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE).stdout
             pipeFromScript = subprocess.Popen(scriptCmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -660,39 +660,39 @@ class DataServer(threading.Thread):
                     self.writeResult('progress', errmsg)
                 else:
                     self.writeResult('progress', msgFromScript)
-                    
-            #**********8            
+
+            #**********8
             #for msgFromScript in pipeFromScript:
             #    self.writeResult('progress', msgFromScript)
-            #**********8                            
+            #**********8
         except Exception as e:
             self.writeError(`e`)
-        
+
         return True
-    
+
     def exportTimeEngagement(self, detailDict):
         '''
         Export two CSV files: a summary of time effort aggregated over all students,
-        and a per-student-per-week aggregation. 
-        detailDict provides any necessary info: 
+        and a per-student-per-week aggregation.
+        detailDict provides any necessary info:
            {courseId : <the courseID>, wipeExisting : <true/false wipe existing class tables files>}
-           
+
         Places names of three temp files into
         instance variables:
           - self.latestResultSummaryFilename = summaryFile
           - self.latestResultDetailFilename  = detailFile
           - self.latestResultWeeklyEffortFilename = weeklyEffortFile
-           
-        :param detailDict: Dict with all info necessary to export standard class info. 
+
+        :param detailDict: Dict with all info necessary to export standard class info.
         :type detailDict: {String : String, String : Boolean}
         :return: tri-tuple of three filenames: the engagement summary .csv file,
             the engagement detail file .csv file, and the engagement weekly effort
             filename.
 
         :rtype: (String,String,String)
-        '''        
-        
-        # Get the courseID to profile. If that ID is None, 
+        '''
+
+        # Get the courseID to profile. If that ID is None,
         # then profile all courses. The Web UI may allow only
         # one course to profile at a time, but the capability
         # to do all is here; just have on_message put None
@@ -702,14 +702,14 @@ class DataServer(threading.Thread):
         except KeyError:
             self.mainThread.logErr('In exportTimeEngagement: course ID was not included; could not compute engagement tables.')
             return
-        
+
         inclPII = self.str2bool(detailDict.get("inclPII", False))
         cryptoPWD = detailDict.get("cryptoPwd", '')
-                
-        # Should we consider only classes that started 
+
+        # Should we consider only classes that started
         # during a particular year?
         try:
-            startYearsArr = detailDict['startYearsArr'] 
+            startYearsArr = detailDict['startYearsArr']
         except KeyError:
             # no limit on the start year:
             startYearsArr = None
@@ -721,12 +721,12 @@ class DataServer(threading.Thread):
         # Are we only to consider video events?
         engageVideoOnly = detailDict.get('engageVideoOnly', False)
         try:
-            engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,                                                                                        
-                                        mySQLUser=invokingUser,                                                                                                    
+            engagementComp = EngagementComputer(coursesStartYearsArr=startYearsArr,
+                                        mySQLUser=invokingUser,
                                         courseToProfile=courseId,
                                         videoOnly=(True if engageVideoOnly else False)
-                                        )                        
-                                                                                                  
+                                        )
+
             engagementComp.run()
             (summaryFile, detailFile, weeklyEffortFile) = engagementComp.writeResultsToDisk()
         finally:
@@ -738,35 +738,35 @@ class DataServer(threading.Thread):
         #     /tmp/tmpxpo4Ng_engagement_CME_MedStats_2013-2015_allData.csv,
         #     /tmp/tmpvIXpVB_engagement_CME_MedStats_2013-2015_weeklyEffort.csv
         # That is: /tmp/<tmpfilePrefix>_engagement_<courseName>_<fileContent>.csv
-        # 
+        #
         # Move the files to their delivery directory without the
         # leading temp prefix. First, see whether the directory exists:
-        
+
         # For each of the file names, get the part starting
         # with 'engagement_...':
         try:
             self.latestResultSummaryFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.search(summaryFile).group(0)
         except Exception as e:
-            errmsg = 'Could not construct target file name for %s: %s' % (summaryFile, `e`) 
+            errmsg = 'Could not construct target file name for %s: %s' % (summaryFile, `e`)
             self.writeResult('progress', errmsg)
             return
         try:
             self.latestResultDetailFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.search(detailFile).group(0)
         except Exception as e:
-            errmsg = 'Could not construct target file name for %s: %s' % (detailFile, `e`) 
+            errmsg = 'Could not construct target file name for %s: %s' % (detailFile, `e`)
             self.writeResult('progress', errmsg)
             return
         try:
             self.latestResultWeeklyEffortFilename = CourseCSVServer.ENGAGEMENT_FILE_CHOPPER_PATTERN.search(weeklyEffortFile).group(0)
         except Exception as e:
-            errmsg = 'Could not construct target file name for %s: %s' % (weeklyEffortFile, `e`) 
+            errmsg = 'Could not construct target file name for %s: %s' % (weeklyEffortFile, `e`)
             self.writeResult('progress', errmsg)
             return
-        
+
         fullSummaryFile = os.path.join(self.fullTargetDir, self.latestResultSummaryFilename)
         fullDetailFile = os.path.join(self.fullTargetDir, self.latestResultDetailFilename)
         fullWeeklyFile  = os.path.join(self.fullTargetDir, self.latestResultWeeklyEffortFilename)
-        
+
         # Move all three files to their final resting place.
         shutil.move(summaryFile, fullSummaryFile)
         shutil.move(detailFile, fullDetailFile)
@@ -774,24 +774,24 @@ class DataServer(threading.Thread):
         os.chmod(fullSummaryFile, 0644)
         os.chmod(fullDetailFile, 0644)
         os.chmod(fullWeeklyFile, 0644)
-        
+
         self.latestResultSummaryFilename = fullSummaryFile
         self.latestResultDetailFilename  = fullDetailFile
         self.latestResultWeeklyEffortFilename = fullWeeklyFile
-        
+
         # Save information for printTableInfo() method to fine:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportEngagement'] = infoXchangeFile
 
         infoXchangeFile.write(fullSummaryFile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(fullSummaryFile)) + '\n')
-        
+
         infoXchangeFile.write(fullDetailFile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(fullDetailFile)) + '\n')
 
         infoXchangeFile.write(fullWeeklyFile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(fullWeeklyFile)) + '\n')
-        
+
         # Add sample lines:
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
         try:
@@ -818,21 +818,21 @@ class DataServer(threading.Thread):
                     if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
                         break
                 infoXchangeFile.write(''.join(head))
-            infoXchangeFile.write('herrgottzemenschnochamal!\n')            
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
         except IOError as e:
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
-                                  
+
         if inclPII:
             targetZipFileBasename = courseId.replace('/','_')
             targetZipFile = os.path.join(self.fullTargetDir,
-                                         targetZipFileBasename + '_' + 'engagement_report.zip') 
+                                         targetZipFileBasename + '_' + 'engagement_report.zip')
             self.zipFiles(targetZipFile,
                           cryptoPWD,
                           [fullSummaryFile,
                            fullDetailFile,
                            fullWeeklyFile]
                           )
-            
+
             # Remove the clear-text originals:
             try:
                 os.remove(fullSummaryFile)
@@ -857,29 +857,29 @@ class DataServer(threading.Thread):
         for isolated data. Relatable data gets anon_screen_name filled
         in with the uid that is also used in the rest of the data archive.
         The forum_uid is then set to -1 for all rows.
-        
+
         If Web client instead asked for isolated forum data, the data
         are delivered as they are stored in the database: anon_screen_name
         is redacted, and forum_uid is some encrypted string. Each string refers
         to one particular course participant, and can therefore be used for
         forum network analysis, post frequency, etc. But relating that data
         to, for instance, video usage data is not possible.
-        
-        In either case, the post bodies in the database are anonymized as best 
-        we can: emails, phone numbers, zip codes, poster's name are all redacted.     
-        
-        detailDict provides any necessary info: 
-           {courseDisplayName : <the courseID>, 
+
+        In either case, the post bodies in the database are anonymized as best
+        we can: emails, phone numbers, zip codes, poster's name are all redacted.
+
+        detailDict provides any necessary info:
+           {courseDisplayName : <the courseID>,
             relatable : <true/false>,
             cryptoPwd : <pwd to use for zip file encryption>}
-           
-        :param detailDict: Dict with all info necessary to export standard class info. 
+
+        :param detailDict: Dict with all info necessary to export standard class info.
         :type detailDict: {String : String, String : Boolean}
-        :return: the encrypted zip filename that contains the result. 
+        :return: the encrypted zip filename that contains the result.
         :rtype: String
-        '''        
-        
-        # Get the courseID to profile. If that ID is None, 
+        '''
+
+        # Get the courseID to profile. If that ID is None,
         # then export all class' forum. The Web UI may allow only
         # one course to profile at a time, but the capability
         # to do all is here; just have on_message put None
@@ -889,8 +889,8 @@ class DataServer(threading.Thread):
         except KeyError:
             self.mainThread.logErr('In exportForum: course ID was not included; could not export forum data.')
             return
-        
-        if len(courseDisplayName) == 0:     
+
+        if len(courseDisplayName) == 0:
             self.writeError('Please fill in the course ID field.')
             return False
 
@@ -906,38 +906,38 @@ class DataServer(threading.Thread):
         # Build the CL command for script makeForumCSV.sh
         # script name plus options:
         scriptCmd = [self.exportForumScript,'-u',self.currUser]
-        
+
         if self.mySQLPwd is not None:
             scriptCmd.extend(['-w',self.mySQLPwd])
-            
+
         if xpungeExisting:
             scriptCmd.append('--xpunge')
-            
+
         # Tell script where to report names of tmp files
         # where it deposited results:
         scriptCmd.extend(['--infoDest',infoXchangeFile.name])
-        
+
         # Tell script whether it is to make the exported Forum
         # excerpt relatable:
         if makeRelatable:
             scriptCmd.extend(['--relatable'])
-            
-        # Provide the script with a pwd with which to encrypt the 
+
+        # Provide the script with a pwd with which to encrypt the
         # .csv.zip file:
         if cryptoPwd is None or len(cryptoPwd) == 0:
             self.mainThread.logErr("Forum export needs to be encrypted, and therefore needs a crypto pwd to use.")
             return;
         scriptCmd.extend(['--cryptoPwd', cryptoPwd])
-        
+
         # If unittesting, tell the script, so that it looks
-        # for the 'contents' table in db unittest, rather 
+        # for the 'contents' table in db unittest, rather
         # than db EdxForum:
         if self.testing:
             scriptCmd.extend(['--testing'])
-        
+
         # The argument:
         scriptCmd.append(courseDisplayName)
-        
+
         #************
         self.mainThread.logDebug("Script cmd is: %s" % str(scriptCmd))
         #************
@@ -945,7 +945,7 @@ class DataServer(threading.Thread):
         # Call makeForumCSV.sh to export:
         # The  script will place a file name and a file size (in lines)
         # into infoXchangeFile. The file is the csv file path
-        # of export results. The third line to EOF will be 
+        # of export results. The third line to EOF will be
         # five sample rows from the forum to be sent to the
         # browser for QA:
         try:
@@ -959,10 +959,10 @@ class DataServer(threading.Thread):
                     return
                 else:
                     self.writeResult('progress', msgFromScript)
-            #**********            
+            #**********
             #for msgFromScript in pipeFromScript:
             #    self.writeResult('progress', msgFromScript)
-            #**********                            
+            #**********
         except Exception as e:
             self.writeError(`e`)
             if self.testing:
@@ -970,7 +970,7 @@ class DataServer(threading.Thread):
 
     def exportPIIDetails(self, detailDict):
         '''
-        Get the courseID to get PII for. If that ID is None, 
+        Get the courseID to get PII for. If that ID is None,
         then PII for all courses. The Web UI may allow only
         one course to profile at a time, but the capability
         to do all is here; just have on_message put None
@@ -985,13 +985,13 @@ class DataServer(threading.Thread):
         if self.mysqlDb is None:
             self.writeError('In exportPIIData: Database is disconnected; have to give up.')
             return
-        
+
         try:
             courseId = detailDict['courseId']
         except KeyError:
             self.writeError('In exportPIIDetails: course ID was not included; could not construct PII table.')
             return
-        
+
         if courseId is not None:
             courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
         else:
@@ -1000,9 +1000,9 @@ class DataServer(threading.Thread):
         # File name for eventual final result:
         outFilePIIName = os.path.join(self.fullTargetDir, '%s_piiData.csv' % courseNameNoSpaces)
 
-        # Get tmp file name for MySQL to write its 
+        # Get tmp file name for MySQL to write its
         # result table to. Can't use built-in tempfile module,
-        # b/c it creates a file, which then has MySQL 
+        # b/c it creates a file, which then has MySQL
         # complain.
         # Create a random num sequence seeded with
         # this instance object:
@@ -1013,8 +1013,8 @@ class DataServer(threading.Thread):
             os.remove(tmpFileForPII)
         except OSError:
             pass
-        
-        try:        
+
+        try:
             for courseName in self.queryCourseNameList(courseId):
                 mySqlCmd = ' '.join([
                 'SELECT EdxPrivate.idInt2Anon(Enrollment.user_int_id) AS anon_screen_name, ',
@@ -1038,23 +1038,23 @@ class DataServer(threading.Thread):
                 '       AND course_id="%s"' % courseName,
                 '     ) AS Enrollment',
                 'WHERE edxprod.student_anonymoususerid.user_id = Enrollment.user_int_id',
-                '  AND edxprod.auth_user.id = Enrollment.user_int_id;'  
+                '  AND edxprod.auth_user.id = Enrollment.user_int_id;'
                 ])
-    
+
             for piiResultLine in self.mysqlDb.query(mySqlCmd):
                 tmpFileForPII.write(','.join(piiResultLine) + '\n')
-    
-            # Create the final output file, prepending the column 
+
+            # Create the final output file, prepending the column
             # name header:
             with open(outFilePIIName, 'w') as fd:
                 fd.write('anon_screen_name,user_int_id,screen_name,forum_id,email,external_lti_id,date_joined,course_display_name\n')
             self.catFiles(outFilePIIName, tmpFileForPII, mode='a')
-            
+
         finally:
             try:
                 os.remove(tmpFileForPII)
             except OSError:
-                pass    
+                pass
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportPIIDetails'] = infoXchangeFile
@@ -1085,7 +1085,7 @@ class DataServer(threading.Thread):
             os.remove(outFilePIIName)
         except OSError:
             pass
-        
+
         return outFilePIIName + '.zip'
 
     def exportDemographics(self, detailDict):
@@ -1095,7 +1095,7 @@ class DataServer(threading.Thread):
         so that unittests can find it. The output table will include
         the following:
             anon_screen_name, gender, year_of_birth, level_of_education, country_three_letters, country_name
-        
+
         :param detailDict: dict of arguments; expected: 'courseId'
         :type detailDict: {String : String}
         :return full path of outputfile
@@ -1104,13 +1104,13 @@ class DataServer(threading.Thread):
         if self.mysqlDb is None:
             self.writeError('In exportDemographics: Database is disconnected; have to give up.')
             return
-        
+
         try:
             courseId = detailDict['courseId']
         except KeyError:
             self.writeError('In exportDemographics: course ID was not included; could not construct lerner performance table.')
             return
-        
+
         if courseId is not None:
             courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
         else:
@@ -1118,7 +1118,7 @@ class DataServer(threading.Thread):
 
         # File name for eventual final result:
         outFileDemographicsName = os.path.join(self.fullTargetDir, '%s_demographics.csv' % courseNameNoSpaces)
-        
+
         #*************
         #print("outFileDemographicsName: '%s'" % outFileDemographicsName)
         #*************
@@ -1193,13 +1193,13 @@ class DataServer(threading.Thread):
         if self.mysqlDb is None:
             self.writeError('In exportLearnerPerf: Database is disconnected; have to give up.')
             return
-        
+
         try:
             courseId = detailDict['courseId']
         except KeyError:
             self.writeError('In exportLearnerPerf: course ID was not included; could not construct lerner performance table.')
             return
-        
+
         if courseId is not None:
             courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
         else:
@@ -1208,9 +1208,9 @@ class DataServer(threading.Thread):
         # File name for eventual final result:
         outFileLearnerPerfName = os.path.join(self.fullTargetDir, '%s_learnerPerf.csv' % courseNameNoSpaces)
 
-        # Get tmp file name for MySQL to write its 
+        # Get tmp file name for MySQL to write its
         # result table to. Can't use built-in tempfile module,
-        # b/c it creates a file, which then has MySQL 
+        # b/c it creates a file, which then has MySQL
         # complain.
         # Create a random num sequence seeded with
         # this instance object:
@@ -1221,8 +1221,8 @@ class DataServer(threading.Thread):
             os.remove(tmpFileForLearnerPerf)
         except OSError:
             pass
-        
-        try:        
+
+        try:
             for courseName in self.queryCourseNameList(courseId):
                 mySqlCmd = ' '.join([
                                      "SELECT  anon_screen_name," +\
@@ -1236,18 +1236,18 @@ class DataServer(threading.Thread):
                                      ])
             for learnerPerfResultLine in self.mysqlDb.query(mySqlCmd):
                 tmpFileForLearnerPerf.write(','.join(learnerPerfResultLine) + '\n')
-    
-            # Create the final output file, prepending the column 
+
+            # Create the final output file, prepending the column
             # name header:
             with open(outFileLearnerPerfName, 'w') as fd:
                 fd.write('anon_screen_name,num_problems,avg_program_grade,avg_num_attempts\n')
             self.catFiles(outFileLearnerPerfName, tmpFileForLearnerPerf, mode='a')
-            
+
         finally:
             try:
                 os.remove(tmpFileForLearnerPerf)
             except OSError:
-                pass    
+                pass
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportPIIDetails'] = infoXchangeFile
@@ -1278,18 +1278,18 @@ class DataServer(threading.Thread):
             os.remove(outFileLearnerPerfName)
         except OSError:
             pass
-        
+
         return outFileLearnerPerfName + '.zip'
-        
+
 
     def exportEmailList(self, detailDict):
-        
+
         try:
             emailStartDate = detailDict['emailStartDate']
         except KeyError:
             self.mainThread.logErr('In exportEmailList: start date was not included; could not export email list.')
             return
-        
+
         # Check whether we are to delete any already existing
         # csv files for this class:
         xpungeExisting = self.str2bool(detailDict.get("wipeExisting", False))
@@ -1301,31 +1301,31 @@ class DataServer(threading.Thread):
         # Build the CL command for script makeEmailListCSV.sh
         # script name plus options:
         scriptCmd = [self.exportEmailListScript,'-u',self.currUser]
-        
+
         if self.mySQLPwd is not None:
             scriptCmd.extend(['-w',self.mySQLPwd])
-            
+
         if xpungeExisting:
             scriptCmd.append('--xpunge')
-            
+
         # Tell script where to report names of tmp files
         # where it deposited results:
         scriptCmd.extend(['--infoDest',infoXchangeFile.name])
-        
-        # Provide the script with a pwd with which to encrypt the 
+
+        # Provide the script with a pwd with which to encrypt the
         # .csv.zip file:
         if cryptoPwd is None or len(cryptoPwd) == 0:
             self.mainThread.logErr("Email list export needs to be encrypted, and therefore needs a crypto pwd to use.")
             return;
         scriptCmd.extend(['--cryptoPwd', cryptoPwd])
-        
+
         # If unittesting, tell the script:
         if self.testing:
             scriptCmd.extend(['--testing'])
-        
+
         # The argument:
         scriptCmd.append(emailStartDate)
-        
+
         #************
         self.mainThread.logDebug("Script cmd is: %s" % str(scriptCmd))
         #************
@@ -1333,7 +1333,7 @@ class DataServer(threading.Thread):
         # Call makeEmailListCSV.sh to export:
         # The  script will place a file name and a file size (in lines)
         # into infoXchangeFile. The file is the csv file path
-        # of export results. The third line to EOF will be 
+        # of export results. The third line to EOF will be
         # five sample rows from the list of emails to be sent to the
         # browser for QA:
         try:
@@ -1347,21 +1347,21 @@ class DataServer(threading.Thread):
                     return
                 else:
                     self.writeResult('progress', msgFromScript)
-                    
-            #**********            
+
+            #**********
             #for msgFromScript in pipeFromScript:
             #    self.writeResult('progress', msgFromScript)
-            #**********                            
+            #**********
         except Exception as e:
             self.writeError(`e`)
             if self.testing:
                 raise
 
     def exportQuarterlyReport(self, detailDict):
-        
+
         try:
-            # Get the *academic* year (not the calendar year; 
-            # JavaScript on other end is required to do any 
+            # Get the *academic* year (not the calendar year;
+            # JavaScript on other end is required to do any
             # conversions):
             quarter = detailDict['quarterRepQuarter']
         except KeyError:
@@ -1375,10 +1375,10 @@ class DataServer(threading.Thread):
         if academic_year == '%' or quarter == '%':
             self.mainThread.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
             return
-        
+
         doEnrollment = detailDict.get('quarterRepEnroll', False)
         doEngagement = detailDict.get('quarterRepEngage', False)
-        
+
         mayOverwrite = detailDict.get('wipeExisting', False)
         enrollmentFileName = 'enrollment_%s%s' % (quarter, self.getCalendarYear(quarter, academic_year))
         engagementFileName = 'engagement_%s%s' % (quarter, self.getCalendarYear(quarter, academic_year))
@@ -1387,7 +1387,7 @@ class DataServer(threading.Thread):
         # whether target overwrite warning must be issued:
         pickupDirNameRoot = 'QuarterlyRep_%s%s' % (quarter,self.getCalendarYear(quarter, academic_year))
         (pickupDir, existed) = self.constructCourseSpecificDeliveryDir(pickupDirNameRoot) #@UnusedVariable
-        pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName) 
+        pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName)
         pickupEngagementPath = os.path.join(pickupDir, engagementFileName)
 
         if doEnrollment and os.path.exists(pickupEnrollmentPath) and not mayOverwrite:
@@ -1405,12 +1405,12 @@ class DataServer(threading.Thread):
         # Create a file that printTableInfo can understand:
         infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
         self.infoTmpFiles['QuarterlyReport'] = infoXchangeFile
-        
+
         exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self)
-        
+
         minEnrollment = detailDict.get('quarterRepMinEnroll', None) # Use default in createQuarterlyReport.sh
         byActivity   = detailDict.get('quarterRepByActivity', None)
-        
+
         if doEnrollment:
             self.writeResult('progress', "Starting enrollment computations...")
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
@@ -1422,12 +1422,12 @@ class DataServer(threading.Thread):
             # Note the file name and size in the print table info:
             infoXchangeFile.write(pickupEnrollmentPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEnrollmentPath)) + '\n')
-        
+
         if doEngagement:
             self.writeResult('progress', "Start engagement computation...")
             resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
             self.writeResult('progress', "Done engagement computation...")
-            shutil.copyfile(resFileNameEngage, pickupEnrollmentPath)
+            shutil.copyfile(resFileNameEngage, pickupEngagementPath)
             infoXchangeFile.write(pickupEngagementPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEngagementPath)) + '\n')
 
@@ -1460,8 +1460,8 @@ class DataServer(threading.Thread):
             except IOError as e:
                 self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
-            
-    
+
+
     def getNumFileLines(self, fileFdOrPath):
         '''
         Given either a file descriptor or a file path string,
@@ -1473,7 +1473,7 @@ class DataServer(threading.Thread):
             return sum(1 for line in fileFdOrPath) #@UnusedVariable
         else:
             return sum(1 for line in open(fileFdOrPath)) #@UnusedVariable
-    
+
     def zipFiles(self, destZipFileName, cryptoPwd, filePathsToZip):
         '''
         Creates an encrypted zip file.
@@ -1486,7 +1486,7 @@ class DataServer(threading.Thread):
         :type filePathsToZip: [String]
         '''
         # The --junk-paths below avoids having all file
-        # names in the zip be full paths. Instead they 
+        # names in the zip be full paths. Instead they
         # will only be the basenames:
         zipCmd = ['zip',
                   '--junk-paths',
@@ -1497,12 +1497,12 @@ class DataServer(threading.Thread):
         # Add all the file names to be zipped to the command:
         zipCmd.extend(filePathsToZip)
         subprocess.call(zipCmd)
-    
+
     def getCalendarYear(self, quarter, academicYear):
         '''
         Given quarter and academic year, return the calendar
         year in which the quarter ran.
-        
+
         :param quarter: quarter in which some course ran
         :type quarter: string: {fall|winter|spring|summer}; case insensitive
         :param academicYear: academic year in which course ran
@@ -1510,17 +1510,17 @@ class DataServer(threading.Thread):
         :return: calendar year in which course ran
         :rtype: int
         '''
-        
+
         if quarter.lower() == 'fall':
             return academicYear
         else:
             return academicYear + 1
-    
+
     def getAcademicYear(self, quarter, calendarYear):
         '''
         Given quarter and calendar year, return the academic
         year in which the quarter ran.
-        
+
         :param quarter: quarter in which some course ran
         :type quarter: string: {fall|winter|spring|summer}; case insensitive
         :param calendarYear: calendar year in which course ran
@@ -1528,23 +1528,23 @@ class DataServer(threading.Thread):
         :return: academic year in which course ran
         :rtype: int
         '''
-        
+
         if quarter.lower() == 'fall':
             return calendarYear
         else:
             return calendarYear - 1
-    
+
     def constructCourseSpecificDeliveryDir(self, courseName):
         '''
         Given a course name, construct a directory name where result
-        files for that course will be stored to be visible on the 
+        files for that course will be stored to be visible on the
         Web. The parent dir is expected in CourseCSVServer.DELIVERY_HOME.
         The leaf dir is constructed as DELIVERY_HOME/courseName
 
         :param courseName: course name for which results will be deposited in the dir
         :type courseName: String
-        :return: Two-tuple: the directory path, and flag PreExisted.EXISTED if 
-                 the directory already existed. Method does nothing in this case. 
+        :return: Two-tuple: the directory path, and flag PreExisted.EXISTED if
+                 the directory already existed. Method does nothing in this case.
                  If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
                  are returned. Creation includes all intermediate subdirectories.
 
@@ -1564,18 +1564,18 @@ class DataServer(threading.Thread):
             # the target dir must be write-open:
             os.chmod(self.fullTargetDir, 0o777)
             return (self.fullTargetDir, PreExisted.DID_NOT_EXIST)
-    
+
     def constructEmailListDeliveryDir(self, emailListStartDate):
         '''
-        Given the start date of an email list export, construct a directory 
-        name where result file for that export will be stored to be visible on the 
+        Given the start date of an email list export, construct a directory
+        name where result file for that export will be stored to be visible on the
         Web. The parent dir is expected in CourseCSVServer.DELIVERY_HOME.
         The leaf dir is constructed as DELIVERY_HOME/Email_<emailListStartDate>
 
         :param emailListStartDate: date for first email to include
         :type courseName: String
-        :return: Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if 
-                 the directory already existed. Method does nothing in this case. 
+        :return: Two-tuple: the already existing directory path, and flag PreExisted.EXISTED if
+                 the directory already existed. Method does nothing in this case.
                  If the directory did not exist, the constructed directory plus PreExisting.DID_NOT_EXIST
                  are returned. Creation includes all intermediate subdirectories.
 
@@ -1587,8 +1587,8 @@ class DataServer(threading.Thread):
         else:
             os.makedirs(self.fullEmailTargetDir)
             return (self.fullEmailTargetDir, PreExisted.DID_NOT_EXIST)
-    
-    
+
+
     def printTableInfo(self):
         '''
         Writes html to browser that shows result table
@@ -1596,22 +1596,22 @@ class DataServer(threading.Thread):
         from each table as samples.
 
         The information is in dict self.infoTmpFiles.
-        Each exporting method above has its own entry 
-        in the dict: exportClass, exportForum, exportEngagement, 
+        Each exporting method above has its own entry
+        in the dict: exportClass, exportForum, exportEngagement,
         exportPIIDetails, etc. Each value is the name of an
         open tmp file that contains alternating: file name,
         file size in lines for as many tables as were output.
-        
+
         After that information come batches of up to NUM_OF_TABLE_SAMPLE_LINES
         sample lines for each table. The batches are separated
         by the token "herrgottzemenschnochamal!"
-        
+
         :return: full path of the last table file that was deposited in the Web pickup area.
              This info is used later to construct a pickup URL
         :rtype: String
 
         '''
-        
+
         if len(self.infoTmpFiles) == 0:
             # Export methods wrote directly to
             # browser:
@@ -1630,7 +1630,7 @@ class DataServer(threading.Thread):
                     tableFileName     = tmpFileFd.readline().strip()
                     if len(tableFileName)  == 0 or tableFileName == 'herrgottzemenschnochamal!':
                         eof = True
-                        continue 
+                        continue
                     tableFileNumLines = tmpFileFd.readline().strip()
                     tableInfoDict[tableFileName.strip()] = tableFileNumLines
                 # Now get all the line samples in the right order:
@@ -1645,7 +1645,7 @@ class DataServer(threading.Thread):
                                 sampleLine = tmpFileFd.readline().strip()
                             except Exception as e:
                                 print("Got it: %s" % `e`) #****************
-                                
+
                             if len(sampleLine) == 0:
                                 eof = True
                                 endOfSampleBatch = True
@@ -1656,7 +1656,7 @@ class DataServer(threading.Thread):
                             sample += sampleLine.strip() + ' <br>'
                         sampleLineBatches.append(sample)
                         endOfSampleBatch = False
-                    
+
                 sampleBatchIndx = 0
                 for tableFileName in tableInfoDict.keys():
                     # Get the table name from the table file name:
@@ -1692,15 +1692,15 @@ class DataServer(threading.Thread):
                         tblName = 'Quarterly'
                     else:
                         tblName = 'unknown table name'
-                    
+
                     numLines = tableInfoDict[tableFileName]
                     # If number of lines is 1, then the table was empty.
                     # The single line is just the column header line:
                     if numLines <= 1:
-                        self.writeResult('printTblInfo', 
+                        self.writeResult('printTblInfo',
                                      '<br><b>Table %s</b> is empty.</br>' % tblName)
                         continue # next table
-                    self.writeResult('printTblInfo', 
+                    self.writeResult('printTblInfo',
                                      '<br><b>Table %s</b> (%s lines):</br>' % (tblName, numLines))
                     if len(sampleLineBatches) > 0:
                         self.writeResult('printTblInfo', sampleLineBatches[sampleBatchIndx])
@@ -1719,7 +1719,7 @@ class DataServer(threading.Thread):
         url = "https://%s/researcher/%s" % (thisFullyQualDomainName, tableDir)
 
         return url
-     
+
     def addClientInstructions(self, args, url):
         '''
         Send the draft of an email message for the client
@@ -1746,18 +1746,18 @@ class DataServer(threading.Thread):
             emailLines = ""
             with open(os.path.join(self.thisScriptDir, 'clientInstructions.html'), 'r') as txtFd:
                 emailLines = txtFd.readlines()
-            
+
             if args.get('basicData', False):
                 with open(os.path.join(self.thisScriptDir, 'clientInstructionsBasicTables.html'), 'r') as txtFd:
                     emailLines += txtFd.readlines()
             if args.get('engagementData', False):
                 with open(os.path.join(self.thisScriptDir, 'clientInstructionsEngagement.html'), 'r') as txtFd:
                     emailLines += txtFd.readlines()
-        
+
             if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
                 with open(os.path.join(self.thisScriptDir, 'clientInstructionsForum.html'), 'r') as txtFd:
                     emailLines += txtFd.readlines()
-        
+
         except Exception as e:
             self.writeError('Could not read client instruction file: %s' % `e`)
             return
@@ -1769,7 +1769,7 @@ class DataServer(threading.Thread):
         # Remove \n everywhere:
         txt = string.replace(txt, '\n', '')
         self.writeResult('progress', txt)
-      
+
     def queryCourseNameList(self, courseID, includeEnrollment=False):
         '''
         Given a MySQL regexp courseID string, return a list
@@ -1795,7 +1795,7 @@ class DataServer(threading.Thread):
             mySqlCmd.extend(['-w',self.mySQLPwd])
         mySqlCmd.extend([courseID])
         self.mainThread.logDebug("About to query for course names on regexp: '%s'" % mySqlCmd)
-        
+
         try:
             pipeFromMySQL = subprocess.Popen(mySqlCmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout
         except Exception as e:
@@ -1804,7 +1804,7 @@ class DataServer(threading.Thread):
         for courseName in pipeFromMySQL:
             courseName = courseName.strip()
             if not includeEnrollment:
-                # This got us 'myCourse 10', i.e. course name 
+                # This got us 'myCourse 10', i.e. course name
                 # plus enrollment:
                 try:
                     # The ...match(...) returns a match object,
@@ -1817,7 +1817,7 @@ class DataServer(threading.Thread):
             if len(courseName) > 0:
                 courseNames.append(courseName)
         return courseNames
-      
+
     def reportProgress(self):
         '''
         Writes a dot to remote browser to indicate liveness.
@@ -1826,7 +1826,7 @@ class DataServer(threading.Thread):
         #*******************
         #return
         #*******************
-        
+
         # Only log heartbeat sending every so often:
         if self.mainThread.latestHeartbeatLogTime is None:
             self.mainThread.latestHeartbeatLogTime = time.time()
@@ -1834,12 +1834,12 @@ class DataServer(threading.Thread):
             numHeartbeatsSent = int(CourseCSVServer.PROGRESS_LOGGING_INTERVAL / CourseCSVServer.PROGRESS_INTERVAL)
             self.mainThread.logDebug('Sent %d heartbeats.' % numHeartbeatsSent)
             self.mainThread.latestHeartbeatLogTime = time.time()
-        
+
         msg = {"resp" : "progress", "args" : "."}
         if not self.testing:
             self.mainThread.write_message(msg)
         self.setTimer(CourseCSVServer.PROGRESS_INTERVAL)
-     
+
     def getDeliveryURL(self, courseId):
         '''
         Given a course ID string, return a URL from which
@@ -1849,7 +1849,7 @@ class DataServer(threading.Thread):
         :type courseId: String
         :return: URL at which tables computed for a class are visible.
 
-        :rtype: String 
+        :rtype: String
         '''
         # FQDN of machine on which this service is running:
         thisFullyQualDomainName = socket.getfqdn()
@@ -1861,7 +1861,7 @@ class DataServer(threading.Thread):
         today = datetime.datetime.today().strftime(format)
         url = "https://%s/researcher/%s_%s" % (thisFullyQualDomainName, courseIdAsDirName, today)
         return url
-                
+
     def setTimer(self, time=None):
         self.cancelTimer()
         if time is None:
@@ -1874,14 +1874,14 @@ class DataServer(threading.Thread):
             self.currTimer.cancel()
             self.currTimer = None
             #self.mainThread.logDebug('Cancelling progress timer')
-        
+
     def str2bool(self, val):
         '''
         Given a string value that likely indicates
         'False', return the boolean False. In all
         other cases, return the boolean True. Used
         to canonicalize values read off the wire.
-        
+
         :param val: value to convert
         :type val: String
         :return: boolean equivalent
@@ -1900,7 +1900,7 @@ class DataServer(threading.Thread):
         is given, it must be one of the Unix file operation
         modes 'w' for 'overwrite existing dest file, or or 'a'
         for 'append to' existing dest file. Default is 'w'
-        
+
         :param destFileName:
         :type destFileName:
         '''
@@ -1911,57 +1911,57 @@ class DataServer(threading.Thread):
             with open(destFileName, mode) as outFd:
                 for srcFileName in srcFileNames:
                     with open(srcFileName, 'r') as inFd:
-                        shutil.copyfileobj(inFd, outFd)                    
+                        shutil.copyfileobj(inFd, outFd)
         except (IOError, OSError) as e:
             raise IOError('Error trying to copy files %s to destination file %s: %s' % (srcFileNames, destFileName, `e`))
 
-     
+
     # -------------------------------------------  Testing  ------------------
-                
+
     def echoParms(self):
         for parmName in self.parms.keys():
             print("Parm: '%s': '%s'" % (self.parms.getvalue(parmName, '')))
 
 
 if __name__ == '__main__':
-    
+
     application = tornado.web.Application([(r"/exportClass", CourseCSVServer),])
     #application.listen(8080)
-    
+
     # To find the SSL certificate location, we assume
-    # that it is stored in dir '.ssl' in the current 
-    # user's home dir. 
+    # that it is stored in dir '.ssl' in the current
+    # user's home dir.
     # We'll build string up to, and excl. '.crt'/'.key' in (for example):
     #     "/home/paepcke/.ssl/mono.stanford.edu.crt"
     # and "/home/paepcke/.ssl/mono.stanford.edu.key"
     # The home dir and fully qual. domain name
-    # will vary by the machine this code runs on:    
+    # will vary by the machine this code runs on:
     # We assume the cert and key files are called
     # <fqdn>.crt and <fqdn>.key:
-    
+
     homeDir = os.path.expanduser("~")
     thisFQDN = socket.getfqdn()
-    
+
     sslRoot = '%s/.ssl/%s' % (homeDir, thisFQDN)
     #*********
     # For self signed certificate:
     #sslRoot = '/home/paepcke/.ssl/server'
     #*********
-    
+
     sslArgsDict = {
      "certfile": sslRoot + '.crt',
      "keyfile":  sslRoot + '.key',
-     }  
-    
+     }
+
     http_server = tornado.httpserver.HTTPServer(application,ssl_options=sslArgsDict)
-    
+
     application.listen(8080, ssl_options=sslArgsDict)
-        
+
     try:
         tornado.ioloop.IOLoop.instance().start()
     except Exception as e:
         print("Error inside Tornado ioloop; continuing: %s" % `e`)
-    
+
 #          Timer sending dots for progress not working b/c of
 #          buffering:
 #         *****server.setTimer()
@@ -1970,14 +1970,14 @@ if __name__ == '__main__':
 #         endTime = datetime.datetime.now() - startTime
 #          Get a timedelta object with the microsecond
 #          component subtracted to be 0, so that the
-#          microseconds won't get printed:        
+#          microseconds won't get printed:
 #         duration = endTime - datetime.timedelta(microseconds=endTime.microseconds)
 #         server.writeResult('progress', "Runtime: %s" % str(duration))
 #         if exportSuccess:
 #             server.printClassTableInfo()
 #             server.addClientInstructions()
-#          
-#     
+#
+#
 #     sys.stdout.write("event: allDone\n")
 #     sys.stdout.write("data: Done in %s.\n\n" % str(duration))
 #     sys.stdout.flush()
