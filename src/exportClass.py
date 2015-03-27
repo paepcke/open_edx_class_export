@@ -1380,8 +1380,8 @@ class DataServer(threading.Thread):
         doEngagement = detailDict.get('quarterRepEngage', False)
 
         mayOverwrite = detailDict.get('wipeExisting', False)
-        enrollmentFileName = 'enrollment_%s%s' % (quarter, self.getCalendarYear(quarter, academic_year))
-        engagementFileName = 'engagement_%s%s' % (quarter, self.getCalendarYear(quarter, academic_year))
+        enrollmentFileName = 'enrollment_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
+        engagementFileName = 'engagement_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
 
         # Create a Web accessible delivery directory early to check
         # whether target overwrite warning must be issued:
@@ -1417,16 +1417,16 @@ class DataServer(threading.Thread):
             if resFileNameEnroll is None:
                 self.writeError('Call to quarterly exporter for enrollment failed. See error log.')
                 return
-            self.writeResult('progress', "Finished enrollment computations<br>")
+            self.writeResult('progress', "Finished enrollment computations.<br>")
             shutil.copyfile(resFileNameEnroll, pickupEnrollmentPath)
             # Note the file name and size in the print table info:
             infoXchangeFile.write(pickupEnrollmentPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEnrollmentPath)) + '\n')
 
         if doEngagement:
-            self.writeResult('progress', "Start engagement computation...")
+            self.writeResult('progress', "Start engagement computations...")
             resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
-            self.writeResult('progress', "Done engagement computation...")
+            self.writeResult('progress', "Finished engagement computations.")
             shutil.copyfile(resFileNameEngage, pickupEngagementPath)
             infoXchangeFile.write(pickupEngagementPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEngagementPath)) + '\n')
