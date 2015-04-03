@@ -99,13 +99,21 @@ class ExportClassTest(unittest.TestCase):
     
     demographicsData = [
                           ('abc', 'f', 1988, 'hs', 'USA', "United States"),
-                          ('def', 'm', 1990, 'ph', 'FRG', "Germany")
+                          ('def', 'm', 1990, 'p', 'FRG', "Germany")
                           ]
     
     true_courseenrollmentData = [
                                  (10, 'CME/MedStats/2013-2015', '2013-08-30 03:27:00', 'nomode'),
                                  (30, 'CME/MedStats/2013-2015', '2014-08-30 03:27:00', 'yesmode'),
                                  ]
+    courseInfoData = [
+                      ('CME/MedStats/2013-2015', 'medStats', 2014, 'fall', 1, 0, '2014-08-01', '2014-09-01', '2014-11-31')
+                      ]
+
+    userCountryData = [
+                       ('US', 'USA', 'abc', 'United States'),
+                       ('DE', 'DEU', 'def', 'Germany'),
+                       ]
     
     twoStudentsOneClassTestData = [
       ('CME/MedStats/2013-2015','abc','page_close','2013-08-30 03:27:00',0),   
@@ -329,11 +337,13 @@ class ExportClassTest(unittest.TestCase):
         self.courseServer.on_message(jsonMsg)
         os.path.exists(self.courseServer.latestForumFilename)
 
-    #****@unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testDemographics(self):
         self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
-        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "CME/MedStats/2013-2015", "demographics" : "True", "wipeExisting" : "True", "relatable" : "False", "cryptoPwd" : "foobar"}}'
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "testtest/MedStats/2013-2015", "demographics" : "True", "wipeExisting" : "True", "relatable" : "False", "cryptoPwd" : "foobar"}}'
         self.courseServer.on_message(jsonMsg)
+        # Allow result to be computed:
+        time.sleep(3)
         with open(self.courseServer.latestDemographicsFilename, 'r') as fd:
             # Read and discard the csv file's header line:
             fd.readline()
@@ -344,10 +354,32 @@ class ExportClassTest(unittest.TestCase):
             allDemographicsLines = fd.readlines()
             allDemographicsLines.sort()
             # abc,f,1988,hs,USA,United States
-            self.assertEqual('abc,f,1988,hs,USA,United States', allDemographicsLines[0].strip())
-            self.assertEqual('def,m,1990,ph,FRG,Germany', allDemographicsLines[1].strip())
+            self.assertEqual('"abc","f","1988","hs","USA","United States"', allDemographicsLines[0].strip())
+            self.assertEqual('"def","m","1990","p","FRG","Germany"', allDemographicsLines[1].strip())
         os.remove(self.courseServer.latestDemographicsFilename)
 
+    #******@unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
+    def testQuarterlyDemographics(self):
+        self.buildSupportTables(TestSet.TWO_STUDENTS_ONE_CLASS)
+        jsonMsg = '{"req" : "getData", "args" : {"courseId" : "testtest/MedStats/2013-2015", "quarterRep": "True", "quarterRepDemographics" : "True", "quarterRepQuarter" : "fall", "quarterRepYear": "2014", "wipeExisting" : "True", "relatable" : "False", "cryptoPwd" : "foobar"}}'
+        self.courseServer.on_message(jsonMsg)
+        # Allow result to be computed:
+        time.sleep(3)
+        with open(self.courseServer.latestQuarterlyDemographicsFilename, 'r') as fd:
+            # Read and discard the csv file's header line:
+            fd.readline()
+            #print(courseSummaryLine)
+            # Read the rest of the summary lines, and
+            # sort them just to ensure that we compare each
+            # line to its ground truth:
+            allDemographicsLines = fd.readlines()
+            allDemographicsLines.sort()
+            # abc,f,1988,hs,USA,United States
+            self.assertEqual('"abc","f","1988","hs","USA","United States"', allDemographicsLines[0].strip())
+            self.assertEqual('"def","m","1990","p","FRG","Germany"', allDemographicsLines[1].strip())
+        os.remove(self.courseServer.latestDemographicsFilename)
+
+    
     @unittest.skipIf(not TEST_ALL, "Temporarily disabled")    
     def testZipFiles(self):
         file1 = tempfile.NamedTemporaryFile()
@@ -426,6 +458,18 @@ class ExportClassTest(unittest.TestCase):
         colNames = ['user_id', 'course_display_name','created', 'mode']
         colValues = ExportClassTest.true_courseenrollmentData
         self.mysqldb.bulkInsert('unittest.true_courseenrollment', colNames, colValues)
+
+        # UserCountry:
+        schema = OrderedDict([('two_letter_country', 'varchar(2)'),
+                              ('three_letter_country','varchar(3)'),
+                              ('anon_screen_name', 'varchar(40)'),
+                              ('country', 'varchar(255)')])
+        self.mysqldb.dropTable('unittest.UserCountry')
+        self.mysqldb.createTable('unittest.UserCountry', schema)
+        colNames = ['two_letter_country', 'three_letter_country', 'anon_screen_name', 'country']
+        colValues = ExportClassTest.userCountryData
+        self.mysqldb.bulkInsert('unittest.UserCountry', colNames, colValues)
+        
         
         # Demographics
         schema = OrderedDict([('anon_screen_name', 'varchar(40)'),
@@ -440,8 +484,25 @@ class ExportClassTest(unittest.TestCase):
         self.mysqldb.createTable('unittest.Demographics', schema)
         colNames = ['anon_screen_name','gender', 'year_of_birth', 'level_of_education', 'country_three_letters', 'country_name']
         colValues = ExportClassTest.demographicsData
-        self.mysqldb.bulkInsert('Demographics', colNames, colValues)
+        self.mysqldb.bulkInsert('unittest.Demographics', colNames, colValues)
         
+        # Quarterly Report Demographics:
+        # CourseInfo:
+        schema = OrderedDict([('course_display_name', 'varchar(255)'),
+                              ('course_catalog_name','varchar(255)'),
+                              ('academic_year', 'int'),
+                              ('quarter', 'varchar(7)'),
+                              ('num_quarters', 'int'),
+                              ('is_internal', 'tinyint'),
+                              ('enrollment_start', 'datetime'),
+                              ('start_date', 'datetime'),
+                              ('end_date', 'datetime')])
+        self.mysqldb.dropTable('unittest.CourseInfo')
+        self.mysqldb.createTable('unittest.CourseInfo', schema)
+        colNames = ['course_display_name', 'course_catalog_name', 'academic_year', 'quarter',
+                    'num_quarters', 'is_internal', 'enrollment_start', 'start_date', 'end_date']
+        colValues = ExportClassTest.courseInfoData
+        self.mysqldb.bulkInsert('unittest.CourseInfo', colNames, colValues)
         
         # Forum table:
         # This tables gets loaded via a .sql file imported into mysql.

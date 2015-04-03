@@ -95,7 +95,7 @@ class QuarterlyReportExporter(object):
         self.mySQLUser = mySQLUser
         self.mySQLPwd = mySQLPwd
         self.parent   = parent
-
+        self.testing  = testing
         if testing:
             self.currUser = 'unittest'
         else:
@@ -206,11 +206,6 @@ class QuarterlyReportExporter(object):
         '''
         
         if outFile is None:                                                                                                                                                                 
-            # Use NamedTemporaryFile to create a temp name.                                                                                                                                 
-            # We need to remove the file, else MySQL further down                                                                                                                           
-            # will vomit that its out file already exists. This                                                                                                                             
-            # deletion does intoduce a race condition with other                                                                                                                            
-            # processes that use NamedTemporaryFile:                                                                                                                                        
             outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement.csv' % (academicYear, quarter), delete=False)                                                          
             resFileName = outFile.name                                                                                                                                                      
         else:                                                                                                                                                                               
@@ -219,35 +214,10 @@ class QuarterlyReportExporter(object):
                 outFile = open(resFileName, 'w')
             except Exception as e:
                 raise ValueError("Method engagement(): argument '%s' cannot be used as file name (%s)" % (resFileName, `e`))
-                
+        
+        allCourseNames = self.getQuarterCourseNames(academicYear, quarter, byActivity)
         colHeaderGrabbed = False
-        if byActivity:
-            if quarter == '%':
-                # All quarters of given year:
-                timeConstraint = "(time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('fall', academicYear) +\
-                                 " time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('winter', academicYear) +\
-                                 " time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('spring', academicYear) +\
-                                 " time BETWEEN '%s' AND '%s')"  % self.getQuarterCalendarStartEndDates('summer', academicYear)
-                               
-            else:
-                (quarterStartDate, quarterEndDate) = self.getQuarterCalendarStartEndDates(quarter, academicYear) 
-                timeConstraint = "time BETWEEN '%s' AND '%s' " % (quarterStartDate, quarterEndDate)
-             
-            courseNameIt = self.mysqlDb.query("SELECT course_display_name, quarter, academic_year " +\
-                                              "FROM CourseInfo " +\
-			                                  "WHERE EXISTS(SELECT 1 " +\
-			                                  "               FROM EventXtract " +\
-			  	                              "              WHERE EventXtract.course_display_name = CourseInfo.course_display_name " +\
-			   	                              "                AND %s);" % timeConstraint
-                                         % (str(academicYear), quarter))
-        else:
-            courseNameIt = self.mysqlDb.query("SELECT course_display_name " +\
-                                             "FROM Edx.CourseInfo " +\
-                                             "WHERE academic_year LIKE '%s' AND quarter LIKE '%s';"\
-                                             % (str(academicYear), quarter))
-        
-        
-        allCourseNames = [name[0] for name in courseNameIt]
+
         pool = multiprocessing.Pool(QuarterlyReportExporter.NUM_OF_CORES_TO_USE)
         partial_computeEngagementMulticore = functools.partial(computeEngagementMulticore, self.dbHost, self.mySQLUser, self.mySQLPwd)
         summaryFiles = pool.map(partial_computeEngagementMulticore, allCourseNames)
@@ -278,6 +248,375 @@ class QuarterlyReportExporter(object):
             self.output('Engagement summaries for %s%s are in %s' % (academicYear,quarter,resFileName))
         outFile.close()
         return resFileName
+
+    def demographics(self,academicYear, quarter, byActivity=False, outFile=None, printResultFilePath=True):
+        '''
+        We create a CSV file with one row for each course that ran
+        during the requested quarter. Columns are (with interspersed
+        explanations:
+        
+               platform, [Always 'openedx']    
+               course_display_name,
+            Number of learners by each gender:
+               gender_female,
+               gender_male,
+               gender_other,
+               gender_withheld,
+            Number of distinct 3-letter country codes:
+               num_countries,
+            Number of learners in each 'prior education' level:
+               edu_Doctorate,
+               edu_Masters_ProfessionalDegree,
+               edu_Bachelors,
+               edu_Associates,
+               edu_Secondary_HighSchool,
+               edu_Secondary_Junior,
+               edu_Elementary_Primary,
+               edu_None,
+               edu_Other,
+               edu_UserWithheld,
+               edu_SignupBeforeLevelCollected,
+            Number of learners in particular age groups:
+               age_1-10
+               age_11-20
+               age_21-30
+               age_31-40
+               age_41-50
+               age_51-60
+               age_61-70
+               age_71-80
+               age_81-90
+               age_unspecified
+        
+        :param academicYear:
+        :type academicYear:
+        :param quarter:
+        :type quarter:
+        :param byActivity: normally the createQuarterlyReport.sh script uses the CourseInfo
+                table to find course names to include. But often courses get learner activity
+                after the official end of the course. If True, this parameter instead has the
+                script include all courses that had at least one action during the academicYear/quarter
+                for which info is requested.
+        :type byActivity: Boolean
+        :param outFile:
+        :type outFile:
+        :param printResultFilePath: whether or not to print msg to stdout about where 
+            result file is to be found
+        :type printResultFilePath: bool
+        :return full path of file where results are stored
+        :rtype string 
+        '''
+
+        if outFile is None:                                                                                                                                                                 
+            outFile = tempfile.NamedTemporaryFile(suffix='quarterRep_%sQ%s_engagement.csv' % (academicYear, quarter), delete=False)                                                          
+            resFileName = outFile.name                                                                                                                                                      
+        else:                                                                                                                                                                               
+            resFileName = outFile
+            try:
+                outFile = open(resFileName, 'w')
+            except Exception as e:
+                raise ValueError("Method demographics(): argument '%s' cannot be used as file name (%s)" % (resFileName, `e`))
+
+        allCourseNames = self.getQuarterCourseNames(academicYear, quarter, byActivity)
+        
+        # There is probably a way to do all steps in
+        # a single, hairy SQL query. Instead, we take
+        # each category in turn (gender, edu, age). For
+        # each course we end up with an array of results,
+        # which we'll put into a dict with the course name
+        # as key. Be very careful about arrays being treated
+        # as references, when you think you are making a
+        # new one:
+        courseResults = {}
+        for courseName in allCourseNames:
+            thisCourseRow = []
+            # Create a MySQL temp table with just the unique
+            # anon_screen_name of this course:
+            if self.testing:
+                db = 'unittest'
+                dbPrivate = 'unittest'
+                dbEdxprod = 'unittest'
+            else:
+                db = self.defaultDb
+                dbPrivate = 'EdxPrivate'
+                dbEdxprod = 'edxprod'
+            self.mysqlDb.dropTable('%s.CourseMembers' % db)
+            self.mysqlDb.createTable('%s.CourseMembers' % db, {'anon_screen_name' : 'varchar(40)'}, temporary=True)
+            self.mysqlDb.execute("INSERT INTO %s.CourseMembers (anon_screen_name) " % db +\
+                                 "SELECT %s.UserGrade.anon_screen_name " % db +\
+                                 "FROM %s.UserGrade, %s.true_courseenrollment " % (dbPrivate, dbEdxprod) +\
+                                 "WHERE %s.UserGrade.user_int_id = %s.true_courseenrollment.user_id " % (dbPrivate, dbEdxprod) +\
+                                 "AND %s.true_courseenrollment.course_display_name = '%s';" % (db, courseName))
+            # Create another temp table to hold demographics in that course,
+            # one row for each learner (i.e. for each anon_screen_name):
+            self.mysqlDb.dropTable('%s.CourseDemographics' % db)
+            self.mysqlDb.createTable('%s.CourseDemographics' % db, 
+                                     {'gender' : 'varchar(6)',
+                                      'year_of_birth' : 'int',
+                                      'level_of_education' : 'varchar(42)',
+                                      'three_letter_country' : 'varchar(3)'
+                                      }, temporary=True)
+            # Populate the temp table: each row is demographics for one learner
+            # in the course we are working on. The final GROUP BY is 
+            # needed b/c some learners have multiple entries in UserCountry,
+            # if they came in from IPs of varying countries during separate
+            # events. The GROUP BY will pick one of those countries, rather
+            # than taking the cross product of the first join with UserCountry
+            # entries for the same learner:  
+            self.mysqlDb.execute ("INSERT INTO %s.CourseDemographics (gender, year_of_birth, level_of_education, three_letter_country) " % db +\
+                                  "SELECT %s.Demographics.gender, " % db +\
+                                  "%s.Demographics.year_of_birth, " % db +\
+                                  "%s.Demographics.level_of_education, " % db +\
+                                  "%s.UserCountry.three_letter_country " % db  +\
+                                  "FROM (%s.CourseMembers LEFT JOIN %s.Demographics " % (db,db)  +\
+                                  "  ON %s.CourseMembers.anon_screen_name = %s.Demographics.anon_screen_name) " % (db,db)  +\
+                                  " LEFT JOIN %s.UserCountry " % db +\
+                                  "  ON %s.CourseMembers.anon_screen_name = %s.UserCountry.anon_screen_name " % (db,db)  +\
+                                  "GROUP BY %s.UserCountry.anon_screen_name;" % db)
+        
+            # Now we have rows like:
+            #    'f','1997','Secondary/High School','USA'
+            # Need to pick out the various counts now.
+            # The nicest query would be something like:
+            #
+            #     SELECT Withhelds.withheld_count AS gender_withheld,
+            #            Males.male_count AS gender_male,
+            #            Females.female_count AS gender_female,
+            #            Others.other_count AS gender_other
+            #     FROM (SELECT
+            #             COUNT(gender) AS male_count FROM CourseDemographics WHERE gender = 'm') AS Males,
+            #          (SELECT
+            #             COUNT(gender) AS female_count FROM CourseDemographics WHERE gender = 'f') AS Females,
+            #          (SELECT
+            #             COUNT(gender) AS other_count FROM CourseDemographics WHERE gender = 'o') AS Others,
+            #          (SELECT
+            #             COUNT(gender) AS withheld_count FROM CourseDemographics WHERE gender = '') AS Withhelds;            
+            #     
+            #                 oneCourseDemographic = ['openedx',courseName]
+            #
+            # Unfortunately, MySQL doesn't let you refer to a tmp table twice.
+            # So we do it in pieces; first gender:
+            queryIt = self.mysqlDb.query("SELECT COUNT(gender) FROM %s.CourseDemographics WHERE gender = 'f';" % db)
+            thisCourseRow.append(queryIt.next()[0])
+            queryIt = self.mysqlDb.query("SELECT COUNT(gender) FROM %s.CourseDemographics WHERE gender = 'm';" % db)
+            thisCourseRow.append(queryIt.next()[0])
+            queryIt = self.mysqlDb.query("SELECT COUNT(gender) FROM %s.CourseDemographics WHERE gender = 'o';" % db)
+            thisCourseRow.append(queryIt.next()[0])
+            queryIt = self.mysqlDb.query("SELECT COUNT(gender) FROM %s.CourseDemographics WHERE gender = '';" % db)
+            thisCourseRow.append(queryIt.next()[0])
+            # Country count:
+            queryIt = self.mysqlDb.query("SELECT COUNT(DISTINCT three_letter_country) FROM %s.CourseDemographics;" % db)
+            thisCourseRow.append(queryIt.next()[0])
+            # Education levels: from the following query we'll get results as tuples
+            # like this: ('Doctorate', 10)
+            # We'll build a dict to collect them, using the col names of
+            # the final result table as keys; any scheme would do.
+            # I'm sure this could be done very elegantly, but I
+            # bet you understand this version:
+            queryIt = self.mysqlDb.query("SELECT level_of_education, COUNT(level_of_education) FROM %s.CourseDemographics GROUP BY level_of_education;" % db)
+            eduDict = {}
+            for resTuple in queryIt:
+                if resTuple[0] == 'p':
+                    eduDict['edu_Doctorate'] = resTuple[1]
+                elif resTuple[0] == 'm':
+                    eduDict['edu_Masters_ProfessionalDegree'] = resTuple[1]
+                elif resTuple[0] == 'b':
+                    eduDict['edu_Bachelors'] = resTuple[1]
+                elif resTuple[0] == 'a':
+                    eduDict['edu_Associates'] = resTuple[1]
+                elif resTuple[0] == 'hs':
+                    eduDict['edu_Secondary_HighSchool'] = resTuple[1]
+                elif resTuple[0] == 'jhs':
+                    eduDict['edu_Secondary_Junior'] = resTuple[1]
+                elif resTuple[0] == 'el':
+                    eduDict['edu_Primary_Elementary'] = resTuple[1]
+                elif resTuple[0] == 'none':
+                    eduDict['edu_None'] = resTuple[1]
+                elif resTuple[0] == 'other':
+                    eduDict['edu_Other'] = resTuple[1]
+                elif resTuple[0] == '':
+                    eduDict['edu_UserWithheld'] = resTuple[1]
+                elif resTuple[0] == 'NULL':
+                    eduDict['edu_SignupBeforeLevelCollected'] = resTuple[1]
+                
+            # Transfer to the res row in the proper order:
+            thisCourseRow.append(eduDict.get('edu_Doctorate', 0))
+            thisCourseRow.append(eduDict.get('edu_Masters_ProfessionalDegree', 0))
+            thisCourseRow.append(eduDict.get('edu_Associates', 0))
+            thisCourseRow.append(eduDict.get('edu_Secondary_HighSchool', 0))
+            thisCourseRow.append(eduDict.get('edu_Secondary_Junior', 0))
+            thisCourseRow.append(eduDict.get('edu_Primary_Elementary', 0))
+            thisCourseRow.append(eduDict.get('edu_None', 0))
+            thisCourseRow.append(eduDict.get('edu_Other', 0))
+            thisCourseRow.append(eduDict.get('edu_UserWithheld', 0))
+            thisCourseRow.append(eduDict.get('edu_SignupBeforeLevelCollected', 0))
+            
+            # Now the age ranges. This one is crufty SQL (for me):
+            #   SELECT CONCAT(
+            #                1 + FLOOR((YEAR(CURDATE()) - year_of_birth)/10) * 10,
+            #         '-',
+            #                10 + FLOOR((YEAR(CURDATE()) - year_of_birth)/10) * 10
+            #         ) AS age_range,
+            #        COUNT(*) AS numLearnersAged
+            #   FROM CourseDemographics
+            #   GROUP BY 1
+            #   ORDER BY age_range;
+            #                           
+            # Yields something like:
+            # +-----------+-----------------+
+            # | age_range | numLearnersAged |
+            # +-----------+-----------------+
+            # | NULL      |            1425 |
+            # | 1-10      |               6 |
+            # | 101-110   |               3 |
+            # | 11-20     |             357 |
+            # | 121-130   |               2 |
+            # | 21-30     |            4941 |
+            # | 31-40     |            2595 |
+            # | 41-50     |            1038 |
+            # | 51-60     |             392 |
+            # | 61-70     |             154 |
+            # | 71-80     |              24 |
+            # | 81-90     |               4 |
+            # +-----------+-----------------+
+            #
+            # The GROUP BY 1 groups by age_range
+             
+            queryIt = self.mysqlDb.query("SELECT CONCAT( " +\
+                                            "1 + FLOOR((YEAR(CURDATE()) - year_of_birth)/10) * 10, " +\
+                                         "'-'," +\
+                                            "10 + FLOOR((YEAR(CURDATE()) - year_of_birth)/10) * 10" +\
+                                         "   ) AS age_range, " +\
+                                         "COUNT(*) AS numLearnersAged " +\
+                                         "FROM %s.CourseDemographics " % db +\
+                                         "GROUP BY 1 " +\
+                                         "ORDER BY age_range;"
+                                         )
+            # We build a dict again to make *sure* the values
+            # will be added to the result row in order:
+            ageDict = {}
+            for ageRangeRow in queryIt:
+                if ageRangeRow[0].startswith('NULL'):
+                    ageDict['age_unspecified'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('1-'):
+                    ageDict['age_1-10'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('11-'):
+                    ageDict['age_11-20'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('21-'):
+                    ageDict['age_21-30'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('31-'):
+                    ageDict['age_31-40'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('41-'):
+                    ageDict['age_41-50'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('51-'):
+                    ageDict['age_51-60'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('61-'):
+                    ageDict['age_61-70'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('71-'):
+                    ageDict['age_71-80'] = ageRangeRow[1]
+                elif ageRangeRow[0].startswith('81-'):
+                    ageDict['age_81-90'] = ageRangeRow[1]
+            thisCourseRow.append(ageDict.get('age_1-10', 0))
+            thisCourseRow.append(ageDict.get('age_11-20', 0))
+            thisCourseRow.append(ageDict.get('age_21-30', 0))
+            thisCourseRow.append(ageDict.get('age_31-40', 0))
+            thisCourseRow.append(ageDict.get('age_41-50', 0))
+            thisCourseRow.append(ageDict.get('age_51-60', 0))
+            thisCourseRow.append(ageDict.get('age_61-70', 0))
+            thisCourseRow.append(ageDict.get('age_71-80', 0))
+            thisCourseRow.append(ageDict.get('age_81-90', 0))
+            thisCourseRow.append(ageDict.get('age_unspecified', 0))
+            
+            courseResults[courseName] = thisCourseRow
+            # loop back for next course
+        
+        # Now populate the result table; order of course rows 
+        # doesn't matter; first the col headers:
+        outFile.write(','.join([
+                                "platform",
+                                "course_display_name",
+                                "gender_female",
+                                "gender_male",
+                                "gender_other",
+                                "gender_withheld",
+                                "num_countries",
+                                "edu_Doctorate",
+                                "edu_Masters_ProfessionalDegree",
+                                "edu_Bachelors",
+                                "edu_Associates",
+                                "edu_Secondary_HighSchool",
+                                "edu_Secondary_Junior",
+                                "edu_Elementary_Primary",
+                                "edu_None",
+                                "edu_Other",
+                                "edu_UserWithheld",
+                                "edu_SignupBeforeLevelCollected",
+                                "age_1-10",
+                                "age_11-20",
+                                "age_21-30",
+                                "age_31-40",
+                                "age_41-50",
+                                "age_51-60",
+                                "age_61-70",
+                                "age_71-80",
+                                "age_81-90",
+                                "age_unspecified"
+                                ]) + '\n')
+        
+        for row in courseResults.values():
+            outFile.write(','.join(row) + '\n')
+        
+        outFile.close()
+        
+        return resFileName
+
+
+    def getQuarterCourseNames(self, academicYear, quarter,  byActivity):
+        '''
+        Returns an array of course names that ran during the given
+        academic year and quarter.
+        
+        :param academicYear: academic year in which desired quarter occurred
+        :type academicYear: int
+        :param quarter: quarter: one of fall,winter,spring,summer
+        :type quarter: string
+        :param byActivity: if true, all courses that showed any activity during
+            the quarter in question will be included. Else only
+            the courses that were scheduled to run during the quarter
+            are included.
+        :type byActivity: boolean
+        '''
+        if byActivity:
+            if quarter == '%':
+                # All quarters of given year:
+                timeConstraint = "(time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('fall', academicYear) +\
+                                 " time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('winter', academicYear) +\
+                                 " time BETWEEN '%s' AND '%s' OR " % self.getQuarterCalendarStartEndDates('spring', academicYear) +\
+                                 " time BETWEEN '%s' AND '%s')"  % self.getQuarterCalendarStartEndDates('summer', academicYear)
+                               
+            else:
+                (quarterStartDate, quarterEndDate) = self.getQuarterCalendarStartEndDates(quarter, academicYear) 
+                timeConstraint = "time BETWEEN '%s' AND '%s' " % (quarterStartDate, quarterEndDate)
+             
+            courseNameIt = self.mysqlDb.query("SELECT course_display_name, quarter, academic_year " +\
+                                              "FROM CourseInfo " +\
+                                              "WHERE EXISTS(SELECT 1 " +\
+                                              "               FROM EventXtract " +\
+                                                "              WHERE EventXtract.course_display_name = CourseInfo.course_display_name " +\
+                                                 "                AND %s);" % timeConstraint
+                                         % (str(academicYear), quarter))
+        else:
+            if self.testing:
+                db = 'unittest'
+            else:
+                db = 'Edx'
+            courseNameIt = self.mysqlDb.query("SELECT course_display_name " +\
+                                             "FROM " + db + ".CourseInfo " +\
+                                             "WHERE academic_year LIKE '%s' AND quarter LIKE '%s';"\
+                                             % (str(academicYear), quarter))
+
+        allCourseNames = [name[0] for name in courseNameIt]
+        return allCourseNames
 
 
     def getQuarterCalendarStartEndDates(self, quarter, academic_year):

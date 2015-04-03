@@ -1101,6 +1101,11 @@ class DataServer(threading.Thread):
         :return full path of outputfile
         :rtype String
         '''
+        
+        # For unittests: None-out the self.mainThread.latestDemographicsFilename
+        # so the test can wait for it to fill:
+        self.mainThread.latestDemographicsFilename = None
+        
         if self.mysqlDb is None:
             self.writeError('In exportDemographics: Database is disconnected; have to give up.')
             return
@@ -1124,7 +1129,7 @@ class DataServer(threading.Thread):
         #*************
         for courseName in self.queryCourseNameList(courseId):
             if self.testing:
-                courseName   = 'CME/MedStats/2013-2015'
+                courseName   = 'testtest/MedStats/2013-2015'
                 userGradeDb  = 'unittest'
                 trueEnrollDb = 'unittest'
             else:
@@ -1147,7 +1152,7 @@ class DataServer(threading.Thread):
                             "LEFT JOIN Demographics" +\
                             "  ON Demographics.anon_screen_name = Students.anon_screen_name;"                                                                       ])
             #***************
-            self.mainThread.logDebug("mySqlCmd: %s" % mySqlCmd)
+            #self.mainThread.logDebug("mySqlCmd: %s" % mySqlCmd)
             #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
             #    errFd.write("mySqlCmd: '%s'\n" % str(mySqlCmd))
             #***************
@@ -1155,11 +1160,12 @@ class DataServer(threading.Thread):
                 resIterator = self.mysqlDb.query(mySqlCmd)
                 resIterator.next()
             except Exception as e:
+                raise
                 #***************
-                with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    traceback.print_tb(exc_traceback, file=errFd)
-                    errFd.write("********MySQL query failed: '%s'\n" % `e`)
+                #with open('/home/dataman/Data/EdX/NonTransformLogs/exportClass.log', 'a') as errFd:
+                #    exc_type, exc_value, exc_traceback = sys.exc_info() #@UnusedVariable
+                #    traceback.print_tb(exc_traceback, file=errFd)
+                #    errFd.write("********MySQL query failed: '%s'\n" % `e`)
                 #***************
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
@@ -1358,6 +1364,17 @@ class DataServer(threading.Thread):
                 raise
 
     def exportQuarterlyReport(self, detailDict):
+        '''
+        Places name of result file into self.mainThread.latestQuarterlyDemographicsFilename,
+        so that unittests can find it.
+        
+        :param detailDict:
+        :type detailDict:
+        '''
+
+        # For unittests: None-out the self.mainThread.latestDemographicsFilename
+        # so the test can wait for it to fill:
+        self.mainThread.latestQuarterlyDemographicsFilename = None
 
         try:
             # Get the *academic* year (not the calendar year;
@@ -1376,12 +1393,14 @@ class DataServer(threading.Thread):
             self.mainThread.logErr('In exportQuarterlyReport: wildcards in quarter and academic year not yet supported.')
             return
 
-        doEnrollment = detailDict.get('quarterRepEnroll', False)
-        doEngagement = detailDict.get('quarterRepEngage', False)
+        doEnrollment   = detailDict.get('quarterRepEnroll', False)
+        doEngagement   = detailDict.get('quarterRepEngage', False)
+        doDemographics = detailDict.get('quarterRepDemographics', False)
 
         mayOverwrite = detailDict.get('wipeExisting', False)
         enrollmentFileName = 'enrollment_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
         engagementFileName = 'engagement_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
+        demographicsFileName = 'demographics_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
 
         # Create a Web accessible delivery directory early to check
         # whether target overwrite warning must be issued:
@@ -1389,6 +1408,7 @@ class DataServer(threading.Thread):
         (pickupDir, existed) = self.constructCourseSpecificDeliveryDir(pickupDirNameRoot) #@UnusedVariable
         pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName)
         pickupEngagementPath = os.path.join(pickupDir, engagementFileName)
+        pickupDemographicsPath = os.path.join(pickupDir, demographicsFileName)
 
         if doEnrollment and os.path.exists(pickupEnrollmentPath) and not mayOverwrite:
             # Did enrollment file exist (or maybe just engagement):
@@ -1397,8 +1417,12 @@ class DataServer(threading.Thread):
             return
 
         if doEngagement and os.path.exists(pickupEngagementPath) and not mayOverwrite:
-            # Did enrollment file exist (or maybe just engagement):
             self.writeError("Quarterly report engagement result for %s%s already existed, and Remove Previous Exports... was not checked." %\
+                            (quarter, self.getCalendarYear(quarter,academic_year)))
+            return
+
+        if doDemographics and os.path.exists(pickupDemographicsPath) and not mayOverwrite:
+            self.writeError("Quarterly report demographics result for %s%s already existed, and Remove Previous Exports... was not checked." %\
                             (quarter, self.getCalendarYear(quarter,academic_year)))
             return
 
@@ -1406,7 +1430,7 @@ class DataServer(threading.Thread):
         infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
         self.infoTmpFiles['QuarterlyReport'] = infoXchangeFile
 
-        exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self)
+        exporter = QuarterlyReportExporter(mySQLUser=self.currUser,mySQLPwd=self.mySQLPwd, parent=self, testing=self.testing)
 
         minEnrollment = detailDict.get('quarterRepMinEnroll', None) # Use default in createQuarterlyReport.sh
         byActivity   = detailDict.get('quarterRepByActivity', None)
@@ -1430,6 +1454,15 @@ class DataServer(threading.Thread):
             shutil.copyfile(resFileNameEngage, pickupEngagementPath)
             infoXchangeFile.write(pickupEngagementPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEngagementPath)) + '\n')
+
+        if doDemographics:
+            self.writeResult('progress', "Start demographics computations...")
+            resFileNameDemographics = exporter.demographics(academic_year, quarter, byActivity, printResultFilePath=False)
+            self.writeResult('progress', "Finished demographics computations.")
+            shutil.copyfile(resFileNameDemographics, pickupDemographicsPath)
+            infoXchangeFile.write(pickupDemographicsPath + '\n')
+            infoXchangeFile.write(str(self.getNumFileLines(pickupDemographicsPath)) + '\n')
+            
 
         # Write up to five lines into the print table file,
         # with the special line separator between the filename/filesize
@@ -1461,7 +1494,24 @@ class DataServer(threading.Thread):
                 self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
+        if doDemographics:
+            try:
+                with open(pickupDemographicsPath, 'r') as fd:
+                    head = []
+                    for lineNum,line in enumerate(fd):
+                        head.append(line)
+                        if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                            break
+                    infoXchangeFile.write(''.join(head))
+            except IOError as e:
+                self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            # Save the demographics result file in 
+            # self.mainThread.latestDemographicsFilename for 
+            # unittest to check:
+            self.mainThread.latestDemographicsFilename = pickupDemographicsPath
 
+        
     def getNumFileLines(self, fileFdOrPath):
         '''
         Given either a file descriptor or a file path string,
