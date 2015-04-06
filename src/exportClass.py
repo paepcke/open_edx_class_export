@@ -1462,6 +1462,10 @@ class DataServer(threading.Thread):
             shutil.copyfile(resFileNameDemographics, pickupDemographicsPath)
             infoXchangeFile.write(pickupDemographicsPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupDemographicsPath)) + '\n')
+            # Put the CSV result name (resFileName) where
+            # unittests can find it:
+            self.mainThread.latestQuarterlyDemographicsFilename = resFileNameDemographics
+
             
 
         # Write up to five lines into the print table file,

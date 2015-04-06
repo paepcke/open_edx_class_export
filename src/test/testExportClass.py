@@ -373,10 +373,8 @@ class ExportClassTest(unittest.TestCase):
             # sort them just to ensure that we compare each
             # line to its ground truth:
             allDemographicsLines = fd.readlines()
-            allDemographicsLines.sort()
-            # abc,f,1988,hs,USA,United States
-            self.assertEqual('"abc","f","1988","hs","USA","United States"', allDemographicsLines[0].strip())
-            self.assertEqual('"def","m","1990","p","FRG","Germany"', allDemographicsLines[1].strip())
+            #allDemographicsLines.sort()
+            self.assertEqual('openedx,CME/MedStats/2013-2015,1,1,0,0,2,1,0,0,1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0', allDemographicsLines[0].strip())
         os.remove(self.courseServer.latestDemographicsFilename)
 
     

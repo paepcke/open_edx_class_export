@@ -329,7 +329,7 @@ class QuarterlyReportExporter(object):
         # new one:
         courseResults = {}
         for courseName in allCourseNames:
-            thisCourseRow = []
+            thisCourseRow = ['openedx',courseName]
             # Create a MySQL temp table with just the unique
             # anon_screen_name of this course:
             if self.testing:
@@ -564,7 +564,10 @@ class QuarterlyReportExporter(object):
                                 ]) + '\n')
         
         for row in courseResults.values():
-            outFile.write(','.join(row) + '\n')
+            # For the join() all cols need to be
+            # strings; so use a list comprehension
+            # for the conversion:
+            outFile.write(','.join([str(colValue) for colValue in row]) + '\n')
         
         outFile.close()
         
