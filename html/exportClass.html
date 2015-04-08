@@ -112,12 +112,13 @@
 	<input type="button" value="List Matching Classes" id="listClassesBtn"><br>
 
         <input type="checkbox" id="fileAction" value="xpunge">
-	<label class="long" for="fileAction">
+	<label class="long" for="fileAction" title="If earlier uses of this export facility exported data for a particular course, then the 
+server will refuse to overwrite those exports, unless this box is checked.">
 	  Remove any previous exports of same type
 	</label>
 	<br><br>
 	<input type="checkbox" id="basicData" value="basicData" checked>
-	<label class="long" for="basicData">
+	<label class="long" for="basicData" title="Three tables: user actions, video-only subset of all actions, and assignment solution submissions.">
 	  Prepare basic course info
 	</label>
 	<br>
@@ -147,16 +148,16 @@
 	    <i>(leave both blank if quarter or year unknown.)</i>
 	  </div>
 	<input type="checkbox" id="engagementData" value="engagementData">
-	<label class="long" for="engagementData">
+	<label class="long" for="engagementData" title="Computes contiguous time on task, session lengths, and week-by-week engagement numbers for a single course.">
 	  Prepare time on task data
 	</label>
 	<input type="checkbox" id="engageVideoOnly"
 	       name="engageVideoOnly" value="engageVideoOnly">
-	<label for="engageVideoOnly"><i>Video events only</i></label>
+	<label for="engageVideoOnly" title="If checked, only video events will be considered for engagement computations."><i>Video events only</i></label>
 	<br>
 
 	<input type="checkbox" id="demographics" value="demographics">
-	<label class="long" for="demographics">
+	<label class="long" for="demographics" title="Basic, self-reported demographics across one course. Does not include personally identifiable information">
 	  Demographics for all learners in one course
 	</label>
 	<br>
@@ -169,13 +170,18 @@
 	<br>
 	-->
 	<input type="checkbox" id="edxForum" value="edxForum">
-	<label for="edxForum">
+	<label for="edxForum" title="Forum post contents, comments, up/down votes">
 	  Forum data:
 	</label>
 	<input type="radio" id="edxForumIsolated"  name="protection" value="edxForumIsolated" checked >
-	<label for="edxForumIsolated"><i>Isolated</i></label>
+	<label for="edxForumIsolated" title="If checked, learner obfuscation will use different IDs than for other data in the archive. 
+I.e. correlations as between forum and grades will not be possible. On the other hand, 
+this choice makes it harder to re-identify learners' login names than with the Relatable choice."><i>Isolated</i></label>
 	<input type="radio" id="edxForumRelatable" name="protection" value="edxForumRelatable">
-	<label for="edxForumRelatable"><i>Relatable</i></label>
+	<label for="edxForumRelatable" title="If checked then learner IDs for forum export will be the same as used in exports 
+of other archive data. Correlations across data in the archive will then
+be possible, but learner login names are easier to re-identify than 
+with the Isolated choice.."><i>Relatable</i></label>
 	<br>
 
 	<div id="piazzaAndEdcast">
@@ -243,11 +249,11 @@
           <div class="formIndentation">
 
 	    <input type="checkbox" id="quarterRepEnroll" value="quarterRepEnroll" checked/>
-	    <label class="long" for="quarterRepEnroll">
+	    <label class="long" for="quarterRepEnroll" title="Enrollment and number of earned certificates for each course in the chosen quarter">
 	      Enrollment/Certs: 
 	    </label>
 
-	    <label class="long" for="quarterRepMinEnroll">
+	    <label class="long" for="quarterRepMinEnroll" title="Only courses with enrollment higher than the given number will be included in statistics.">
 	      Min enrollment: 
 	    </label>	  
 	    <select id="quarterRepMinEnroll">
@@ -264,14 +270,20 @@
 	    <br>
 	    <input type="checkbox" id="quarterRepEngage" value="quarterRepEngage">
 	    <!-- <label class="long" for="quarterRepEngage" class="grayedOut"> -->
-	    <label for="quarterRepEngage">
+	    <label for="quarterRepEngage" title="Computes total time on task, and number of learner sessions for all learners in each course of the chosen quarter.">
 	      Engagement
 	    </label>
 	    <br>
-	    <label class="long" for="quarterRepByActivity">
-	      (Include all courses with any activity during quarter:
-	    </label>	  
-	    <input type="checkbox" id="quarterRepByActivity" value="quarterRepByActivity">)
+	    <div class="formIndentation" title="Engagement computations may include just courses scheduled to be running during the chosen quarter, or all courses from which activity was detected during the quarter.">
+	      <input class="long" type="checkbox" id="quarterRepByActivity" value="quarterRepByActivity">
+	      <label for="quarterRepByActivity">
+		Include all courses with any activity during quarter
+	      </label>	  
+	    </div>
+	    <input type="checkbox" id="quarterRepDemographics" value="quarterRepDemographics">
+	    <label for="quarterRepDemographics">
+	      Demographics over all courses of chosen quarter
+	    </label>
 
 	  </div> <!-- end outer form indentation -->
         </div> <!-- end quarterly specs  -->

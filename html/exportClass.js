@@ -198,7 +198,7 @@ function ExportClass() {
 	// takes a long time:
 	if (document.getElementById('quarterRepEngage').checked &&
 	    confirm("Computing engagement for all courses in a quarter " +
-		    "takes a long time; example: about 5hrs for 45 courses. " +
+		    "takes about 15min. " +
 		    "Want to go ahead?") == false)
 	    return;
 
@@ -223,7 +223,8 @@ function ExportClass() {
     this.evtEnrollOrEngageReqBoxChanged = function() {
 	if (document.getElementById('quarterRepEnroll').checked ||
 	    document.getElementById('quarterRepByActivity').checked ||
-	    document.getElementById('quarterRepEngage').checked
+	    document.getElementById('quarterRepEngage').checked ||
+	    document.getElementById('quarterRepDemographics').checked
 	   ) {
 	    document.getElementById('quarterRep').checked = true;
 	} else {
@@ -428,6 +429,7 @@ function ExportClass() {
 	var quarterRepMinEnroll = quarterRep && document.getElementById("quarterRepMinEnroll").value;
 	var quarterRepByActivity = quarterRep && document.getElementById("quarterRepByActivity").checked;
 	var quarterRepEngage = quarterRep && document.getElementById("quarterRepEngage").checked;
+	var quarterRepDemographics = quarterRep && document.getElementById("quarterRepDemographics").checked;
 	var demographics = document.getElementById("demographics").checked;
 
 	if (!basicData && 
@@ -445,10 +447,10 @@ function ExportClass() {
 	    return;
 	}
 
-	// If quarterly report, ensure that at least one of the enrollment/engagement boxes
+	// If quarterly report, ensure that at least one of the enrollment/engagement/demographics boxes
         // is filled:
 	if (quarterRep &&
-	    !(quarterRepEnroll || quarterRepEngage)) {
+	    !(quarterRepEnroll || quarterRepEngage || quarterRepDemographics)) {
 	    alert("If you check 'Quarterly Report' you need also to check 'Enrollment' or 'Engagement', or both.");
 	    return;
 	}
@@ -524,6 +526,7 @@ function ExportClass() {
 		      "quarterRepMinEnroll": quarterRepMinEnroll,
 		      "quarterRepByActivity": quarterRepByActivity,
 		      "quarterRepEngage": quarterRepEngage,
+		      "quarterRepDemographics": quarterRepDemographics,
 		      "demographics": demographics,
 		     };
 	var req = buildRequest("getData", argObj);
@@ -719,8 +722,14 @@ document.getElementById('courseID').addEventListener('onkeydown', classExporter.
 // a PII zip file encryption pwd:
 classExporter.hideCryptoPwdSolicitation();
 
-// Same for the quarterly specs:
-classExporter.hideQuarterlySpecs();
+// Same for the quarterly specs, unless 
+// quarterly report is already checked:
+
+if (document.getElementById('quarterRep').checked) {
+    classExporter.showQuarterlySpecs();
+} else {
+    classExporter.hideQuarterlySpecs();
+}
 
 // For now we permanently hide Edcast and Piazza:
 document.getElementById('piazzaAndEdcast').style.display = "none";

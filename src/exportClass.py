@@ -139,8 +139,8 @@ class CourseCSVServer(WebSocketHandler):
         self.testing = testing
         self.request = request;
 
-        self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
-        #self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
+        #self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
+        self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
         #self.loglevel = CourseCSVServer.LOG_LEVEL_NONE
 
         # Interval between logging the sending of
