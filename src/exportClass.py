@@ -1995,15 +1995,13 @@ if __name__ == '__main__':
 
     homeDir = os.path.expanduser("~")
     thisFQDN = socket.getfqdn()
+    thisFQDNUnderscored = thisFQDN.replace('.', '_')
 
     sslRoot = '%s/.ssl/%s' % (homeDir, thisFQDN)
-    #*********
-    # For self signed certificate:
-    #sslRoot = '/home/paepcke/.ssl/server'
-    #*********
+    sslRootUnderscored = '%s/.ssl/%s' % (homeDir, thisFQDNUnderscored)
 
     sslArgsDict = {
-     "certfile": sslRoot + '.crt',
+     "certfile": sslRootUnderscored + '_cert.cer',
      "keyfile":  sslRoot + '.key',
      }
 
