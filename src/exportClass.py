@@ -185,6 +185,8 @@ class CourseCSVServer(WebSocketHandler):
         except Exception as e:
             self.writeError("Bad JSON in request received at server: %s" % `e`)
 
+        self.logDebug("About to fork thread for request '%s'" % str(requestDict))
+
         serverThread = DataServer(requestDict, self, self.testing)
         serverThread.start()
         # If we are testing the unittest needs to wait
