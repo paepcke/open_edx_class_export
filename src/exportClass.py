@@ -1972,6 +1972,29 @@ class DataServer(threading.Thread):
             raise IOError('Error trying to copy files %s to destination file %s: %s' % (srcFileNames, destFileName, `e`))
 
 
+    def getCertAndKey(self):
+        '''
+        Return a 
+        
+        '''
+        homeDir = os.path.expanduser("~")
+        sslDir = '%s/.ssl/' % homeDir
+        try:
+            certFileName = next(fileName for fileName in os.listdir(sslDir) 
+	                               if fileName.endswith('.cer') or fileName.endswith('.crt'))
+        except StopIteration:
+            raise(ValueError("Could not find ssl certificate file in %s" % sslDir))
+        
+        try:
+            privateKeyFileName = next(fileName for fileName in os.listdir(sslDir) 
+	                                     if fileName.endswith('.key'))
+        except StopIteration:
+            raise(ValueError("Could not find ssl private key file in %s" % sslDir))
+        return (os.path.join(sslDir, certFileName),
+                os.path.join(sslDir, privateKeyFileName))
+
+
+
     # -------------------------------------------  Testing  ------------------
 
     def echoParms(self):
