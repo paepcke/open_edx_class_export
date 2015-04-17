@@ -215,6 +215,55 @@ class CourseCSVServer(WebSocketHandler):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_DEBUG:
             print(str(datetime.datetime.now()) + ' debug: ' + msg)
 
+    def getFQDM(self):
+        '''
+        Obtain true fully qualified domain name of server, as
+        seen from the 'outside' of any router behind which the
+        server may be hiding. Strategy: use shell cmd "wget -q -O- icanhazip.com"
+        to get IP address as seen from the outside. Then use
+        gethostbyaddr() to do reverse DNS lookup.
+        
+        @return: this server's fully qualified IP name.
+        @rtype: string
+        @raise ValueError: if either the WAN IP lookup, or the subsequent
+            reverse DNS lookup fail.
+        '''
+
+        try:
+            ip = subprocess.check_output(['wget', '-q', '-O-', 'icanhazip.com'])
+        except CalledProcessError:
+            # Could not get the outside IP address. Fall back
+            # on using the FQDM obtained locally:
+            return socket.getfqdn()
+
+        try:
+            fqdm = socket.gethostbyaddr(ip.strip())[0]
+        except socket.gaierror:
+            raise("ValueError: could not find server's fully qualified domain name from IP address '%s'" % ip.string())
+        except Exception as e:
+            raise("ValueError: could not find server's fully qualified domain: '%s'" % `e`)
+        return fqdm
+         
+    def getFQDNWithoutDigits(self):
+        '''
+        Returns fully qualified domain name of server, but with
+        all digits removed. Thus if the current machine's FQDN
+        is datastage2.stanford.edu, then datastage.stanford.edu
+        is returned. Note getFQDM() is much preferrable to this
+        hack. Don't use this method if you don't have to. The
+        idea of this one is that you can use multiple server names
+        with numbers added, where the server names are known to
+        be the WAN-visible names. So: if WAN visible hostname 
+        (i.e. the router/firewall's) hostname is datastage.stanford.edu,
+        and multiple servers behind the router take turns serving,
+        then one could call those servers datastage1.stanford.edu,
+        datastage2.stanford.edu, etc. and this method would still always
+        return datastage.stanford.edu. A hack.
+        
+        '''
+        fullyQualDomainName = socket.getfqdn()
+        return(re.sub(r'[0-9]', '', fullyQualDomainName))
+
     @classmethod
     def getCertAndKey(self):
         '''
@@ -2007,55 +2056,6 @@ class DataServer(threading.Thread):
                         shutil.copyfileobj(inFd, outFd)
         except (IOError, OSError) as e:
             raise IOError('Error trying to copy files %s to destination file %s: %s' % (srcFileNames, destFileName, `e`))
-
-    def getFQDM(self):
-        '''
-        Obtain true fully qualified domain name of server, as
-        seen from the 'outside' of any router behind which the
-        server may be hiding. Strategy: use shell cmd "wget -q -O- icanhazip.com"
-        to get IP address as seen from the outside. Then use
-        gethostbyaddr() to do reverse DNS lookup.
-        
-        @return: this server's fully qualified IP name.
-        @rtype: string
-        @raise ValueError: if either the WAN IP lookup, or the subsequent
-            reverse DNS lookup fail.
-        '''
-
-        try:
-            ip = subprocess.check_output(['wget', '-q', '-O-', 'icanhazip.com'])
-        except CalledProcessError:
-            # Could not get the outside IP address. Fall back
-            # on using the FQDM obtained locally:
-            return socket.getfqdn()
-
-        try:
-            fqdm = socket.gethostbyaddr(ip.strip())[0]
-        except socket.gaierror:
-            raise("ValueError: could not find server's fully qualified domain name from IP address '%s'" % ip.string())
-        except Exception as e:
-            raise("ValueError: could not find server's fully qualified domain: '%s'" % `e`)
-        return fqdm
-         
-    def getFQDNWithoutDigits(self):
-        '''
-        Returns fully qualified domain name of server, but with
-        all digits removed. Thus if the current machine's FQDN
-        is datastage2.stanford.edu, then datastage.stanford.edu
-        is returned. Note getFQDM() is much preferrable to this
-        hack. Don't use this method if you don't have to. The
-        idea of this one is that you can use multiple server names
-        with numbers added, where the server names are known to
-        be the WAN-visible names. So: if WAN visible hostname 
-        (i.e. the router/firewall's) hostname is datastage.stanford.edu,
-        and multiple servers behind the router take turns serving,
-        then one could call those servers datastage1.stanford.edu,
-        datastage2.stanford.edu, etc. and this method would still always
-        return datastage.stanford.edu. A hack.
-        
-        '''
-        fullyQualDomainName = socket.getfqdn()
-        return(re.sub(r'[0-9]', '', fullyQualDomainName))
 
     # -------------------------------------------  Testing  ------------------
 
