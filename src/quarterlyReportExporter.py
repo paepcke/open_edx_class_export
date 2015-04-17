@@ -496,7 +496,10 @@ class QuarterlyReportExporter(object):
             # will be added to the result row in order:
             ageDict = {}
             for ageRangeRow in queryIt:
-                if ageRangeRow is None:
+                if ageRangeRow is None or \
+                    type(ageRangeRow) != tuple or \
+                    len(ageRangeRow) < 1 or \
+                    ageRangeRow[0] is None:
                     next
                 elif ageRangeRow[0].startswith('NULL'):
                     ageDict['age_unspecified'] = ageRangeRow[1]
