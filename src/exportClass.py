@@ -209,6 +209,40 @@ class CourseCSVServer(WebSocketHandler):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_DEBUG:
             print(str(datetime.datetime.now()) + ' debug: ' + msg)
 
+    @classmethod
+    def getCertAndKey(self):
+        '''
+        Return a 2-tuple with full paths, respectively to 
+        the SSL certificate, and private key.
+        To find the SSL certificate location, we assume
+        that it is stored in dir '.ssl' in the current
+        user's home dir.
+        We assume the cert file either ends in .cer, or
+        in .crt, and that the key file ends in .key.
+        The first matching files in the .ssl directory
+        are grabbed.
+        
+        @return: two-tuple with full path to SSL certificate, and key files.
+        @rtype: (str,str)
+        @raise ValueError: if either of the files are not found. 
+        
+        '''
+        homeDir = os.path.expanduser("~")
+        sslDir = '%s/.ssl/' % homeDir
+        try:
+            certFileName = next(fileName for fileName in os.listdir(sslDir) 
+	                               if fileName.endswith('.cer') or fileName.endswith('.crt'))
+        except StopIteration:
+            raise(ValueError("Could not find ssl certificate file in %s" % sslDir))
+        
+        try:
+            privateKeyFileName = next(fileName for fileName in os.listdir(sslDir) 
+	                                     if fileName.endswith('.key'))
+        except StopIteration:
+            raise(ValueError("Could not find ssl private key file in %s" % sslDir))
+        return (os.path.join(sslDir, certFileName),
+                os.path.join(sslDir, privateKeyFileName))
+
 class DataServer(threading.Thread):
 
     def __init__(self, requestDict, mainThread, testing=False):
@@ -1970,41 +2004,6 @@ class DataServer(threading.Thread):
                         shutil.copyfileobj(inFd, outFd)
         except (IOError, OSError) as e:
             raise IOError('Error trying to copy files %s to destination file %s: %s' % (srcFileNames, destFileName, `e`))
-
-    @classmethod
-    def getCertAndKey(self):
-        '''
-        Return a 2-tuple with full paths, respectively to 
-        the SSL certificate, and private key.
-        To find the SSL certificate location, we assume
-        that it is stored in dir '.ssl' in the current
-        user's home dir.
-        We assume the cert file either ends in .cer, or
-        in .crt, and that the key file ends in .key.
-        The first matching files in the .ssl directory
-        are grabbed.
-        
-        @return: two-tuple with full path to SSL certificate, and key files.
-        @rtype: (str,str)
-        @raise ValueError: if either of the files are not found. 
-        
-        '''
-        homeDir = os.path.expanduser("~")
-        sslDir = '%s/.ssl/' % homeDir
-        try:
-            certFileName = next(fileName for fileName in os.listdir(sslDir) 
-	                               if fileName.endswith('.cer') or fileName.endswith('.crt'))
-        except StopIteration:
-            raise(ValueError("Could not find ssl certificate file in %s" % sslDir))
-        
-        try:
-            privateKeyFileName = next(fileName for fileName in os.listdir(sslDir) 
-	                                     if fileName.endswith('.key'))
-        except StopIteration:
-            raise(ValueError("Could not find ssl private key file in %s" % sslDir))
-        return (os.path.join(sslDir, certFileName),
-                os.path.join(sslDir, privateKeyFileName))
-
 
 
     # -------------------------------------------  Testing  ------------------
