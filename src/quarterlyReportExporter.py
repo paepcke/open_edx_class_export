@@ -343,7 +343,7 @@ class QuarterlyReportExporter(object):
             self.mysqlDb.dropTable('%s.CourseMembers' % db)
             self.mysqlDb.createTable('%s.CourseMembers' % db, {'anon_screen_name' : 'varchar(40)'}, temporary=True)
             self.mysqlDb.execute("INSERT INTO %s.CourseMembers (anon_screen_name) " % db +\
-                                 "SELECT %s.UserGrade.anon_screen_name " % db +\
+                                 "SELECT %s.UserGrade.anon_screen_name " % dbPrivate +\
                                  "FROM %s.UserGrade, %s.true_courseenrollment " % (dbPrivate, dbEdxprod) +\
                                  "WHERE %s.UserGrade.user_int_id = %s.true_courseenrollment.user_id " % (dbPrivate, dbEdxprod) +\
                                  "AND %s.true_courseenrollment.course_display_name = '%s';" % (db, courseName))

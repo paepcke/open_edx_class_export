@@ -1486,7 +1486,7 @@ class DataServer(threading.Thread):
         if doEngagement:
             self.writeResult('progress', "Start engagement computations...")
             resFileNameEngage = exporter.engagement(academic_year, quarter, printResultFilePath=False)
-            self.writeResult('progress', "Finished engagement computations.")
+            self.writeResult('progress', "Finished engagement computations.<br>")
             shutil.copyfile(resFileNameEngage, pickupEngagementPath)
             infoXchangeFile.write(pickupEngagementPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupEngagementPath)) + '\n')
@@ -1494,7 +1494,7 @@ class DataServer(threading.Thread):
         if doDemographics:
             self.writeResult('progress', "Start demographics computations...")
             resFileNameDemographics = exporter.demographics(academic_year, quarter, byActivity, printResultFilePath=False)
-            self.writeResult('progress', "Finished demographics computations.")
+            self.writeResult('progress', "Finished demographics computations.<br>")
             shutil.copyfile(resFileNameDemographics, pickupDemographicsPath)
             infoXchangeFile.write(pickupDemographicsPath + '\n')
             infoXchangeFile.write(str(self.getNumFileLines(pickupDemographicsPath)) + '\n')
