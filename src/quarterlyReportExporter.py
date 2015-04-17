@@ -346,7 +346,7 @@ class QuarterlyReportExporter(object):
                                  "SELECT %s.UserGrade.anon_screen_name " % dbPrivate +\
                                  "FROM %s.UserGrade, %s.true_courseenrollment " % (dbPrivate, dbEdxprod) +\
                                  "WHERE %s.UserGrade.user_int_id = %s.true_courseenrollment.user_id " % (dbPrivate, dbEdxprod) +\
-                                 "AND %s.true_courseenrollment.course_display_name = '%s';" % (db, courseName))
+                                 "AND %s.true_courseenrollment.course_display_name = '%s';" % (dbEdxprod, courseName))
             # Create another temp table to hold demographics in that course,
             # one row for each learner (i.e. for each anon_screen_name):
             self.mysqlDb.dropTable('%s.CourseDemographics' % db)
