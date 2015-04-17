@@ -1974,7 +1974,19 @@ class DataServer(threading.Thread):
 
     def getCertAndKey(self):
         '''
-        Return a 
+        Return a 2-tuple with full paths, respectively to 
+        the SSL certificate, and private key.
+        To find the SSL certificate location, we assume
+        that it is stored in dir '.ssl' in the current
+        user's home dir.
+        We assume the cert file either ends in .cer, or
+        in .crt, and that the key file ends in .key.
+        The first matching files in the .ssl directory
+        are grabbed.
+        
+        @return: two-tuple with full path to SSL certificate, and key files.
+        @rtype: (str,str)
+        @raise ValueError: if either of the files are not found. 
         
         '''
         homeDir = os.path.expanduser("~")
@@ -2007,28 +2019,9 @@ if __name__ == '__main__':
     application = tornado.web.Application([(r"/exportClass", CourseCSVServer),])
     #application.listen(8080)
 
-    # To find the SSL certificate location, we assume
-    # that it is stored in dir '.ssl' in the current
-    # user's home dir.
-    # We'll build string up to, and excl. '.crt'/'.key' in (for example):
-    #     "/home/paepcke/.ssl/mono.stanford.edu.crt"
-    # and "/home/paepcke/.ssl/mono.stanford.edu.key"
-    # The home dir and fully qual. domain name
-    # will vary by the machine this code runs on:
-    # We assume the cert and key files are called
-    # <fqdn>.crt and <fqdn>.key:
-
-    homeDir = os.path.expanduser("~")
-    thisFQDN = socket.getfqdn()
-    thisFQDNUnderscored = thisFQDN.replace('.', '_')
-
-    sslRoot = '%s/.ssl/%s' % (homeDir, thisFQDN)
-    sslRootUnderscored = '%s/.ssl/%s' % (homeDir, thisFQDNUnderscored)
-
-    sslArgsDict = {
-     "certfile": sslRootUnderscored + '_cert.cer',
-     "keyfile":  sslRoot + '.key',
-     }
+    (certFile,keyFile) = CourseCSVServer.getCertAndKey()
+    sslArgsDict = {'certfile' : certFile,
+                   'keyfile'  : keyFile}
 
     http_server = tornado.httpserver.HTTPServer(application,ssl_options=sslArgsDict)
 
