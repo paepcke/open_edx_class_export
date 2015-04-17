@@ -1527,7 +1527,7 @@ class DataServer(threading.Thread):
         byActivity   = detailDict.get('quarterRepByActivity', None)
 
         if doEnrollment:
-            self.writeResult('progress', "Starting enrollment computations...")
+            self.writeResult('progress', "Start enrollment computations...")
             resFileNameEnroll = exporter.enrollment(academic_year, quarter, printResultFilePath=False, minEnrollment=minEnrollment, byActivity=byActivity)
             if resFileNameEnroll is None:
                 self.writeError('Call to quarterly exporter for enrollment failed. See error log.')
