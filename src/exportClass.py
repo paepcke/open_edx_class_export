@@ -597,7 +597,7 @@ class DataServer(threading.Thread):
         '''
         self.mainThread.logDebug("Sending err to browser: %s" % msg)
         if not self.testing:
-            errMsg = '{"resp" : "error", "args" : "%s"}' % msg
+            errMsg = '{"resp" : "error", "args" : "%s"}' % msg.replace('"', "`")
             try:
                 self.mainThread.write_message(errMsg)
             except IOError as e:
