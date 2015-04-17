@@ -1971,7 +1971,7 @@ class DataServer(threading.Thread):
         except (IOError, OSError) as e:
             raise IOError('Error trying to copy files %s to destination file %s: %s' % (srcFileNames, destFileName, `e`))
 
-
+    @classmethod
     def getCertAndKey(self):
         '''
         Return a 2-tuple with full paths, respectively to 
