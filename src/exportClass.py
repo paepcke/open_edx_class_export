@@ -2001,9 +2001,10 @@ class DataServer(threading.Thread):
         # course ID can be used as part of a directory name:
         courseIdAsDirName = courseId.strip('/').replace('/','_')
         # Add timestamp and current number of microseconds as a UID
-        dateFormat = '%d-%b-%y_%I-%M_%f'
-        today = datetime.datetime.today().strftime(dateFormat)
-        url = "https://%s/researcher/%s_%s" % (self.mainThread.FQDN, courseIdAsDirName, today)
+#         dateFormat = '%d-%b-%y_%I-%M_%f'
+#         today = datetime.datetime.today().strftime(dateFormat)
+#         url = "https://%s/researcher/%s_%s" % (self.mainThread.FQDN, courseIdAsDirName, today)
+        url = "https://%s/researcher/%s" % (self.mainThread.FQDN, courseIdAsDirName)
         return url
 
     def setTimer(self, time=None):
