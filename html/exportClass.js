@@ -196,7 +196,8 @@ function ExportClass() {
 
 	// If quarterly report is request with engagement, warn that
 	// takes a long time:
-	if (document.getElementById('quarterRepEngage').checked &&
+	if (document.getElementById('quarterRep').checked &&
+	    document.getElementById('quarterRepEngage').checked &&
 	    confirm("Computing engagement for all courses in a quarter " +
 		    "may take around 2hrs. " +
 		    "Want to go ahead?") == false)
