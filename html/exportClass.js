@@ -198,7 +198,7 @@ function ExportClass() {
 	// takes a long time:
 	if (document.getElementById('quarterRepEngage').checked &&
 	    confirm("Computing engagement for all courses in a quarter " +
-		    "takes about 15min. " +
+		    "may take around 2hrs. " +
 		    "Want to go ahead?") == false)
 	    return;
 
