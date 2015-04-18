@@ -1250,6 +1250,8 @@ class DataServer(threading.Thread):
             try:
                 resIterator = self.mysqlDb.query(mySqlCmd)
                 resIterator.next()
+            except StopIteration:
+                pass
             except Exception as e:
                 raise
                 #***************
