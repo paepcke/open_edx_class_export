@@ -147,7 +147,7 @@ class CourseCSVServer(WebSocketHandler):
         # of this server, *as seen from the outside*, i.e. 
         # from the WAN, outside any router that this server
         # might be behind:
-        self.FQDM = self.getFQDM()
+        self.FQDN = self.getFQDN()
 
         # Interval between logging the sending of
         # the heartbeat:
@@ -215,7 +215,7 @@ class CourseCSVServer(WebSocketHandler):
         if self.loglevel >= CourseCSVServer.LOG_LEVEL_DEBUG:
             print(str(datetime.datetime.now()) + ' debug: ' + msg)
 
-    def getFQDM(self):
+    def getFQDN(self):
         '''
         Obtain true fully qualified domain name of server, as
         seen from the 'outside' of any router behind which the
@@ -233,23 +233,23 @@ class CourseCSVServer(WebSocketHandler):
             ip = subprocess.check_output(['wget', '-q', '-O-', 'icanhazip.com'])
         except CalledProcessError:
             # Could not get the outside IP address. Fall back
-            # on using the FQDM obtained locally:
+            # on using the FQDN obtained locally:
             return socket.getfqdn()
 
         try:
-            fqdm = socket.gethostbyaddr(ip.strip())[0]
+            fqdn = socket.gethostbyaddr(ip.strip())[0]
         except socket.gaierror:
             raise("ValueError: could not find server's fully qualified domain name from IP address '%s'" % ip.string())
         except Exception as e:
             raise("ValueError: could not find server's fully qualified domain: '%s'" % `e`)
-        return fqdm
+        return fqdn
          
     def getFQDNWithoutDigits(self):
         '''
         Returns fully qualified domain name of server, but with
         all digits removed. Thus if the current machine's FQDN
         is datastage2.stanford.edu, then datastage.stanford.edu
-        is returned. Note getFQDM() is much preferrable to this
+        is returned. Note getFQDN() is much preferrable to this
         hack. Don't use this method if you don't have to. The
         idea of this one is that you can use multiple server names
         with numbers added, where the server names are known to
@@ -1860,7 +1860,7 @@ class DataServer(threading.Thread):
         # (i.e. the 'CourseSubdir' in:
         # /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv:)
         tableDir = os.path.basename(os.path.dirname(tableFileName))
-        url = "https://%s/researcher/%s" % (self.mainThread.FQDM, tableDir)
+        url = "https://%s/researcher/%s" % (self.mainThread.FQDN, tableDir)
 
         return url
 
