@@ -118,7 +118,7 @@ class CourseCSVServer(WebSocketHandler):
     # Regex to separate first col from second
     # col in something like 'foo bar': returns 'foo':
     COURSE_NAME_SEP_PATTERN = re.compile(r'([^\s]*)')
-    
+
     def __init__(self, application, request, testing=False ):
         '''
         Invoked when browser accesses this server via ws://...
@@ -142,9 +142,9 @@ class CourseCSVServer(WebSocketHandler):
         #self.loglevel = CourseCSVServer.LOG_LEVEL_DEBUG
         self.loglevel = CourseCSVServer.LOG_LEVEL_INFO
         #self.loglevel = CourseCSVServer.LOG_LEVEL_NONE
-        
+
         # Get and remember the fully qualified domain name
-        # of this server, *as seen from the outside*, i.e. 
+        # of this server, *as seen from the outside*, i.e.
         # from the WAN, outside any router that this server
         # might be behind:
         self.FQDN = self.getFQDN()
@@ -222,7 +222,7 @@ class CourseCSVServer(WebSocketHandler):
         server may be hiding. Strategy: use shell cmd "wget -q -O- icanhazip.com"
         to get IP address as seen from the outside. Then use
         gethostbyaddr() to do reverse DNS lookup.
-        
+
         @return: this server's fully qualified IP name.
         @rtype: string
         @raise ValueError: if either the WAN IP lookup, or the subsequent
@@ -243,7 +243,7 @@ class CourseCSVServer(WebSocketHandler):
         except Exception as e:
             raise("ValueError: could not find server's fully qualified domain: '%s'" % `e`)
         return fqdn
-         
+
     def getFQDNWithoutDigits(self):
         '''
         Returns fully qualified domain name of server, but with
@@ -253,13 +253,13 @@ class CourseCSVServer(WebSocketHandler):
         hack. Don't use this method if you don't have to. The
         idea of this one is that you can use multiple server names
         with numbers added, where the server names are known to
-        be the WAN-visible names. So: if WAN visible hostname 
+        be the WAN-visible names. So: if WAN visible hostname
         (i.e. the router/firewall's) hostname is datastage.stanford.edu,
         and multiple servers behind the router take turns serving,
         then one could call those servers datastage1.stanford.edu,
         datastage2.stanford.edu, etc. and this method would still always
         return datastage.stanford.edu. A hack.
-        
+
         '''
         fullyQualDomainName = socket.getfqdn()
         return(re.sub(r'[0-9]', '', fullyQualDomainName))
@@ -267,7 +267,7 @@ class CourseCSVServer(WebSocketHandler):
     @classmethod
     def getCertAndKey(self):
         '''
-        Return a 2-tuple with full paths, respectively to 
+        Return a 2-tuple with full paths, respectively to
         the SSL certificate, and private key.
         To find the SSL certificate location, we assume
         that it is stored in dir '.ssl' in the current
@@ -276,22 +276,22 @@ class CourseCSVServer(WebSocketHandler):
         in .crt, and that the key file ends in .key.
         The first matching files in the .ssl directory
         are grabbed.
-        
+
         @return: two-tuple with full path to SSL certificate, and key files.
         @rtype: (str,str)
-        @raise ValueError: if either of the files are not found. 
-        
+        @raise ValueError: if either of the files are not found.
+
         '''
         homeDir = os.path.expanduser("~")
         sslDir = '%s/.ssl/' % homeDir
         try:
-            certFileName = next(fileName for fileName in os.listdir(sslDir) 
+            certFileName = next(fileName for fileName in os.listdir(sslDir)
 	                               if fileName.endswith('.cer') or fileName.endswith('.crt'))
         except StopIteration:
             raise(ValueError("Could not find ssl certificate file in %s" % sslDir))
-        
+
         try:
-            privateKeyFileName = next(fileName for fileName in os.listdir(sslDir) 
+            privateKeyFileName = next(fileName for fileName in os.listdir(sslDir)
 	                                     if fileName.endswith('.key'))
         except StopIteration:
             raise(ValueError("Could not find ssl private key file in %s" % sslDir))
@@ -1192,11 +1192,11 @@ class DataServer(threading.Thread):
         :return full path of outputfile
         :rtype String
         '''
-        
+
         # For unittests: None-out the self.mainThread.latestDemographicsFilename
         # so the test can wait for it to fill:
         self.mainThread.latestDemographicsFilename = None
-        
+
         if self.mysqlDb is None:
             self.writeError('In exportDemographics: Database is disconnected; have to give up.')
             return
@@ -1460,7 +1460,7 @@ class DataServer(threading.Thread):
         '''
         Places name of result file into self.mainThread.latestQuarterlyDemographicsFilename,
         so that unittests can find it.
-        
+
         :param detailDict:
         :type detailDict:
         '''
@@ -1559,7 +1559,7 @@ class DataServer(threading.Thread):
             # unittests can find it:
             self.mainThread.latestQuarterlyDemographicsFilename = resFileNameDemographics
 
-            
+
 
         # Write up to five lines into the print table file,
         # with the special line separator between the filename/filesize
@@ -1603,12 +1603,12 @@ class DataServer(threading.Thread):
             except IOError as e:
                 self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
-            # Save the demographics result file in 
-            # self.mainThread.latestDemographicsFilename for 
+            # Save the demographics result file in
+            # self.mainThread.latestDemographicsFilename for
             # unittest to check:
             self.mainThread.latestDemographicsFilename = pickupDemographicsPath
 
-        
+
     def getNumFileLines(self, fileFdOrPath):
         '''
         Given either a file descriptor or a file path string,
@@ -2004,7 +2004,7 @@ class DataServer(threading.Thread):
 #         dateFormat = '%d-%b-%y_%I-%M_%f'
 #         today = datetime.datetime.today().strftime(dateFormat)
 #         url = "https://%s/researcher/%s_%s" % (self.mainThread.FQDN, courseIdAsDirName, today)
-        url = "https://%s/researcher/%s" % (self.mainThread.FQDN, courseIdAsDirName)
+        url = "https://%s/researcher/%s/" % (self.mainThread.FQDN, courseIdAsDirName)
         return url
 
     def setTimer(self, time=None):
