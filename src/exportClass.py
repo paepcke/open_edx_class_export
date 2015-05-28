@@ -1862,7 +1862,7 @@ class DataServer(threading.Thread):
         # (i.e. the 'CourseSubdir' in:
         # /home/dataman/Data/CustomExcerpts/CourseSubdir/<tables>.csv:)
         tableDir = os.path.basename(os.path.dirname(tableFileName))
-        url = "https://%s/researcher/%s" % (self.mainThread.FQDN, tableDir)
+        url = "https://%s/researcher/%s/" % (self.mainThread.FQDN, tableDir)
 
         return url
 
