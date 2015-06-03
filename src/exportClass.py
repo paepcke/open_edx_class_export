@@ -399,7 +399,13 @@ class DataServer(threading.Thread):
             if emailStartDate is None and requestName == 'emailList':
                 self.writeErr('In on_message: start date was not included; could not export email list.')
                 return
-
+            
+            # Conversely, if this request is not for emails,
+            # then set the email start date to None, so that
+            # we can use that start date value reliably further down:
+            if requestName != 'emailList':
+                emailStartDate = None
+            
             # Check whether any of the requests
             # were previously issued, and output files
             # were therefore created. If so, then delete
