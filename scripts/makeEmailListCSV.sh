@@ -264,29 +264,19 @@ fi
 
 # ----------------------------- Create MySQL Command -------------
 
-EMAIL_TMP_FILE=`mktemp -p /tmp`
-PREVIEW_TMP_FILE=`mktemp -p /tmp`
-
-# Ensure the files are cleaned up when script exits:
-trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
-
-# MySQL will be asked to output emails to the EMAIL_TMP_FILE.
-# The above mktemp created the (empty) file, and MySQL will
-# refuse to write to it, unless:
-unlink $EMAIL_TMP_FILE
-
 EXPORT_EMAIL_CMD=" \
  USE "$EMAIL_DB"; \
- SELECT email \
- INTO OUTFILE '"$EMAIL_TMP_FILE"' \
-  FIELDS TERMINATED BY ',' \
+ SELECT DISTINCT email \
+   FROM edxprod.student_courseenrollment LEFT JOIN edxprod.auth_user \
+          ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
+        Edx.CourseInfo \
+  INTO OUTFILE '"$EMAIL_FNAME"' \                                                                                                                                                 
+  FIELDS TERMINATED BY ',' \                                                                                                                                                        
   LINES TERMINATED BY '\r\n' \
-  FROM edxprod.student_courseenrollment LEFT JOIN edxprod.auth_user \
-         ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
-       Edx.CourseInfo \
- WHERE created > '"$DATE_JOINED"' 
-   AND Edx.CourseInfo.course_display_name = course_id \
-   AND not Edx.CourseInfo.is_internal;"
+  WHERE date_joined > '"$DATE_JOINED"' \
+    AND Edx.CourseInfo.course_display_name = course_id \
+    AND not Edx.CourseInfo.is_internal \
+    AND INSTR(email, 'noreply') = 0;"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
@@ -294,7 +284,7 @@ EXPORT_EMAIL_CMD=" \
 #echo "MYSQL_AUTH: $MYSQL_AUTH"
 #echo "EXPORT_EMAIL_CMD: $EXPORT_EMAIL_CMD"
 #exit 0
-*******************
+#*******************
 
 echo "Creating email list ...<br>"
 
@@ -311,16 +301,14 @@ echo "$EXPORT_EMAIL_CMD" | mysql $MYSQL_AUTH
 
 echo "Done creating email list ...<br>"
 
-#**********
-#echo "Email file: " $EMAIL_TMP_FILE
-#exit
-#**********
-
 # ----------------------------- Clean the emails -------------
 
-echo 'Cleaning email list...<br>'
-cat $EMAIL_TMP_FILE | sed '/^noreply/d' > $EMAIL_FNAME
-echo 'Done cleaning email list...<br>'
+# The following removal of noreply... anonymous
+# email addresses are now filtered out in the query,
+# so the following SED isn't needed:
+# echo 'Cleaning email list...<br>'
+# cat $EMAIL_TMP_FILE | sed '/^noreply/d' > $EMAIL_FNAME
+# echo 'Done cleaning email list...<br>'
 
 # ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
 
