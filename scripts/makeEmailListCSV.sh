@@ -2,7 +2,8 @@
 
 # Build single-column CSV file with email addresses 
 # of course participants who signed up since a given
-# date. 
+# date, for courses that are open to the public.
+#
 # Usage:
 #   o -u/--user           : MySQL user to use for query
 #   o -p/--password       : Prompt for MySQL password
@@ -280,16 +281,20 @@ EXPORT_EMAIL_CMD=" \
  INTO OUTFILE '"$EMAIL_TMP_FILE"' \
   FIELDS TERMINATED BY ',' \
   LINES TERMINATED BY '\r\n' \
- FROM auth_user \
- WHERE date_joined >= '"$DATE_JOINED"';"
+  FROM edxprod.student_courseenrollment LEFT JOIN edxprod.auth_user \
+         ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
+       Edx.CourseInfo \
+ WHERE created > '"$DATE_JOINED"' 
+   AND Edx.CourseInfo.course_display_name = course_id \
+   AND not Edx.CourseInfo.is_internal;"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
 #********************
-# echo "MYSQL_AUTH: $MYSQL_AUTH"
-# echo "EXPORT_EMAIL_CMD: $EXPORT_EMAIL_CMD"
-# exit 0
-#********************
+#echo "MYSQL_AUTH: $MYSQL_AUTH"
+#echo "EXPORT_EMAIL_CMD: $EXPORT_EMAIL_CMD"
+#exit 0
+*******************
 
 echo "Creating email list ...<br>"
 
@@ -305,6 +310,11 @@ set -e
 echo "$EXPORT_EMAIL_CMD" | mysql $MYSQL_AUTH
 
 echo "Done creating email list ...<br>"
+
+#**********
+#echo "Email file: " $EMAIL_TMP_FILE
+#exit
+#**********
 
 # ----------------------------- Clean the emails -------------
 
