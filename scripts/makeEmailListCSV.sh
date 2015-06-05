@@ -270,8 +270,9 @@ EXPORT_EMAIL_CMD=" \
    FROM edxprod.student_courseenrollment LEFT JOIN edxprod.auth_user \
           ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
         Edx.CourseInfo \
-  INTO OUTFILE '"$EMAIL_FNAME"' \                                                                                                                                                 
-  FIELDS TERMINATED BY ',' \                                                                                                                                                         LINES TERMINATED BY '\r\n' \
+  INTO OUTFILE '"$EMAIL_FNAME"' \
+  FIELDS TERMINATED BY ',' \
+  LINES TERMINATED BY '\r\n' \
   WHERE date_joined > '"$DATE_JOINED"' \
     AND Edx.CourseInfo.course_display_name = course_id \
     AND not Edx.CourseInfo.is_internal \
