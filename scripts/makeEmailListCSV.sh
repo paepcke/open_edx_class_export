@@ -264,15 +264,25 @@ fi
 
 # ----------------------------- Create MySQL Command -------------
 
+EMAIL_TMP_FILE=`mktemp -p /tmp`
+PREVIEW_TMP_FILE=`mktemp -p /tmp`
+
+trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
+
+# MySQL will be asked to output emails to the EMAIL_TMP_FILE.
+# The above mktemp created the (empty) file, and MySQL will
+# refuse to write to it, unless:
+unlink $EMAIL_TMP_FILE
+
 EXPORT_EMAIL_CMD=" \
  USE "$EMAIL_DB"; \
  SELECT DISTINCT email \
+   INTO OUTFILE '"$EMAIL_TMP_FILE"' \
+   FIELDS TERMINATED BY ',' \
+   LINES TERMINATED BY '\r\n' \
    FROM edxprod.student_courseenrollment LEFT JOIN edxprod.auth_user \
           ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
         Edx.CourseInfo \
-  INTO OUTFILE '"$EMAIL_FNAME"' \
-  FIELDS TERMINATED BY ',' \
-  LINES TERMINATED BY '\r\n' \
   WHERE date_joined > '"$DATE_JOINED"' \
     AND Edx.CourseInfo.course_display_name = course_id \
     AND not Edx.CourseInfo.is_internal \
@@ -309,6 +319,11 @@ echo "Done creating email list ...<br>"
 # echo 'Cleaning email list...<br>'
 # cat $EMAIL_TMP_FILE | sed '/^noreply/d' > $EMAIL_FNAME
 # echo 'Done cleaning email list...<br>'
+
+# ----------------------------- Move email file to final destination -------------
+
+#mv $EMAIL_TMP_FILE $EMAIL_FNAME
+
 
 # ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
 
