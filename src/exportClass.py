@@ -334,6 +334,9 @@ class DataServer(threading.Thread):
         self.requestDict = requestDict
 
         self.currTimer = None
+        
+        # Make fullEmailTargetDir predictable:
+        self.fullEmailTargetDir = None
 
     def ensureOpenMySQLDb(self):
         try:
@@ -397,7 +400,13 @@ class DataServer(threading.Thread):
             if emailStartDate is None and requestName == 'emailList':
                 self.writeErr('In on_message: start date was not included; could not export email list.')
                 return
-
+            
+            # Conversely, if this request is not for emails,
+            # then set the email start date to None, so that
+            # we can use that start date value reliably further down:
+            if requestName != 'emailList':
+                emailStartDate = None
+            
             # Check whether any of the requests
             # were previously issued, and output files
             # were therefore created. If so, then delete
@@ -415,8 +424,17 @@ class DataServer(threading.Thread):
                 # That invocation produced an output file, and the
                 # "Remove any previous exports of same type' option
                 # was not checked.
+                # When email or quarterly report are requested, then there is
+                # no associated courseId. Keeping this in mind, find the pickup
+                # URL of the existing data:
+                if not courseIdWasPresent:
+                    if self.fullEmailTargetDir is not None:
+                        oldDeliveryUrl = self.getDeliveryURL(os.path.basename(self.fullEmailTargetDir))
+                    else:
+                        oldDeliveryUrl = self.getDeliveryURL(courseId)
+                    
                 self.writeError("Request '%s': table(s) for %s %s already existed, and Remove Previous Exports... was not checked. Pickup at %s." %\
-                                (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else '', self.getDeliveryURL(courseId)))
+                                (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else '', oldDeliveryUrl))
                 return None
 
             courseList = None
@@ -2080,20 +2098,22 @@ class DataServer(threading.Thread):
             self.mainThread.write_message(msg)
         self.setTimer(CourseCSVServer.PROGRESS_INTERVAL)
 
-    def getDeliveryURL(self, courseId):
+    def getDeliveryURL(self, courseIdOrCustomExportFileName):
         '''
         Given a course ID string, return a URL from which
         completed course tables can be picked up:
 
-        :param courseId: course identifier, e.g.: /networking/EE120/Fall
-        :type courseId: String
+        :param courseIdOrCustomExportFileName: course identifier, e.g.: /networking/EE120/Fall,
+            or an existing file name in ~dataman/Data/CustomExports, such 
+            as 'Email_2015-03-01'
+        :type courseIdOrCustomExportFileName: String
         :return: URL at which tables computed for a class are visible.
 
         :rtype: String
         '''
         # Replace slashes in class by underscores, so that the
         # course ID can be used as part of a directory name:
-        courseIdAsDirName = courseId.strip('/').replace('/','_')
+        courseIdAsDirName = courseIdOrCustomExportFileName.strip('/').replace('/','_')
         # Add timestamp and current number of microseconds as a UID
 #         dateFormat = '%d-%b-%y_%I-%M_%f'
 #         today = datetime.datetime.today().strftime(dateFormat)

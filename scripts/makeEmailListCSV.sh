@@ -2,7 +2,8 @@
 
 # Build single-column CSV file with email addresses 
 # of course participants who signed up since a given
-# date. 
+# date, for courses that are open to the public.
+#
 # Usage:
 #   o -u/--user           : MySQL user to use for query
 #   o -p/--password       : Prompt for MySQL password
@@ -266,7 +267,6 @@ fi
 EMAIL_TMP_FILE=`mktemp -p /tmp`
 PREVIEW_TMP_FILE=`mktemp -p /tmp`
 
-# Ensure the files are cleaned up when script exits:
 trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
 
 # MySQL will be asked to output emails to the EMAIL_TMP_FILE.
@@ -276,20 +276,25 @@ unlink $EMAIL_TMP_FILE
 
 EXPORT_EMAIL_CMD=" \
  USE "$EMAIL_DB"; \
- SELECT email \
- INTO OUTFILE '"$EMAIL_TMP_FILE"' \
-  FIELDS TERMINATED BY ',' \
-  LINES TERMINATED BY '\r\n' \
- FROM auth_user \
- WHERE date_joined >= '"$DATE_JOINED"';"
+ SELECT DISTINCT email \
+   INTO OUTFILE '"$EMAIL_TMP_FILE"' \
+   FIELDS TERMINATED BY ',' \
+   LINES TERMINATED BY '\r\n' \
+   FROM edxprod.student_courseenrollment LEFT JOIN edxprod.auth_user \
+          ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
+        Edx.CourseInfo \
+  WHERE date_joined > '"$DATE_JOINED"' \
+    AND Edx.CourseInfo.course_display_name = course_id \
+    AND not Edx.CourseInfo.is_internal \
+    AND INSTR(email, 'noreply') = 0;"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
 #********************
-# echo "MYSQL_AUTH: $MYSQL_AUTH"
-# echo "EXPORT_EMAIL_CMD: $EXPORT_EMAIL_CMD"
-# exit 0
-#********************
+#echo "MYSQL_AUTH: $MYSQL_AUTH"
+#echo "EXPORT_EMAIL_CMD: $EXPORT_EMAIL_CMD"
+#exit 0
+#*******************
 
 echo "Creating email list ...<br>"
 
@@ -308,9 +313,17 @@ echo "Done creating email list ...<br>"
 
 # ----------------------------- Clean the emails -------------
 
-echo 'Cleaning email list...<br>'
-cat $EMAIL_TMP_FILE | sed '/^noreply/d' > $EMAIL_FNAME
-echo 'Done cleaning email list...<br>'
+# The following removal of noreply... anonymous
+# email addresses are now filtered out in the query,
+# so the following SED isn't needed:
+# echo 'Cleaning email list...<br>'
+# cat $EMAIL_TMP_FILE | sed '/^noreply/d' > $EMAIL_FNAME
+# echo 'Done cleaning email list...<br>'
+
+# ----------------------------- Move email file to final destination -------------
+
+#mv $EMAIL_TMP_FILE $EMAIL_FNAME
+
 
 # ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
 
