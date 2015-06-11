@@ -178,7 +178,7 @@ class CourseCSVServer(WebSocketHandler):
         :param message: message arriving from the browser
         :type message: string
         '''
-        #print message
+        print message
         try:
             requestDict = json.loads(message)
             if requestDict['req'] == 'keepAlive':
