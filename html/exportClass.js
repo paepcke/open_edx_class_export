@@ -19,7 +19,7 @@ function ExportClass() {
     var timer = null;
     // Form node containing the course name
     // selection list:
-    var crsNmFormObj = null; 
+    var crsNmFormObj = null;
     var encryptionPwd = null;
     // Regex to separate course name from the enrollment column:
     var courseNameSepPattern = /([^\s,])*/;
@@ -118,12 +118,12 @@ function ExportClass() {
 	    }
 
 	    //*******REMOVE // Add the Now Get the Data button below the radio buttons:
-	    // addButtonToDiv('progress', 
-	    // 		   'Get Data', 
-	    // 		   'courseIDChoiceBtn', 
+	    // addButtonToDiv('progress',
+	    // 		   'Get Data',
+	    // 		   'courseIDChoiceBtn',
 	    // 		   'classExporter.evtFinalCourseSelButton()');
-	    
-	    // Activate the first radiobutton (must do after the above 
+
+	    // Activate the first radiobutton (must do after the above
 	    // statement, else radio button is unchecked again:
 	    document.getElementById('courseIDRadBtns0').checked = true;
 	} catch(err) {
@@ -155,7 +155,7 @@ function ExportClass() {
     this.evtResolveCourseNames = function() {
 	/* Called when List Matching Class button is pushed. Request
 	   that server find all matching course names:
-	*/	
+	*/
 	var courseIDRegExp = document.getElementById("courseID").value;
 	// Course id regexp fld empty? If so: MySQL wildcard:
 	if (courseIDRegExp.length == 0) {
@@ -181,7 +181,7 @@ function ExportClass() {
 	    document.getElementById('edcastForum').checked ||
 	    document.getElementById('learnerPII').checked ||
 	    document.getElementById('demographics').checked
-	    
+
 	   ) {
 	    try {
 		fullCourseName = getCourseNameChoice();
@@ -218,7 +218,7 @@ function ExportClass() {
 	clrProgressDiv();
     }
 
-    // Not being called: should get control when one of 
+    // Not being called: should get control when one of
     // the Quarterly Report-->Details:enrollment checkmarks
     // change:
     this.evtEnrollOrEngageReqBoxChanged = function() {
@@ -264,7 +264,7 @@ function ExportClass() {
 
     this.evtAnyForumClicked = function() {
 	// If any forum data is requested, crypto protection is required:
-	if (document.getElementById('edxForum').checked || 
+	if (document.getElementById('edxForum').checked ||
 	    document.getElementById('edxForum').checked) {
 
 	    classExporter.showCryptoPwdSolicitation();
@@ -350,7 +350,7 @@ function ExportClass() {
     }
 
     var restoreCourseNameChoice = function() {
-	// Adding to the progress div changes 
+	// Adding to the progress div changes
 	// makes the chosen course appear unchecked,
 	// even though its obj's 'checked' var is
 	// true. Turn the radiobutton off and on
@@ -372,8 +372,8 @@ function ExportClass() {
 	// is buffering:
 	var currDate = new Date();
 	clrProgressDiv();
-	addTextToProgDiv(screenContent + 
-			 currDate.toLocaleDateString() + 
+	addTextToProgDiv(screenContent +
+			 currDate.toLocaleDateString() +
 			 " " +
 			 currDate.toLocaleTimeString()
 			);
@@ -432,8 +432,9 @@ function ExportClass() {
 	var quarterRepEngage = quarterRep && document.getElementById("quarterRepEngage").checked;
 	var quarterRepDemographics = quarterRep && document.getElementById("quarterRepDemographics").checked;
 	var demographics = document.getElementById("demographics").checked;
+  var qualtrics = document.getElementById("qualtrics").checked;
 
-	if (!basicData && 
+	if (!basicData &&
 	    !engagementData &&
 	    //******!learnerPerf &&
 	    !edxForum &&
@@ -470,7 +471,7 @@ function ExportClass() {
 	    if (basicDataQuarter != 'blank') {
 		if ((basicDataQuarter == 'winter') ||
 		    (basicDataQuarter == 'spring') ||
-		    (basicDataQuarter == 'summer')) { 
+		    (basicDataQuarter == 'summer')) {
 			basicDataAcademicYear = basicDataCalYear - 1;
 		    } else {
 			basicDataAcademicYear = basicDataCalYear;
@@ -501,9 +502,9 @@ function ExportClass() {
 	    quarterRepYear -= 1;
 	}
 
-	var argObj = {"courseId" : resolvedCourseID, 
-		      "wipeExisting" : fileAction, 
-		      //"inclPII" : inclPII, 
+	var argObj = {"courseId" : resolvedCourseID,
+		      "wipeExisting" : fileAction,
+		      //"inclPII" : inclPII,
 		      "cryptoPwd" : encryptionPwd,
 		      "basicData" : basicData,
 		      "basicDataQuarter" : basicDataQuarter,
@@ -529,13 +530,14 @@ function ExportClass() {
 		      "quarterRepEngage": quarterRepEngage,
 		      "quarterRepDemographics": quarterRepDemographics,
 		      "demographics": demographics,
+          "qualtrics": qualtrics
 		     };
 	var req = buildRequest("getData", argObj);
 
 	// Start the progress timer; remember the existing
 	// screen content in the 'progress' div so that
 	// the timer func can append to that:
-	
+
 	screenContent = "<h2>Data Export Progress</h2>\n\n";
 	addTextToProgDiv(screenContent);
 	//*********timer = window.setInterval(progressUpdate,1000);
@@ -627,9 +629,9 @@ function ExportClass() {
 	radioObj.setAttribute("id", id);
 	radioObj.setAttribute("name", groupName);
 	crsNmFormObj.appendChild(radioObj);
-  
-	// Need label object associated with the new 
-	// radio button, so that user can click on the 
+
+	// Need label object associated with the new
+	// radio button, so that user can click on the
 	// label to activate the radio button:
 	var labelObj     = document.createElement('label');
 	labelObj.setAttribute("htmlFor", id);
@@ -663,8 +665,8 @@ function ExportClass() {
     this.showCryptoPwdSolicitation = function() {
 	// Make two pwd text entry input fields, an OK
 	// button, and associated text labels. The pwd
-	// entry flds won't echo. All nodes will be 
-	// children of a new div: pwdSolicitationDiv, 
+	// entry flds won't echo. All nodes will be
+	// children of a new div: pwdSolicitationDiv,
 	// which will be added to the widget column under
 	// the course name regex text field:
 
@@ -672,10 +674,10 @@ function ExportClass() {
 	// pwdSolicitationDiv.style.visibility = "visible";
 	pwdSolicitationDiv.style.display = "block";
     }
-    
+
     this.hideCryptoPwdSolicitation = function() {
 	// Find the div that holds the crypto solicitation
-	// elements, and remove it. First, get that div's 
+	// elements, and remove it. First, get that div's
 	// parent, which is the column of widgets under the
 	// course regex text entry fld:
 	var pwdSolicitationDiv = document.getElementById('pwdSolicitationDiv');
@@ -714,7 +716,7 @@ document.getElementById('learnerPII').addEventListener('click', classExporter.ev
 document.getElementById('quarterRep').addEventListener('click', classExporter.evtQuarterlyRepClicked);
 document.getElementById('quarterRepByActivity').addEventListener('click', classExporter.inclCourseActivityClicked);
 
-// The following is intended to make CR in 
+// The following is intended to make CR in
 // course ID text field click the Get Course List
 // button, but the assigned func is never talled:
 document.getElementById('courseID').addEventListener('onkeydown', classExporter.evtCarriageReturnListMatchesTrigger);
@@ -723,7 +725,7 @@ document.getElementById('courseID').addEventListener('onkeydown', classExporter.
 // a PII zip file encryption pwd:
 classExporter.hideCryptoPwdSolicitation();
 
-// Same for the quarterly specs, unless 
+// Same for the quarterly specs, unless
 // quarterly report is already checked:
 
 if (document.getElementById('quarterRep').checked) {

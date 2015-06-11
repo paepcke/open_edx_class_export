@@ -18,18 +18,18 @@
       width: 150px;
       }
 
-      H1 { 
+      H1 {
       text-align: center;
       margin-bottom: 0cm;
       }
       H2 {
-      padding: 5px; 
+      padding: 5px;
       margin: 0px;
       }
       #p {
-      margin-top: 0px; 
-      padding: 0px; 
-      } 
+      margin-top: 0px;
+      padding: 0px;
+      }
       #subtitle {
       text-align: center;
       margin-top: 0cm;
@@ -55,11 +55,11 @@
       }
       .tab2_align {
       position: absolute;
-      left: 280px    
+      left: 280px
       }
       .tab3_align {
       position: absolute;
-      left: 305px    
+      left: 305px
       }
 
       .formIndentation {
@@ -72,7 +72,7 @@
 
       .tblExportControls {
       margin-bottom: -50px;
-      width: 900px; 
+      width: 900px;
       }
 
       .tinyPrint {
@@ -89,7 +89,7 @@
       }
 
     </style>
-    
+
   </head>
   <body>
 
@@ -112,7 +112,7 @@
 	<input type="button" value="List Matching Classes" id="listClassesBtn"><br>
 
         <input type="checkbox" id="fileAction" value="xpunge">
-	<label class="long" for="fileAction" title="If earlier uses of this export facility exported data for a particular course, then the 
+	<label class="long" for="fileAction" title="If earlier uses of this export facility exported data for a particular course, then the
 server will refuse to overwrite those exports, unless this box is checked.">
 	  Remove any previous exports of same type
 	</label>
@@ -169,18 +169,25 @@ server will refuse to overwrite those exports, unless this box is checked.">
 	</label>
 	<br>
 	-->
+
+  <input type="checkbox" id="qualtrics" value="qualtrics">
+  <label for="qualtrics" title="Pre- and post-course surveys">
+    Course surveys
+  </label>
+  <br>
+
 	<input type="checkbox" id="edxForum" value="edxForum">
 	<label for="edxForum" title="Forum post contents, comments, up/down votes">
 	  Forum data:
 	</label>
 	<input type="radio" id="edxForumIsolated"  name="protection" value="edxForumIsolated" checked >
-	<label for="edxForumIsolated" title="If checked, learner obfuscation will use different IDs than for other data in the archive. 
-I.e. correlations as between forum and grades will not be possible. On the other hand, 
+	<label for="edxForumIsolated" title="If checked, learner obfuscation will use different IDs than for other data in the archive.
+I.e. correlations as between forum and grades will not be possible. On the other hand,
 this choice makes it harder to re-identify learners' login names than with the Relatable choice."><i>Isolated</i></label>
 	<input type="radio" id="edxForumRelatable" name="protection" value="edxForumRelatable">
-	<label for="edxForumRelatable" title="If checked then learner IDs for forum export will be the same as used in exports 
+	<label for="edxForumRelatable" title="If checked then learner IDs for forum export will be the same as used in exports
 of other archive data. Correlations across data in the archive will then
-be possible, but learner login names are easier to re-identify than 
+be possible, but learner login names are easier to re-identify than
 with the Isolated choice.."><i>Relatable</i></label>
 	<br>
 
@@ -189,7 +196,7 @@ with the Isolated choice.."><i>Relatable</i></label>
 	  <label for="piazzaForum">
 	    <font color="dimGray"> Piazza data:</font>
 	  </label>
-	  <input type="radio" id="piazzaIsolated"  name="piazzaProtection" value="piazzaIsolated" 
+	  <input type="radio" id="piazzaIsolated"  name="piazzaProtection" value="piazzaIsolated"
 		 checked>
 	  <label for="piazzaIsolated"><i>Isolated</i></label>
 	  <input type="radio" id="piazzaRelatable" name="piazzaProtection" value="piazzaRelatable">
@@ -200,7 +207,7 @@ with the Isolated choice.."><i>Relatable</i></label>
 	  <label class="long" for="edcastForum">
 	    <font color="dimGray"> Edcast data:</font>
 	  </label>
-	  <input type="radio" id="edcastIsolated"  name="edcastProtection" value="edcastIsolated" 
+	  <input type="radio" id="edcastIsolated"  name="edcastProtection" value="edcastIsolated"
 		 checked >
 	  <label for="edcastIsolated"><i>Isolated</i></label>
 	  <input type="radio" id="edcastRelatable" name="edcastProtection" value="edcastRelatable">
@@ -212,7 +219,7 @@ with the Isolated choice.."><i>Relatable</i></label>
 	<label class="long" for="emailList">Email mailing list; start date:</label>
 	<!-- Text input with calendar popup: -->
 	<input onclick="ds_sh(this); checkEmailOn()" id="emailDate"
-	       name="emailDate" readonly="readonly" 
+	       name="emailDate" readonly="readonly"
 	       style="cursor: text position: relative;"/>
 	<br>
 
@@ -250,12 +257,12 @@ with the Isolated choice.."><i>Relatable</i></label>
 
 	    <input type="checkbox" id="quarterRepEnroll" value="quarterRepEnroll" checked/>
 	    <label class="long" for="quarterRepEnroll" title="Enrollment and number of earned certificates for each course in the chosen quarter">
-	      Enrollment/Certs: 
+	      Enrollment/Certs:
 	    </label>
 
 	    <label class="long" for="quarterRepMinEnroll" title="Only courses with enrollment higher than the given number will be included in statistics.">
-	      Min enrollment: 
-	    </label>	  
+	      Min enrollment:
+	    </label>
 	    <select id="quarterRepMinEnroll">
 	      <option value="0">0</option>
 	      <option value="9" selected>9</option>
@@ -278,7 +285,7 @@ with the Isolated choice.."><i>Relatable</i></label>
 	      <input class="long" type="checkbox" id="quarterRepByActivity" value="quarterRepByActivity">
 	      <label for="quarterRepByActivity">
 		Include all courses with any activity during quarter
-	      </label>	  
+	      </label>
 	    </div>
 	    <input type="checkbox" id="quarterRepDemographics" value="quarterRepDemographics">
 	    <label for="quarterRepDemographics">
@@ -296,20 +303,20 @@ with the Isolated choice.."><i>Relatable</i></label>
 
       </form>
     </div>
-    
+
     <p class="spaceBelow"></p>
 
-    <input type="button" 
+    <input type="button"
 	   value="Get Data"
 	   id="getDataBtn">
     <hr>
     <span>
-      <input type="button" 
+      <input type="button"
 	     value="Clear Progress Pane"
 	     id="clrProgressBtn">
 
       <span id="spanBackTab">
-	<input type="button" 
+	<input type="button"
 	       value="Cancel Process"
 	       id="cancelBtn">
       </span>
