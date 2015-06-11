@@ -334,7 +334,7 @@ class DataServer(threading.Thread):
         self.requestDict = requestDict
 
         self.currTimer = None
-        
+
         # Make fullEmailTargetDir predictable:
         self.fullEmailTargetDir = None
 
@@ -400,13 +400,13 @@ class DataServer(threading.Thread):
             if emailStartDate is None and requestName == 'emailList':
                 self.writeErr('In on_message: start date was not included; could not export email list.')
                 return
-            
+
             # Conversely, if this request is not for emails,
             # then set the email start date to None, so that
             # we can use that start date value reliably further down:
             if requestName != 'emailList':
                 emailStartDate = None
-            
+
             # Check whether any of the requests
             # were previously issued, and output files
             # were therefore created. If so, then delete
@@ -432,7 +432,7 @@ class DataServer(threading.Thread):
                         oldDeliveryUrl = self.getDeliveryURL(os.path.basename(self.fullEmailTargetDir))
                     else:
                         oldDeliveryUrl = self.getDeliveryURL(courseId)
-                    
+
                 self.writeError("Request '%s': table(s) for %s %s already existed, and Remove Previous Exports... was not checked. Pickup at %s." %\
                                 (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else '', oldDeliveryUrl))
                 return None
@@ -1397,7 +1397,7 @@ class DataServer(threading.Thread):
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
         except IOError as e:
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
-            
+
 
     def exportLearnerPerf(self, detailDict):
         #***** To be completed:
@@ -2104,7 +2104,7 @@ class DataServer(threading.Thread):
         completed course tables can be picked up:
 
         :param courseIdOrCustomExportFileName: course identifier, e.g.: /networking/EE120/Fall,
-            or an existing file name in ~dataman/Data/CustomExports, such 
+            or an existing file name in ~dataman/Data/CustomExports, such
             as 'Email_2015-03-01'
         :type courseIdOrCustomExportFileName: String
         :return: URL at which tables computed for a class are visible.
