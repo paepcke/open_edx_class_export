@@ -443,7 +443,8 @@ function ExportClass() {
 	    !emailList &&
 	    !learnerPII &&
 	    !quarterRep &&
-	    !demographics
+	    !demographics &&
+      !qualtrics
 	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
