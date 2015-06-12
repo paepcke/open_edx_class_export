@@ -1322,10 +1322,14 @@ class DataServer(threading.Thread):
         :param detailDict: dict of arguments; expected: 'courseId', 'wipeExisting'
         :type detailDict: {String : String, String : Boolean}
         '''
+        courseID = detailDict.get('courseId', '').strip()
+        courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey.csv' % (courseNameNoSpaces))
+
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
 
-        infoXchangeFile.write("Qualtrics Testing\n")
+        infoXchangeFile.write(surveyOutfile + '\n')
         infoXchangeFile.write(str(9001) + '\n')
 
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
