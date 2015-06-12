@@ -203,7 +203,6 @@ function ExportClass() {
 		    "Want to go ahead?") == false)
 	    return;
 
-  alert(fullCourseName)
 	startProgressStream(fullCourseName);
     }
 
@@ -535,6 +534,7 @@ function ExportClass() {
           "qualtrics": qualtrics
 		     };
 	var req = buildRequest("getData", argObj);
+  alert(argObj)
 
 	// Start the progress timer; remember the existing
 	// screen content in the 'progress' div so that
