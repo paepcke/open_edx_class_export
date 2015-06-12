@@ -1328,7 +1328,8 @@ class DataServer(threading.Thread):
 
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyInfo WHERE course_display_name = '%s'" % courseId
-        svIDs = self.mysqlDb.query(idgetter).next()
+        svIter = self.mysqlDb.query(idgetter)
+        svIDs = list(svIter)
 
         # Define query template
         dbQuery = Template( """
@@ -1346,11 +1347,11 @@ class DataServer(threading.Thread):
             self.mysqlDb.query(surveyQuery).next()
 
             answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer.csv' % (courseNameNoSpaces, idx+1))
-            answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", svID=surveyID[0])
+            answerQuery = dbQuery.substitute(filename=responseOutfile, table="response", svID=surveyID[0])
             self.mysqlDb.query(answerQuery).next()
 
             answermetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta.csv' % (courseNameNoSpaces, idx+1))
-            answermetaQuery = dbQuery.substitute(filename=answermetaOutfile, table="AnswerMeta", svID=surveyID[0])
+            answermetaQuery = dbQuery.substitute(filename=responsemetaOutfile, table="response_metadata", svID=surveyID[0])
             self.mysqlDb.query(answermetaQuery).next()
 
         # Save information for printTableInfo() method to find:
