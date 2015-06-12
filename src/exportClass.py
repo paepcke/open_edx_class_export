@@ -1324,10 +1324,14 @@ class DataServer(threading.Thread):
         '''
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
+
         infoXchangeFile.write("Qualtrics Testing\n")
         infoXchangeFile.write(str(9001) + '\n')
+
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
         for field in detailDict:
             infoXchangeFile.write(field + '\n')
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
         # # Set course ID and format for filenames
         # courseID = detailDict.get('courseId', '').strip()
