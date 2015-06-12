@@ -1335,7 +1335,6 @@ class DataServer(threading.Thread):
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
         for field in detailDict.keys():
             infoXchangeFile.write(field + ': ' + str(detailDict[field]) + '\n')
-        infoXchangeFile.write("filename: " + surveyOutfile + '\n')
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
         # # Set course ID and format for filenames
@@ -1965,6 +1964,8 @@ class DataServer(threading.Thread):
                         tblName = 'Demographics'
                     elif tableFileName.find('QuarterlyReport') > -1:
                         tblName = 'Quarterly'
+                    elif tableFileName.find('qualtrics') > -1:
+                        tblName = 'Surveys'
                     else:
                         tblName = 'unknown table name'
 
