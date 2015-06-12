@@ -1324,7 +1324,7 @@ class DataServer(threading.Thread):
         '''
         courseID = detailDict['courseId']
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
-        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey.csv' % (courseNameNoSpaces))
+        surveyOutfile = os.path.join(self.fullTargetDir, 'testing.csv')
 
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
