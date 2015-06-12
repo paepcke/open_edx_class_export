@@ -1337,28 +1337,26 @@ class DataServer(threading.Thread):
                             INTO OUTFILE '${filename}'
                             FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.${table}
-                            WHERE SurveyId = '${svID}'
+                            WHERE SurveyId IN '${svID}'
                             """ )
 
         # Export data for each survey ID (usually not more than 2 surveys)
-        for idx, surveyID in enumerate(svIDs):
-            runnum = random.randint(0,3000)
+        runnum = random.randint(0,3000)
 
-            surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
-            surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID[0])
-            self.mysqlDb.query(surveyQuery).next()
+        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
+        surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=svIDs)
+        self.mysqlDb.query(surveyQuery).next()
 
-            # answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
-            # answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", svID=surveyID[0])
-            # self.mysqlDb.query(answerQuery).next()
+        # answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
+        # answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", svID=surveyID[0])
+        # self.mysqlDb.query(answerQuery).next()
 
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
 
         infoXchangeFile.write(surveyOutfile + '\n')
-        infoXchangeFile.write(str(len(svIDs)) + '\n')
-        # infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
 
         # infoXchangeFile.write(answerOutfile + '\n')
         # infoXchangeFile.write(str(self.getNumFileLines(answerOutfile)) + '\n')
