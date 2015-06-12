@@ -1343,7 +1343,7 @@ class DataServer(threading.Thread):
         # Export data for each survey ID (usually not more than 2 surveys)
         runnum = random.randint(0,3000)
 
-        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
+        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
         surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=svIDs)
         self.mysqlDb.query(surveyQuery).next()
 
