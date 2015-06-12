@@ -1342,15 +1342,17 @@ class DataServer(threading.Thread):
 
         # Export data for each survey ID (usually not more than 2 surveys)
         for idx, surveyID in enumerate(svIDs):
-            surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d.csv' % (courseNameNoSpaces, idx+1))
+            runnum = random.randint(0,3000)
+
+            surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
             surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID[0])
             self.mysqlDb.query(surveyQuery).next()
 
-            responseOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer.csv' % (courseNameNoSpaces, idx+1))
+            responseOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
             responseQuery = dbQuery.substitute(filename=responseOutfile, table="response", svID=surveyID[0])
             self.mysqlDb.query(responseQuery).next()
 
-            responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta.csv' % (courseNameNoSpaces, idx+1))
+            responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta_%d.csv' % (courseNameNoSpaces, idx+1, runnum)
             responsemetaQuery = dbQuery.substitute(filename=responsemetaOutfile, table="response_metadata", svID=surveyID[0])
             self.mysqlDb.query(responsemetaQuery).next()
 
