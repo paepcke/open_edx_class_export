@@ -1343,16 +1343,16 @@ class DataServer(threading.Thread):
         # Export data for each survey ID (usually not more than 2 surveys)
         for idx, surveyID in enumerate(svIDs):
             surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d.csv' % (courseNameNoSpaces, idx+1))
-            surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID[0])
+            surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID)
             self.mysqlDb.query(surveyQuery).next()
 
-            answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer.csv' % (courseNameNoSpaces, idx+1))
-            answerQuery = dbQuery.substitute(filename=responseOutfile, table="response", svID=surveyID[0])
-            self.mysqlDb.query(answerQuery).next()
+            responseOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer.csv' % (courseNameNoSpaces, idx+1))
+            responseQuery = dbQuery.substitute(filename=responseOutfile, table="response", svID=surveyID)
+            self.mysqlDb.query(responseQuery).next()
 
-            answermetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta.csv' % (courseNameNoSpaces, idx+1))
-            answermetaQuery = dbQuery.substitute(filename=responsemetaOutfile, table="response_metadata", svID=surveyID[0])
-            self.mysqlDb.query(answermetaQuery).next()
+            responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta.csv' % (courseNameNoSpaces, idx+1))
+            responsemetaQuery = dbQuery.substitute(filename=responsemetaOutfile, table="response_metadata", svID=surveyID)
+            self.mysqlDb.query(responsemetaQuery).next()
 
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
