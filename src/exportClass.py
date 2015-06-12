@@ -1352,7 +1352,7 @@ class DataServer(threading.Thread):
             responseQuery = dbQuery.substitute(filename=responseOutfile, table="response", svID=surveyID[0])
             self.mysqlDb.query(responseQuery).next()
 
-            responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta_%d.csv' % (courseNameNoSpaces, idx+1, runnum)
+            responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
             responsemetaQuery = dbQuery.substitute(filename=responsemetaOutfile, table="response_metadata", svID=surveyID[0])
             self.mysqlDb.query(responsemetaQuery).next()
 
