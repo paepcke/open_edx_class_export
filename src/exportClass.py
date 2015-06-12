@@ -1322,7 +1322,6 @@ class DataServer(threading.Thread):
         :param detailDict: dict of arguments; expected: 'courseId', 'wipeExisting'
         :type detailDict: {String : String, String : Boolean}
         '''
-        raise detailDict.keys()
         surveyOutfile = os.path.join(self.fullTargetDir, 'testing.csv')
 
         infoXchangeFile = tempfile.NamedTemporaryFile()
@@ -1332,8 +1331,8 @@ class DataServer(threading.Thread):
         infoXchangeFile.write(str(9001) + '\n')
 
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
-        for field in detailDict:
-            infoXchangeFile.write(field + '\n')
+        for field in detailDict.keys():
+            infoXchangeFile.write(field + ':' + detailDict[field] + '\n')
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
         # # Set course ID and format for filenames
