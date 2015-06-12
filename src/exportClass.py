@@ -1329,7 +1329,7 @@ class DataServer(threading.Thread):
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyInfo WHERE course_display_name = '%s'" % courseId
         svGen = list(self.mysqlDb.query(idgetter))
-        svIDs = ", ".join(svID[0] for svID in svGen)
+        svIDs = ", ".join('%s'%svID[0] for svID in svGen)
 
         # Define query template
         dbQuery = Template( """
@@ -1337,7 +1337,7 @@ class DataServer(threading.Thread):
                             INTO OUTFILE '${filename}'
                             FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.${table}
-                            WHERE SurveyId IN '${svID}'
+                            WHERE SurveyId IN (${svID})
                             """ )
 
         # Export survey and answer data
