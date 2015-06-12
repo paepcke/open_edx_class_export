@@ -203,6 +203,7 @@ function ExportClass() {
 		    "Want to go ahead?") == false)
 	    return;
 
+  alert(fullCourseName)
 	startProgressStream(fullCourseName);
     }
 
