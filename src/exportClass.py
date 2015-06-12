@@ -1328,7 +1328,13 @@ class DataServer(threading.Thread):
 
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyInfo WHERE course_display_name = '%s'" % courseId
-        svIDs = self.mysqlDb.query(idgetter)
+        svIter = self.mysqlDb.query(idgetter)
+        svIDs = []
+        while True:
+            try:
+                svIDs.append(svIter.next()[0])
+            except StopIteration:
+                break
 
         # Define query template
         dbQuery = Template( """
