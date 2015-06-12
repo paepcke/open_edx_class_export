@@ -1348,8 +1348,7 @@ class DataServer(threading.Thread):
             infoXchangeFile.write(surveyOutfile + '\n')
             infoXchangeFile.write(str(idx+1) + '\n')
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
-            infoXchangeFile.write(surveyID[0] + '\n')
-            infoXchangeFile.write(surveyQuery + '\n')
+            infoXchangeFile.write(surveyID[0] + surveyQuery + '\n')
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
 
