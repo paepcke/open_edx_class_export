@@ -180,8 +180,8 @@ function ExportClass() {
 	    document.getElementById('piazzaForum').checked ||
 	    document.getElementById('edcastForum').checked ||
 	    document.getElementById('learnerPII').checked ||
-	    document.getElementById('demographics').checked
-
+	    document.getElementById('demographics').checked ||
+      document.getElementById('qualtrics').checked
 	   ) {
 	    try {
 		fullCourseName = getCourseNameChoice();
