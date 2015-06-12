@@ -1332,7 +1332,7 @@ class DataServer(threading.Thread):
 
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
         for field in detailDict.keys():
-            infoXchangeFile.write(field + ':' + detailDict[field] + '\n')
+            infoXchangeFile.write(field + ':' + str(detailDict[field]) + '\n')
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
         # # Set course ID and format for filenames
