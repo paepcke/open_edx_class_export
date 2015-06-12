@@ -1339,64 +1339,78 @@ class DataServer(threading.Thread):
                             WHERE SurveyId = '{svID}'
                             """ )
 
-        # Export data for each survey ID (usually not more than 2 surveys)
-        for idx, surveyID in enumerate(svIDs):
-            surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d.csv' % (courseNameNoSpaces, idx+1))
-            surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID)
-            self.mysqlDb.query(surveyQuery).next()
-
-            answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer.csv' % (courseNameNoSpaces, idx+1))
-            answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", svID=surveyID)
-            self.mysqlDb.query(answerQuery).next()
-
-            answermetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta.csv' % (courseNameNoSpaces, idx+1))
-            answermetaQuery = dbQuery.substitute(filename=answermetaOutfile, table="AnswerMeta", svID=surveyID)
-            self.mysqlDb.query(answermetaQuery).next()
-
-        # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
 
-        infoXchangeFile.write(surveyOutfile + '\n')
-        infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
-
-        infoXchangeFile.write(answerOutfile + '\n')
-        infoXchangeFile.write(str(self.getNumFileLines(answerOutfile)) + '\n')
-
-        infoXchangeFile.write(answermetaOutfile + '\n')
-        infoXchangeFile.write(str(self.getNumFileLines(answermetaOutfile)) + '\n')
-
-        # Add sample lines:
-        infoXchangeFile.write('herrgottzemenschnochamal!\n')
-        try:
-            with open(surveyOutfile, 'r') as fd:
-                head = []
-                for lineNum,line in enumerate(fd):
-                    head.append(line)
-                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        break
-                infoXchangeFile.write(''.join(head))
+        for idx, surveyID in enumerate(svIDs):
+            surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d.csv' % (courseNameNoSpaces, idx+1))
+            surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID)
+            infoXchangeFile.write(surveyOutfile + '\n')
+            infoXchangeFile.write(str(idx) + '\n')
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            infoXchangeFile.write(surveyID + '\n')
+            infoXchangeFile.write(surveyQuery + '\n')
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
-            with open(answerOutfile, 'r') as fd:
-                head = []
-                for lineNum,line in enumerate(fd):
-                    head.append(line)
-                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        break
-                infoXchangeFile.write(''.join(head))
-            infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
-            with open(answermetaOutfile, 'r') as fd:
-                head = []
-                for lineNum,line in enumerate(fd):
-                    head.append(line)
-                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        break
-                infoXchangeFile.write(''.join(head))
-            infoXchangeFile.write('herrgottzemenschnochamal!\n')
-        except IOError as e:
-            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+        # # Export data for each survey ID (usually not more than 2 surveys)
+        # for idx, surveyID in enumerate(svIDs):
+        #     surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d.csv' % (courseNameNoSpaces, idx+1))
+        #     surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID)
+        #     self.mysqlDb.query(surveyQuery).next()
+        #
+        #     answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer.csv' % (courseNameNoSpaces, idx+1))
+        #     answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", svID=surveyID)
+        #     self.mysqlDb.query(answerQuery).next()
+        #
+        #     answermetaOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answermeta.csv' % (courseNameNoSpaces, idx+1))
+        #     answermetaQuery = dbQuery.substitute(filename=answermetaOutfile, table="AnswerMeta", svID=surveyID)
+        #     self.mysqlDb.query(answermetaQuery).next()
+        #
+        # # Save information for printTableInfo() method to find:
+        # infoXchangeFile = tempfile.NamedTemporaryFile()
+        # self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
+        #
+        # infoXchangeFile.write(surveyOutfile + '\n')
+        # infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
+        #
+        # infoXchangeFile.write(answerOutfile + '\n')
+        # infoXchangeFile.write(str(self.getNumFileLines(answerOutfile)) + '\n')
+        #
+        # infoXchangeFile.write(answermetaOutfile + '\n')
+        # infoXchangeFile.write(str(self.getNumFileLines(answermetaOutfile)) + '\n')
+        #
+        # # Add sample lines:
+        # infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        # try:
+        #     with open(surveyOutfile, 'r') as fd:
+        #         head = []
+        #         for lineNum,line in enumerate(fd):
+        #             head.append(line)
+        #             if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+        #                 break
+        #         infoXchangeFile.write(''.join(head))
+        #     infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        #
+        #     with open(answerOutfile, 'r') as fd:
+        #         head = []
+        #         for lineNum,line in enumerate(fd):
+        #             head.append(line)
+        #             if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+        #                 break
+        #         infoXchangeFile.write(''.join(head))
+        #     infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        #
+        #     with open(answermetaOutfile, 'r') as fd:
+        #         head = []
+        #         for lineNum,line in enumerate(fd):
+        #             head.append(line)
+        #             if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+        #                 break
+        #         infoXchangeFile.write(''.join(head))
+        #     infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        # except IOError as e:
+        #     self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
 
     def exportLearnerPerf(self, detailDict):
