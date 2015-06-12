@@ -1348,19 +1348,20 @@ class DataServer(threading.Thread):
             surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID[0])
             self.mysqlDb.query(surveyQuery).next()
 
-            answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
-            answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", svID=surveyID[0])
-            self.mysqlDb.query(answerQuery).next()
+            # answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
+            # answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", svID=surveyID[0])
+            # self.mysqlDb.query(answerQuery).next()
 
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
 
         infoXchangeFile.write(surveyOutfile + '\n')
-        infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
+        infoXchangeFile.write(str(len(svIDs)) + '\n')
+        # infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
 
-        infoXchangeFile.write(answerOutfile + '\n')
-        infoXchangeFile.write(str(self.getNumFileLines(answerOutfile)) + '\n')
+        # infoXchangeFile.write(answerOutfile + '\n')
+        # infoXchangeFile.write(str(self.getNumFileLines(answerOutfile)) + '\n')
 
         # Add sample lines:
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
@@ -1374,14 +1375,14 @@ class DataServer(threading.Thread):
                 infoXchangeFile.write(''.join(head))
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
-            with open(answerOutfile, 'r') as fd:
-                head = []
-                for lineNum,line in enumerate(fd):
-                    head.append(line)
-                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        break
-                infoXchangeFile.write(''.join(head))
-            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            # with open(answerOutfile, 'r') as fd:
+            #     head = []
+            #     for lineNum,line in enumerate(fd):
+            #         head.append(line)
+            #         if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+            #             break
+            #     infoXchangeFile.write(''.join(head))
+            # infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
         except IOError as e:
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
@@ -1939,6 +1940,8 @@ class DataServer(threading.Thread):
                         tblName = 'Quarterly'
                     elif tableFileName.find('survey') > -1:
                         tblName = 'Surveys'
+                    elif tableFileName.find('answer') > -1:
+                        tblName = 'Answers'
                     else:
                         tblName = 'unknown table name'
 
