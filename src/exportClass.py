@@ -1346,9 +1346,9 @@ class DataServer(threading.Thread):
             surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey%d.csv' % (courseNameNoSpaces, idx+1))
             surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=surveyID)
             infoXchangeFile.write(surveyOutfile + '\n')
-            infoXchangeFile.write(str(idx) + '\n')
+            infoXchangeFile.write(str(idx+1) + '\n')
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
-            # infoXchangeFile.write(surveyID + '\n')
+            infoXchangeFile.write(surveyID[0] + '\n')
             infoXchangeFile.write(surveyQuery + '\n')
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
