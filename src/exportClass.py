@@ -1329,7 +1329,7 @@ class DataServer(threading.Thread):
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyInfo WHERE course_display_name = '%s'" % courseId
         svGen = list(self.mysqlDb.query(idgetter))
-        svIDs = ", ".join('%s'%svID[0] for svID in svGen)
+        svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
 
         # Define query template
         dbQuery = Template( """
@@ -1337,13 +1337,13 @@ class DataServer(threading.Thread):
                             INTO OUTFILE '${filename}'
                             FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.${table}
-                            WHERE SurveyId IN (${svID})
+                            WHERE SurveyId IN (${surveys});
                             """ )
 
         # Export survey and answer data
         runnum = random.randint(0,3000)
         surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
-        surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", svID=svIDs)
+        surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", surveys=svIDs)
         self.mysqlDb.query(surveyQuery).next()
 
         # answerOutfile = os.path.join(self.fullTargetDir, '%s_survey%d_answer_%d.csv' % (courseNameNoSpaces, idx+1, runnum))
