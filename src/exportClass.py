@@ -1344,7 +1344,10 @@ class DataServer(threading.Thread):
         runnum = random.randint(0,3000)
         surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
         surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", surveys=svIDs)
-        self.mysqlDb.query(surveyQuery).next()
+        try:
+            self.mysqlDb.query(surveyQuery).next()
+        except StopIteration:
+            pass
 
         answerOutfile = os.path.join(self.fullTargetDir, '%s_survey_answer_%d.csv' % (courseNameNoSpaces, runnum))
         answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", surveys=svIDs)
