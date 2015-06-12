@@ -1333,7 +1333,7 @@ class DataServer(threading.Thread):
         # Define query template
         dbQuery = Template( """
                             SELECT *
-                            INTO OUTFILE {filename}
+                            INTO OUTFILE '{filename}'
                             FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.{table}
                             WHERE SurveyId = '{svID}'
