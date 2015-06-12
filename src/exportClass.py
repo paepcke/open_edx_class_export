@@ -1366,27 +1366,27 @@ class DataServer(threading.Thread):
         infoXchangeFile.write(answerOutfile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(answerOutfile)) + '\n')
 
-        # Add sample lines:
-        infoXchangeFile.write('herrgottzemenschnochamal!\n')
-        try:
-            with open(surveyOutfile, 'r') as fd:
-                head = []
-                for lineNum,line in enumerate(fd):
-                    head.append(line)
-                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        break
-                infoXchangeFile.write(''.join(head))
-            infoXchangeFile.write('herrgottzemenschnochamal!\n')
-            with open(answerOutfile, 'r') as fd:
-                head = []
-                for lineNum,line in enumerate(fd):
-                    head.append(line)
-                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
-                        break
-                infoXchangeFile.write(''.join(head))
-            infoXchangeFile.write('herrgottzemenschnochamal!\n')
-        except IOError as e:
-            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+        # # Add sample lines:
+        # infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        # try:
+        #     with open(surveyOutfile, 'r') as fd:
+        #         head = []
+        #         for lineNum,line in enumerate(fd):
+        #             head.append(line)
+        #             if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+        #                 break
+        #         infoXchangeFile.write(''.join(head))
+        #     infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        #     with open(answerOutfile, 'r') as fd:
+        #         head = []
+        #         for lineNum,line in enumerate(fd):
+        #             head.append(line)
+        #             if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+        #                 break
+        #         infoXchangeFile.write(''.join(head))
+        #     infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        # except IOError as e:
+        #     self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
         return (surveyOutfile, answerOutfile)
 
