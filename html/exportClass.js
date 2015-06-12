@@ -534,7 +534,7 @@ function ExportClass() {
           "qualtrics": qualtrics
 		     };
 	var req = buildRequest("getData", argObj);
-  alert(argObj)
+  alert(argObj[0])
 
 	// Start the progress timer; remember the existing
 	// screen content in the 'progress' div so that
