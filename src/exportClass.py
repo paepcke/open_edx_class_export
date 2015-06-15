@@ -1419,7 +1419,7 @@ class DataServer(threading.Thread):
         except IOError as e:
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
-        return (surveyOutfile, answerOutfile)
+        return (surveyOutfile, responseOutfile, responsemetaOutfile)
 
 
     def exportLearnerPerf(self, detailDict):
