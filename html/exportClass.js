@@ -147,6 +147,7 @@ function ExportClass() {
     }
 
     var displayTableInfo = function(tblSamplesTxt) {
+      console.log(tblSamplesTxt)
 	addTextToProgDiv('<div class="tblExtract">' + tblSamplesTxt + '</div>');
     }
 
