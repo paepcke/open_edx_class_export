@@ -1347,10 +1347,6 @@ class DataServer(threading.Thread):
             self.mysqlDb.query(surveyQuery).next()
         except StopIteration:
             pass
-        with open(surveyOutfile, 'w') as f:
-            f.write(idgetter)
-            f.write(svIDs)
-            f.write(surveyQuery)
 
         answerOutfile = os.path.join(self.fullTargetDir, '%s_survey_answer_%d.csv' % (courseNameNoSpaces, runnum))
         answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", surveys=svIDs)
@@ -1358,8 +1354,6 @@ class DataServer(threading.Thread):
             self.mysqlDb.query(answerQuery).next()
         except StopIteration:
             pass
-        with open(answerOutfile, 'w') as f:
-            f.write(answerQuery)
 
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
