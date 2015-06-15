@@ -1326,20 +1326,10 @@ class DataServer(threading.Thread):
         courseId = detailDict.get('courseId', '')
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
 
-        runnum = random.randint(0,3000)
-        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
-        with open(surveyOutfile, 'w') as f:
-            f.write(courseId + '\n')
-            f.write('200' + '\n')
-
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyManifest WHERE course_display_name = '%s' AND responses_actual is not NULL" % courseId
         svGen = list(self.mysqlDb.query(idgetter))
         svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
-
-        with open(surveyOutfile, 'w') as f:
-            f.write(idgetter + '\n')
-            f.write(svIDs + '\n')
 
         # Define query template
         dbQuery = Template( """
@@ -1351,8 +1341,8 @@ class DataServer(threading.Thread):
                             """ )
 
         # Export survey and answer data
-        # runnum = random.randint(0,3000)
-        # surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
+        runnum = random.randint(0,3000)
+        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
         surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", surveys=svIDs)
         try:
             self.mysqlDb.query(surveyQuery).next()
