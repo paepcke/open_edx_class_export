@@ -1335,6 +1335,7 @@ class DataServer(threading.Thread):
         dbQuery = Template( """
                             SELECT *
                             INTO OUTFILE '${filename}'
+                            FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.${table}
                             WHERE SurveyId IN (${surveys});
                             """ )
@@ -1347,6 +1348,8 @@ class DataServer(threading.Thread):
             self.mysqlDb.query(surveyQuery).next()
         except StopIteration:
             pass
+        with open(surveyOutfile, 'w') as f:
+            f.write(surveyQuery)
 
         answerOutfile = os.path.join(self.fullTargetDir, '%s_survey_answer_%d.csv' % (courseNameNoSpaces, runnum))
         answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", surveys=svIDs)
