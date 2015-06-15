@@ -1326,6 +1326,7 @@ class DataServer(threading.Thread):
         courseId = detailDict.get('courseId', '')
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
 
+        runnum = random.randint(0,3000)
         surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
         with open(surveyOutfile, 'w') as f:
             f.write(courseId + '\n')
@@ -1346,7 +1347,7 @@ class DataServer(threading.Thread):
                             """ )
 
         # Export survey and answer data
-        runnum = random.randint(0,3000)
+        # runnum = random.randint(0,3000)
         # surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
         surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", surveys=svIDs)
         try:
