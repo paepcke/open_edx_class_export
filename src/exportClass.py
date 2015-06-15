@@ -1335,7 +1335,6 @@ class DataServer(threading.Thread):
         dbQuery = Template( """
                             SELECT *
                             INTO OUTFILE '${filename}'
-                            FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.${table}
                             WHERE SurveyId IN (${surveys});
                             """ )
