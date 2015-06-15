@@ -1342,7 +1342,7 @@ class DataServer(threading.Thread):
                         FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                         FROM EdxQualtrics.Survey
                         WHERE SurveyId IN (%s);
-                        """ % surveyOutfile, svIDs
+                        """ % (surveyOutfile, svIDs)
         try:
             self.mysqlDb.query(surveyQuery).next()
         except StopIteration:
@@ -1356,7 +1356,7 @@ class DataServer(threading.Thread):
                         FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                         FROM EdxQualtrics.response
                         WHERE SurveyId IN (%s);
-                        """ % responseOutfile, svIDs
+                        """ % (responseOutfile, svIDs)
         try:
             self.mysqlDb.query(responseQuery).next()
         except StopIteration:
@@ -1370,7 +1370,7 @@ class DataServer(threading.Thread):
                             FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.response_metadata
                             WHERE SurveyId IN (%s);
-                            """ % responsemetaOutfile, svIDs
+                            """ % (responsemetaOutfile, svIDs)
         try:
             self.mysqlDb.query(responsemetaQuery).next()
         except StopIteration:
