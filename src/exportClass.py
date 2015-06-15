@@ -1336,6 +1336,7 @@ class DataServer(threading.Thread):
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyManifest WHERE course_display_name = '%s' AND responses_actual is not NULL" % courseId
         svGen = list(self.mysqlDb.query(idgetter))
         svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
+
         with open(surveyOutfile, 'w') as f:
             f.write(idgetter + '\n')
             f.write(svIDs + '\n')
