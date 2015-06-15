@@ -433,6 +433,7 @@ class DataServer(threading.Thread):
                     else:
                         oldDeliveryUrl = self.getDeliveryURL(courseId)
 
+                oldDeliveryUrl = self.getDeliveryURL(courseId)
                 self.writeError("Request '%s': table(s) for %s %s already existed, and Remove Previous Exports... was not checked. Pickup at %s." %\
                                 (e.actionRequest, 'course' if courseIdWasPresent else 'email', courseId if courseIdWasPresent else '', oldDeliveryUrl))
                 return None
