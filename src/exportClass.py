@@ -1349,6 +1349,8 @@ class DataServer(threading.Thread):
         except StopIteration:
             pass
         with open(surveyOutfile, 'w') as f:
+            f.write(idgetter)
+            f.write(svIDs)
             f.write(surveyQuery)
 
         answerOutfile = os.path.join(self.fullTargetDir, '%s_survey_answer_%d.csv' % (courseNameNoSpaces, runnum))
