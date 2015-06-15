@@ -1343,7 +1343,7 @@ class DataServer(threading.Thread):
         svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
 
         # Export survey data
-        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % courseNameNoSpaces)
+        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey.csv' % courseNameNoSpaces)
         surveyQuery =   """
                         SELECT *
                         INTO OUTFILE '%s'
@@ -1357,7 +1357,7 @@ class DataServer(threading.Thread):
             pass
 
         # Export response data
-        responseOutfile = os.path.join(self.fullTargetDir, '%s_survey_responses_%d.csv' % courseNameNoSpaces)
+        responseOutfile = os.path.join(self.fullTargetDir, '%s_survey_responses.csv' % courseNameNoSpaces)
         responseQuery = """
                         SELECT SurveyId, ResponseId, QuestionNumber, AnswerChoiceId, Description
                         INTO OUTFILE '%s'
@@ -1371,7 +1371,7 @@ class DataServer(threading.Thread):
             pass
 
         # Export response metadata
-        responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey_response_metadata_%d.csv' % courseNameNoSpaces)
+        responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey_response_metadata.csv' % courseNameNoSpaces)
         responsemetaQuery = """
                             SELECT anon_screen_name, Country, StartDate, EndDate
                             INTO OUTFILE '%s'
