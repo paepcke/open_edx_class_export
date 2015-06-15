@@ -613,6 +613,17 @@ class DataServer(threading.Thread):
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Demographics'))
 
+                if (action == 'qualtrics'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*survey.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*responses.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*metadata.csv'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutfile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Course surveys'))
+
                 if (action == 'edxForumRelatable') or (action == 'edxForumIsolated'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*forum.csv.zip'))
                     if len(existingFiles) > 0:
@@ -1331,11 +1342,8 @@ class DataServer(threading.Thread):
         svGen = list(self.mysqlDb.query(idgetter))
         svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
 
-        # TEMPORARY filename randomizer to avoid file overwriting issues
-        runnum = random.randint(0,3000)
-
         # Export survey data
-        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
+        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % courseNameNoSpaces)
         surveyQuery =   """
                         SELECT *
                         INTO OUTFILE '%s'
@@ -1349,7 +1357,7 @@ class DataServer(threading.Thread):
             pass
 
         # Export response data
-        responseOutfile = os.path.join(self.fullTargetDir, '%s_survey_responses_%d.csv' % (courseNameNoSpaces, runnum))
+        responseOutfile = os.path.join(self.fullTargetDir, '%s_survey_responses_%d.csv' % courseNameNoSpaces)
         responseQuery = """
                         SELECT SurveyId, ResponseId, QuestionNumber, AnswerChoiceId, Description
                         INTO OUTFILE '%s'
@@ -1363,7 +1371,7 @@ class DataServer(threading.Thread):
             pass
 
         # Export response metadata
-        responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey_response_metadata_%d.csv' % (courseNameNoSpaces, runnum))
+        responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey_response_metadata_%d.csv' % courseNameNoSpaces)
         responsemetaQuery = """
                             SELECT anon_screen_name, Country, StartDate, EndDate
                             INTO OUTFILE '%s'
