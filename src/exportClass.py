@@ -2054,6 +2054,10 @@ class DataServer(threading.Thread):
                 with open(os.path.join(self.thisScriptDir, 'clientInstructionsForum.html'), 'r') as txtFd:
                     emailLines += txtFd.readlines()
 
+            if args.get('qualtrics', False):
+                with open(os.path.join(self.thisScriptDir, 'clientInstructionsSurveys.html'), 'r') as txtFd:
+                    emailLines += txtFd.readLines()
+
         except Exception as e:
             self.writeError('Could not read client instruction file: %s' % `e`)
             return
