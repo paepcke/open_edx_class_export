@@ -1317,7 +1317,7 @@ class DataServer(threading.Thread):
 
     def exportQualtrics(self, detailDict):
         '''
-        Exports surveys and survey responses as three tables, Survey, Answer, and AnswerMeta.
+        Exports surveys and survey responses as two tables, Survey and Answer.
 
         :param detailDict: dict of arguments; expected: 'courseId', 'wipeExisting'
         :type detailDict: {String : String, String : Boolean}
@@ -1325,6 +1325,11 @@ class DataServer(threading.Thread):
         # Set course ID and format for filenames
         courseId = detailDict.get('courseId', '')
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+
+        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
+        with open(surveyOutfile, 'w') as f:
+            f.write(courseId + '\n')
+            f.write(200 + '\n')
 
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyManifest WHERE course_display_name = '%s' AND responses_actual is not NULL" % courseId
@@ -1342,11 +1347,8 @@ class DataServer(threading.Thread):
 
         # Export survey and answer data
         runnum = random.randint(0,3000)
-        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
+        # surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
         surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", surveys=svIDs)
-        with open(surveyOutfile, 'w') as f:
-            f.write(surveyQuery + '\n')
-            f.write(svIDs + '\n')
         try:
             self.mysqlDb.query(surveyQuery).next()
         except StopIteration:
