@@ -1327,7 +1327,7 @@ class DataServer(threading.Thread):
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
 
         # Get list of survey IDs
-        idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyInfo WHERE course_display_name = '%s'" % courseId
+        idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyInfo WHERE course_display_name = '%s' AND responses_actual is not NULL" % courseId
         svGen = list(self.mysqlDb.query(idgetter))
         svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
 
