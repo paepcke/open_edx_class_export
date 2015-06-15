@@ -1330,7 +1330,7 @@ class DataServer(threading.Thread):
         surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
         with open(surveyOutfile, 'w') as f:
             f.write(courseId + '\n')
-            f.write(200 + '\n')
+            f.write('200' + '\n')
 
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.SurveyManifest WHERE course_display_name = '%s' AND responses_actual is not NULL" % courseId
