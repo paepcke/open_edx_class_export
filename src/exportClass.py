@@ -1331,28 +1331,48 @@ class DataServer(threading.Thread):
         svGen = list(self.mysqlDb.query(idgetter))
         svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
 
-        # Define query template
-        dbQuery = Template( """
-                            SELECT *
-                            INTO OUTFILE '${filename}'
-                            FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
-                            FROM EdxQualtrics.${table}
-                            WHERE SurveyId IN (${surveys});
-                            """ )
-
-        # Export survey and answer data
+        # TEMPORARY filename randomizer to avoid file overwriting issues
         runnum = random.randint(0,3000)
+
+        # Export survey data
         surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey_%d.csv' % (courseNameNoSpaces, runnum))
-        surveyQuery = dbQuery.substitute(filename=surveyOutfile, table="Survey", surveys=svIDs)
+        surveyQuery =   """
+                        SELECT *
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM EdxQualtrics.Survey
+                        WHERE SurveyId IN (%s);
+                        """ % surveyOutfile, svIDs
         try:
             self.mysqlDb.query(surveyQuery).next()
         except StopIteration:
             pass
 
-        answerOutfile = os.path.join(self.fullTargetDir, '%s_survey_answer_%d.csv' % (courseNameNoSpaces, runnum))
-        answerQuery = dbQuery.substitute(filename=answerOutfile, table="Answer", surveys=svIDs)
+        # Export response data
+        responseOutfile = os.path.join(self.fullTargetDir, '%s_survey_responses_%d.csv' % (courseNameNoSpaces, runnum))
+        responseQuery = """
+                        SELECT SurveyId, ResponseId, QuestionNumber, AnswerChoiceId, Description
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM EdxQualtrics.response
+                        WHERE SurveyId IN (%s);
+                        """ % responseOutfile, svIDs
         try:
-            self.mysqlDb.query(answerQuery).next()
+            self.mysqlDb.query(responseQuery).next()
+        except StopIteration:
+            pass
+
+        # Export response metadata
+        responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey_response_metadata_%d.csv' % (courseNameNoSpaces, runnum))
+        responsemetaQuery = """
+                            SELECT anon_screen_name, Country, StartDate, EndDate
+                            INTO OUTFILE '%s'
+                            FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                            FROM EdxQualtrics.response_metadata
+                            WHERE SurveyId IN (%s);
+                            """ % responsemetaOutfile, svIDs
+        try:
+            self.mysqlDb.query(responsemetaQuery).next()
         except StopIteration:
             pass
 
@@ -1363,8 +1383,11 @@ class DataServer(threading.Thread):
         infoXchangeFile.write(surveyOutfile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
 
-        infoXchangeFile.write(answerOutfile + '\n')
-        infoXchangeFile.write(str(self.getNumFileLines(answerOutfile)) + '\n')
+        infoXchangeFile.write(responseOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(responseOutfile)) + '\n')
+
+        infoXchangeFile.write(responsemetaOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(responsemetaOutfile)) + '\n')
 
         # Add sample lines:
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
@@ -1377,7 +1400,15 @@ class DataServer(threading.Thread):
                         break
                 infoXchangeFile.write(''.join(head))
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
-            with open(answerOutfile, 'r') as fd:
+            with open(responseOutfile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            with open(responsemetaOutfile, 'r') as fd:
                 head = []
                 for lineNum,line in enumerate(fd):
                     head.append(line)
@@ -1941,8 +1972,10 @@ class DataServer(threading.Thread):
                         tblName = 'Demographics'
                     elif tableFileName.find('QuarterlyReport') > -1:
                         tblName = 'Quarterly'
-                    elif tableFileName.find('survey_answer') > -1:
-                        tblName = 'Answer'
+                    elif tableFileName.find('metadata') > -1:
+                        tblName = 'ResponseMetadata'
+                    elif tableFileName.find('response') > -1:
+                        tblName = 'Response'
                     elif tableFileName.find('survey') > -1:
                         tblName = 'Survey'
                     else:
