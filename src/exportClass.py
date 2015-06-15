@@ -1941,10 +1941,10 @@ class DataServer(threading.Thread):
                         tblName = 'Demographics'
                     elif tableFileName.find('QuarterlyReport') > -1:
                         tblName = 'Quarterly'
+                    elif tableFileName.find('survey_answer') > -1:
+                        tblName = 'Answer'
                     elif tableFileName.find('survey') > -1:
-                        tblName = 'Surveys'
-                    elif tableFileName.find('answer') > -1:
-                        tblName = 'Answers'
+                        tblName = 'Survey'
                     else:
                         tblName = 'unknown table name'
 
