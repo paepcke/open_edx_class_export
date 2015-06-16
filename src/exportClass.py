@@ -634,7 +634,7 @@ class DataServer(threading.Thread):
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Course surveys'))
 
-                if (aciton == 'abtest'):
+                if (action == 'abtest'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*ABExperiment.csv'))
                     if len(existingFiles) > 0:
                         if mayDelete:
