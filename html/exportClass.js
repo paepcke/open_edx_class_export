@@ -182,7 +182,8 @@ function ExportClass() {
 	    document.getElementById('edcastForum').checked ||
 	    document.getElementById('learnerPII').checked ||
 	    document.getElementById('demographics').checked ||
-      document.getElementById('qualtrics').checked
+      document.getElementById('qualtrics').checked ||
+      document.getElementById('abtest').checked
 	   ) {
 	    try {
 		fullCourseName = getCourseNameChoice();
@@ -434,6 +435,7 @@ function ExportClass() {
 	var quarterRepDemographics = quarterRep && document.getElementById("quarterRepDemographics").checked;
 	var demographics = document.getElementById("demographics").checked;
   var qualtrics = document.getElementById("qualtrics").checked;
+  var abtest = document.getElementById("abtest").checked;
 
 	if (!basicData &&
 	    !engagementData &&
@@ -445,7 +447,8 @@ function ExportClass() {
 	    !learnerPII &&
 	    !quarterRep &&
 	    !demographics &&
-      !qualtrics
+      !qualtrics &&
+      !abtest
 	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
 	    return;
@@ -532,7 +535,8 @@ function ExportClass() {
 		      "quarterRepEngage": quarterRepEngage,
 		      "quarterRepDemographics": quarterRepDemographics,
 		      "demographics": demographics,
-          "qualtrics": qualtrics
+          "qualtrics": qualtrics,
+          "abtest": abtest
 		     };
 	var req = buildRequest("getData", argObj);
 

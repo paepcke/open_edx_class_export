@@ -482,6 +482,15 @@ class DataServer(threading.Thread):
                     else:
                         self.exportDemographics(args)
 
+                if args.get('abtest', False):
+                    self.setTimer()
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportABExperiment(args)
+                    else:
+                        self.exportABExperiment(args)
+
                 if args.get('qualtrics', False):
                     self.setTimer()
                     if courseList is not None:
@@ -624,6 +633,15 @@ class DataServer(threading.Thread):
                                 os.remove(fileName)
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Course surveys'))
+
+                if (aciton == 'abtest'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*ABExperiment.csv'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'A/B test data'))
 
                 if (action == 'edxForumRelatable') or (action == 'edxForumIsolated'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*forum.csv.zip'))
@@ -1327,6 +1345,55 @@ class DataServer(threading.Thread):
 
         return outFileDemographicsName
 
+    def exportABExperiment(self, detailDict):
+        '''
+        Exports ABExperiment table.
+
+        :param detailDict: dict of arguments; expected: 'courseId', 'wipeExisting'
+        :type detailDict: {String : String, String : Boolean}
+        '''
+        # Set course ID and format for filenames
+        courseId = detailDict.get('courseId', '')
+        courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+
+        # Export survey data
+        abtestOutfile = os.path.join(self.fullTargetDir, '%s_ABExperiment.csv' % courseNameNoSpaces)
+        abtestQuery =   """
+                        SELECT *
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM Edx.ABExperiment
+                        WHERE course_display_name = '%s'
+                        """ % courseId
+        try:
+            self.mysqlDb.query(abtestQuery).next()
+        except StopIteration:
+            pass
+
+        # Save information for printTableInfo() method to find:
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportABTest'] = infoXchangeFile
+
+        infoXchangeFile.write(abtestOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(abtestOutfile)) + '\n')
+
+        # Add sample lines:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(abtestOutfile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        except IOError as e:
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+
+        return abtestOutfile
+
+
     def exportQualtrics(self, detailDict):
         '''
         Exports surveys and survey responses as two tables, Survey and Answer.
@@ -1676,7 +1743,7 @@ class DataServer(threading.Thread):
             self.mysqlDb.query(courseIDMapQuery).next()
         except StopIteration:
             pass
-        self.writeResult('progress', "Exported course ID mapping between Podio and EdX.")
+        self.writeResult('progress', "Exported course ID mapping between Podio and EdX.\n")
 
         # Create a file that printTableInfo can understand:
         infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
@@ -2006,6 +2073,8 @@ class DataServer(threading.Thread):
                         tblName = 'Engagement'
                     elif tableFileName.find('demographics') > -1:
                         tblName = 'Demographics'
+                    elif tableFileName.find('ABExperiment') > -1:
+                        tblName = 'ABExperiment'
                     elif tableFileName.find('courseidmap') > -1:
                         tblName = 'CourseIDMap'
                     elif tableFileName.find('QuarterlyReport') > -1:
