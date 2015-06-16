@@ -1364,7 +1364,7 @@ class DataServer(threading.Thread):
                         FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                         FROM Edx.ABExperiment
                         WHERE course_display_name = '%s'
-                        """ % courseId
+                        """ % (abtestOutfile, courseId)
         try:
             self.mysqlDb.query(abtestQuery).next()
         except StopIteration:
