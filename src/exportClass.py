@@ -1638,6 +1638,7 @@ class DataServer(threading.Thread):
         enrollmentFileName = 'enrollment_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
         engagementFileName = 'engagement_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
         demographicsFileName = 'demographics_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
+        courseIDMapFileName = 'courseidmap_%s%s.csv' % (quarter, self.getCalendarYear(quarter, academic_year))
 
         # Create a Web accessible delivery directory early to check
         # whether target overwrite warning must be issued:
@@ -1646,6 +1647,7 @@ class DataServer(threading.Thread):
         pickupEnrollmentPath = os.path.join(pickupDir, enrollmentFileName)
         pickupEngagementPath = os.path.join(pickupDir, engagementFileName)
         pickupDemographicsPath = os.path.join(pickupDir, demographicsFileName)
+        pickupCourseIDMapPath = os.path.join(pickupDir, courseIDMapFileName)
 
         if doEnrollment and os.path.exists(pickupEnrollmentPath) and not mayOverwrite:
             # Did enrollment file exist (or maybe just engagement):
@@ -1662,6 +1664,19 @@ class DataServer(threading.Thread):
             self.writeError("Quarterly report demographics result for %s%s already existed, and Remove Previous Exports... was not checked." %\
                             (quarter, self.getCalendarYear(quarter,academic_year)))
             return
+
+        # Write CourseIDMap table to file.
+        courseIDMapQuery =  """
+                            SELECT *
+                            INTO OUTFILE '%s'
+                            FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                            FROM Podio.CourseIDMap
+                            """ % pickupCourseIDMapPath
+        try:
+            self.mysqlDb.query(courseIDMapQuery).next()
+        except StopIteration:
+            pass
+        self.writeResult('progress', "Exported course ID mapping between Podio and EdX.")
 
         # Create a file that printTableInfo can understand:
         infoXchangeFile = tempfile.NamedTemporaryFile(delete=True)
@@ -1751,6 +1766,18 @@ class DataServer(threading.Thread):
             # self.mainThread.latestDemographicsFilename for
             # unittest to check:
             self.mainThread.latestDemographicsFilename = pickupDemographicsPath
+
+        try:
+            with open(pickupCourseIDMapPath, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+        except IOError as e:
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
 
 
     def getNumFileLines(self, fileFdOrPath):
@@ -1979,6 +2006,8 @@ class DataServer(threading.Thread):
                         tblName = 'Engagement'
                     elif tableFileName.find('demographics') > -1:
                         tblName = 'Demographics'
+                    elif tableFileName.find('courseidmap') > -1:
+                        tblName = 'CourseIDMap'
                     elif tableFileName.find('QuarterlyReport') > -1:
                         tblName = 'Quarterly'
                     elif tableFileName.find('metadata') > -1:
