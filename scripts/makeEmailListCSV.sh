@@ -321,7 +321,7 @@ set -o pipefail
 
 # Exit on error:
 set -e
-echo "$EXPORT_EMAIL_CMD" | mysql $MYSQL_AUTH
+echo $EXPORT_EMAIL_CMD | mysql $MYSQL_AUTH
 
 echo "Done creating email list ...<br>"
 
