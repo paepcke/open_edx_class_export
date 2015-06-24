@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build single-column CSV file with email addresses 
+# Build single-column CSV file with email addresses
 # of course participants who signed up since a given
 # date, for courses that are open to the public.
 #
@@ -40,16 +40,16 @@ TESTING=false
 # Execute getopt
 ARGS=`getopt -o "u:pw:c:xd:i:t" -l "user:,password,mysqlpwd:,cryptoPwd:,xpunge,destDir:,infoDest:,testing" \
       -n "getopt.sh" -- "$@"`
- 
+
 #Bad arguments
 if [ $? -ne 0 ];
 then
   exit 1
 fi
- 
+
 # A little magic
 eval set -- "$ARGS"
- 
+
 # Now go through all the options
 while true;
 do
@@ -66,11 +66,11 @@ do
 	echo $USAGE
 	exit 1
       fi;;
- 
+
     -p|--password)
       needPasswd=true
       shift;;
- 
+
     -w|--mysqlpwd)
       shift
       # Grab the option value:
@@ -162,9 +162,9 @@ fi
 
 # The following SED expression has three repetitions
 # of \([^/]*\)\/, which means all letters that are
-# not forward slashes (the '[^/]*), followed by a 
+# not forward slashes (the '[^/]*), followed by a
 # forward slash (the '\/'). The forward slash must
-# be escaped b/c it's special in SED. 
+# be escaped b/c it's special in SED.
 # The escaped parentheses pairs form a group,
 # which we then recall later, in the substitution
 # part with \2 and \3 (the '/\2_\3/' part):
@@ -175,7 +175,7 @@ DIR_LEAF='Email_'$DATE_JOINED
 #echo "DEST_LEAF after first xform: '$DIR_LEAF'<br>"
 #******************
 
-# If destination directory was not explicitly 
+# If destination directory was not explicitly
 # provided, add a leaf directory to the
 # standard directory to hold the result file:
 if ! $destDirGiven
@@ -274,19 +274,33 @@ trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
 # refuse to write to it, unless:
 unlink $EMAIL_TMP_FILE
 
+# HACK: Might want to load this to a temp table and filter from there?
+CANADA_FILTER=" \
+SELECT DISTINCT email \
+FROM ( \
+  SELECT user_id, Edx.UserCountry.three_letter_country, max(edxprod.student_courseenrollment.created) as last_registration \
+	FROM edxprod.student_courseenrollment \
+		INNER JOIN Edx.UserCountry ON idInt2Anon(edxprod.student_courseenrollment.user_id) = Edx.UserCountry.anon_screen_name \
+	GROUP BY user_id \
+	) as regdata \
+	INNER JOIN edxprod.auth_user ON regdata.user_id = edxprod.auth_user.id \
+	WHERE last_registration < DATE_SUB(CURDATE(), INTERVAL 20 MONTH) \
+	AND three_letter_country = 'CAN'"
+
 EXPORT_EMAIL_CMD=" \
  USE "$EMAIL_DB"; \
  SELECT DISTINCT email \
    INTO OUTFILE '"$EMAIL_TMP_FILE"' \
    FIELDS TERMINATED BY ',' \
    LINES TERMINATED BY '\r\n' \
-   FROM edxprod.student_courseenrollment LEFT JOIN edxprod.auth_user \
-          ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
+   FROM edxprod.student_courseenrollment \
+          LEFT JOIN edxprod.auth_user ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
         Edx.CourseInfo \
   WHERE date_joined > '"$DATE_JOINED"' \
     AND Edx.CourseInfo.course_display_name = course_id \
     AND not Edx.CourseInfo.is_internal \
-    AND INSTR(email, 'noreply') = 0;"
+    AND INSTR(email, 'noreply') = 0 \
+    AND email not in ("$CANADA_FILTER");"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
@@ -298,9 +312,9 @@ EXPORT_EMAIL_CMD=" \
 
 echo "Creating email list ...<br>"
 
-# Make pipe fail with error code saved: If pipefail is enabled, 
-# the pipeline's return status is the value of the last (rightmost) 
-# command to exit with a non-zero status, or zero if all commands 
+# Make pipe fail with error code saved: If pipefail is enabled,
+# the pipeline's return status is the value of the last (rightmost)
+# command to exit with a non-zero status, or zero if all commands
 # exit successfully:
 
 set -o pipefail
@@ -327,13 +341,13 @@ echo "Done creating email list ...<br>"
 
 # ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
 
-# Write path to the encrypted zip file to 
+# Write path to the encrypted zip file to
 # path the caller provided:
 if [ ! -z $INFO_DEST ]
 then
 	echo $ZIP_FNAME > $INFO_DEST
 	echo "Appending number of lines to $INFO_DEST<br>"
-	wc -l $EMAIL_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+	wc -l $EMAIL_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST
 
 	# Separator between the above table info and the
 	# start of the sample lines. That division could
