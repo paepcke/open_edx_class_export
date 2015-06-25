@@ -267,7 +267,7 @@ fi
 EMAIL_TMP_FILE=`mktemp -p /tmp`
 PREVIEW_TMP_FILE=`mktemp -p /tmp`
 
-# trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
+trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
 
 # MySQL will be asked to output emails to the EMAIL_TMP_FILE.
 # The above mktemp created the (empty) file, and MySQL will
@@ -335,7 +335,6 @@ echo "Done creating email list ...<br>"
 # ----------------------------- Move email file to final destination -------------
 
 cp $EMAIL_TMP_FILE $EMAIL_FNAME
-rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE
 
 
 # ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
