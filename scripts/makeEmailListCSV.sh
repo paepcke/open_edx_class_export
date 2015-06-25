@@ -334,7 +334,7 @@ echo "Done creating email list ...<br>"
 
 # ----------------------------- Move email file to final destination -------------
 
-mv $EMAIL_TMP_FILE $EMAIL_FNAME
+cp $EMAIL_TMP_FILE $EMAIL_FNAME
 
 
 # ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
