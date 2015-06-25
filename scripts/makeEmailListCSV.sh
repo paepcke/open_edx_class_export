@@ -274,21 +274,19 @@ trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
 # refuse to write to it, unless:
 unlink $EMAIL_TMP_FILE
 
-# HACK: Might want to load this to a temp table and filter from there?
-CANADA_FILTER=" \
-SELECT DISTINCT email \
-FROM ( \
-  SELECT user_id, Edx.UserCountry.three_letter_country, max(edxprod.student_courseenrollment.created) as last_registration \
-	FROM edxprod.student_courseenrollment \
-		INNER JOIN Edx.UserCountry ON idInt2Anon(edxprod.student_courseenrollment.user_id) = Edx.UserCountry.anon_screen_name \
-	GROUP BY user_id \
-	) as regdata \
-	INNER JOIN edxprod.auth_user ON regdata.user_id = edxprod.auth_user.id \
-	WHERE last_registration < DATE_SUB(CURDATE(), INTERVAL 20 MONTH) \
-	AND three_letter_country = 'CAN'"
-
 EXPORT_EMAIL_CMD=" \
  USE "$EMAIL_DB"; \
+ CREATE TEMPORARY TABLE IF NOT EXISTS CANExclude (`email` VARCHAR(75)) AS \
+  SELECT DISTINCT email \
+  FROM ( \
+	 SELECT user_id, Edx.UserCountry.three_letter_country, max(edxprod.student_courseenrollment.created) as last_registration \
+   FROM edxprod.student_courseenrollment \
+   INNER JOIN Edx.UserCountry ON idInt2Anon(edxprod.student_courseenrollment.user_id) = Edx.UserCountry.anon_screen_name \
+   GROUP BY user_id \
+   ) as regdata \
+  INNER JOIN edxprod.auth_user ON regdata.user_id = edxprod.auth_user.id \
+  WHERE last_registration < DATE_SUB(CURDATE(), INTERVAL 20 MONTH) \
+  AND three_letter_country = 'CAN'; \
  SELECT DISTINCT email \
    INTO OUTFILE '"$EMAIL_TMP_FILE"' \
    FIELDS TERMINATED BY ',' \
@@ -300,7 +298,7 @@ EXPORT_EMAIL_CMD=" \
     AND Edx.CourseInfo.course_display_name = course_id \
     AND not Edx.CourseInfo.is_internal \
     AND INSTR(email, 'noreply') = 0 \
-    AND email not in ("$CANADA_FILTER");"
+    AND email not in CANExclude;"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
@@ -321,7 +319,7 @@ set -o pipefail
 
 # Exit on error:
 set -e
-echo $EXPORT_EMAIL_CMD | mysql $MYSQL_AUTH
+echo "$EXPORT_EMAIL_CMD" | mysql $MYSQL_AUTH
 
 echo "Done creating email list ...<br>"
 
