@@ -298,7 +298,7 @@ EXPORT_EMAIL_CMD=" \
     AND Edx.CourseInfo.course_display_name = course_id \
     AND not Edx.CourseInfo.is_internal \
     AND INSTR(email, 'noreply') = 0 \
-    AND email not in CANExclude;"
+    AND email not in (select * from CANExclude);"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
