@@ -276,7 +276,7 @@ unlink $EMAIL_TMP_FILE
 
 EXPORT_EMAIL_CMD=" \
  USE "$EMAIL_DB"; \
- CREATE TEMPORARY TABLE IF NOT EXISTS CANExclude (`email` VARCHAR(75)) AS \
+ CREATE TEMPORARY TABLE IF NOT EXISTS CANExclude AS \
   SELECT DISTINCT email \
   FROM ( \
 	 SELECT user_id, Edx.UserCountry.three_letter_country, max(edxprod.student_courseenrollment.created) as last_registration \
