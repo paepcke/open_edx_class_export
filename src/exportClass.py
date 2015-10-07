@@ -2152,6 +2152,8 @@ class DataServer(threading.Thread):
                         tblName = 'Response'
                     elif tableFileName.find('survey') > -1:
                         tblName = 'Survey'
+                    elif tableFileName.find('FinalGrade') > -1:
+                        tblName = 'FinalGrade'
                     else:
                         tblName = 'unknown table name'
 
