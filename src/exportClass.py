@@ -1595,7 +1595,7 @@ class DataServer(threading.Thread):
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
 
         # Export grades data
-        metadataOutfile = os.path.join(self.fullTargetDir, '%s_FinalGrade.csv' % courseNameNoSpaces)
+        metadataOutfile = os.path.join(self.fullTargetDir, '%s_CourseInfo.csv' % courseNameNoSpaces)
         metadataQuery =   """
                         SELECT *
                         INTO OUTFILE '%s'
