@@ -515,6 +515,8 @@ class DataServer(threading.Thread):
                         for courseName in courseList:
                             args['courseId'] = courseName
                             self.exportMetadata(args)
+                    else:
+                        self.exportMetadata(args)
 
                 if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
                     self.setTimer()
