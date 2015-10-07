@@ -1534,7 +1534,7 @@ class DataServer(threading.Thread):
                         INTO OUTFILE '%s'
                         FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                         FROM EdxPrivate.FinalGrade
-                        WHERE course_display_name = '%s'
+                        WHERE course_id = '%s'
                         """ % (gradesOutfile, courseId)
         try:
             self.mysqlDb.query(gradesQuery).next()
@@ -1561,7 +1561,7 @@ class DataServer(threading.Thread):
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
         except IOError as e:
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
-            
+
         return gradesOutfile
 
 
