@@ -644,7 +644,7 @@ class DataServer(threading.Thread):
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Course surveys'))
 
                 if (action == 'grades'):
-                    existingFiles = glob.glob(os.path.join(self.fulTargetDir,'*FinalGrade.csv'))
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*FinalGrade.csv'))
                     if len(existingFiles) > 0:
                         if mayDelete:
                             for fileName in existingFiles:
