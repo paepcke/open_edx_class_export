@@ -509,6 +509,13 @@ class DataServer(threading.Thread):
                     else:
                         self.exportGrades(args)
 
+                if args.get('metadata', False):
+                    self.setTimer()
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportMetadata(args)
+
                 if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
                     self.setTimer()
                     if courseList is not None:
@@ -651,6 +658,15 @@ class DataServer(threading.Thread):
                                 os.remove(fileName)
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Learner grades'))
+
+                if (action == 'metadata'):
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*CourseInfo.csv'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Course metadata'))
 
                 if (action == 'abtest'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*ABExperiment.csv'))
@@ -1565,6 +1581,55 @@ class DataServer(threading.Thread):
         return gradesOutfile
 
 
+    def exportMetadata(self, detailDict):
+        '''
+        Exports course metadata as a single CSV.
+
+        :param detailDict: dict of arguments; expected: 'courseId', 'wipeExisting'
+        :type detailDict: {String : String, String : Boolean}
+        '''
+        # Set course ID and format for filenames
+        courseId = detailDict.get('courseId', '')
+        courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+
+        # Export grades data
+        metadataOutfile = os.path.join(self.fullTargetDir, '%s_FinalGrade.csv' % courseNameNoSpaces)
+        metadataQuery =   """
+                        SELECT *
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM Edx.CourseInfo
+                        WHERE course_display_name = '%s'
+                        """ % (metadataOutfile, courseId)
+        try:
+            self.mysqlDb.query(metadataQuery).next()
+        except StopIteration:
+            pass
+
+        # Save information for printTableInfo() method to find:
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportMetadata'] = infoXchangeFile
+
+        infoXchangeFile.write(metadataOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(metadataOutfile)) + '\n')
+
+        # Add sample lines:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(metadataOutfile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        except IOError as e:
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+
+        return metadataOutfile
+
+
     def exportLearnerPerf(self, detailDict):
         #***** To be completed:
         if self.mysqlDb is None:
@@ -2154,6 +2219,8 @@ class DataServer(threading.Thread):
                         tblName = 'Survey'
                     elif tableFileName.find('FinalGrade') > -1:
                         tblName = 'FinalGrade'
+                    elif tableFileName.find('CourseInfo') > -1:
+                        tblName = 'CourseInfo'
                     else:
                         tblName = 'unknown table name'
 
