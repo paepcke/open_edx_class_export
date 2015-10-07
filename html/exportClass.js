@@ -183,6 +183,7 @@ function ExportClass() {
 	    document.getElementById('learnerPII').checked ||
 	    document.getElementById('demographics').checked ||
       document.getElementById('qualtrics').checked ||
+      document.getElementById('grades').checked ||
       document.getElementById('abtest').checked
 	   ) {
 	    try {
@@ -435,6 +436,7 @@ function ExportClass() {
 	var quarterRepDemographics = quarterRep && document.getElementById("quarterRepDemographics").checked;
 	var demographics = document.getElementById("demographics").checked;
   var qualtrics = document.getElementById("qualtrics").checked;
+  var grades = document.getElementById("grades").checked;
   var abtest = document.getElementById("abtest").checked;
 
 	if (!basicData &&
@@ -448,6 +450,7 @@ function ExportClass() {
 	    !quarterRep &&
 	    !demographics &&
       !qualtrics &&
+      !grades &&
       !abtest
 	   ) {
 	    alert("You need to select one or more of the desired-data checkboxes.");
@@ -536,6 +539,7 @@ function ExportClass() {
 		      "quarterRepDemographics": quarterRepDemographics,
 		      "demographics": demographics,
           "qualtrics": qualtrics,
+          "grades": grades,
           "abtest": abtest
 		     };
 	var req = buildRequest("getData", argObj);

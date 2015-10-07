@@ -500,6 +500,15 @@ class DataServer(threading.Thread):
                     else:
                         self.exportQualtrics(args)
 
+                if args.get('grades', False):
+                    self.setTimer()
+                    if courseList is not None:
+                        for courseName in courseList:
+                            args['courseId'] = courseName
+                            self.exportGrades(args)
+                    else:
+                        self.exportGrades(args)
+
                 if args.get('edxForumRelatable', False) or args.get('edxForumIsolated', False):
                     self.setTimer()
                     if courseList is not None:
@@ -633,6 +642,15 @@ class DataServer(threading.Thread):
                                 os.remove(fileName)
                         else:
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Course surveys'))
+
+                if (action == 'grades'):
+                    existingFiles = glob.glob(os.path.join(self.fulTargetDir,'*FinalGrade.csv'))
+                    if len(existingFiles) > 0:
+                        if mayDelete:
+                            for fileName in existingFiles:
+                                os.remove(fileName)
+                        else:
+                            raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Learner grades'))
 
                 if (action == 'abtest'):
                     existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*ABExperiment.csv'))
@@ -1356,7 +1374,7 @@ class DataServer(threading.Thread):
         courseId = detailDict.get('courseId', '')
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
 
-        # Export survey data
+        # Export AB test data
         abtestOutfile = os.path.join(self.fullTargetDir, '%s_ABExperiment.csv' % courseNameNoSpaces)
         abtestQuery =   """
                         SELECT *
@@ -1441,7 +1459,7 @@ class DataServer(threading.Thread):
         # Export response metadata
         responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey_response_metadata.csv' % courseNameNoSpaces)
         responsemetaQuery = """
-                            SELECT ResponseID, anon_screen_name, Country, StartDate, EndDate 
+                            SELECT ResponseID, anon_screen_name, Country, StartDate, EndDate
                             INTO OUTFILE '%s'
                             FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.response_metadata
@@ -1496,6 +1514,55 @@ class DataServer(threading.Thread):
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
         return (surveyOutfile, responseOutfile, responsemetaOutfile)
+
+
+    def exportGrades(self, detailDict):
+        '''
+        Exports course grades as a single CSV.
+
+        :param detailDict: dict of arguments; expected: 'courseId', 'wipeExisting'
+        :type detailDict: {String : String, String : Boolean}
+        '''
+        # Set course ID and format for filenames
+        courseId = detailDict.get('courseId', '')
+        courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
+
+        # Export grades data
+        gradesOutfile = os.path.join(self.fullTargetDir, '%s_FinalGrade.csv' % courseNameNoSpaces)
+        gradesQuery =   """
+                        SELECT *
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM EdxPrivate.FinalGrade
+                        WHERE course_display_name = '%s'
+                        """ % (gradesOutfile, courseId)
+        try:
+            self.mysqlDb.query(gradesQuery).next()
+        except StopIteration:
+            pass
+
+        # Save information for printTableInfo() method to find:
+        infoXchangeFile = tempfile.NamedTemporaryFile()
+        self.infoTmpFiles['exportGrades'] = infoXchangeFile
+
+        infoXchangeFile.write(gradesOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(gradesOutfile)) + '\n')
+
+        # Add sample lines:
+        infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        try:
+            with open(gradesOutfile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+        except IOError as e:
+            self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
+            
+        return gradesOutfile
 
 
     def exportLearnerPerf(self, detailDict):
