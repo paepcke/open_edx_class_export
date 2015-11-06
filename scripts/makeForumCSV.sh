@@ -12,10 +12,10 @@
 #   o -t/--testing        : If provided, uses db unittest.contents, instead of EdxForum.contents
 #  courseNamePattern      : MySQL style pattern name of course whose Forum entries to export.
 #
-# The directory path and zip file name are determined as per 
+# The directory path and zip file name are determined as per
 # section 'Determine Directory Path for CSV Tables'.
 #
-# The infoDest, if provided will hold in its first line 
+# The infoDest, if provided will hold in its first line
 # the absolute path of the .zip file. The second line will
 # hold the number of bytes in the (uncompressed) Forum file.
 # Five following lines contain the first five lines of the forum file.
@@ -27,9 +27,9 @@ USAGE="Usage: "`basename $0`" [-u user][-p password][-w mysqlpwd][-c cryptoPwd][
 # Get MySQL version on this machine
 MYSQL_VERSION=$(mysql --version | sed -ne 's/.*Distrib \([0-9][.][0-9]\).*/\1/p')
 if [[ $MYSQL_VERSION > 5.5 ]]
-then 
+then
     MYSQL_VERSION='5.6+'
-else 
+else
     MYSQL_VERSION='5.5'
 fi
 
@@ -58,16 +58,16 @@ TESTING=false
 # Execute getopt
 ARGS=`getopt -o "u:pw:c:xd:i:rt" -l "user:,password,mysqlpwd:,cryptoPwd:,xpunge,destDir:,infoDest:,relatable,testing" \
       -n "getopt.sh" -- "$@"`
- 
+
 #Bad arguments
 if [ $? -ne 0 ];
 then
   exit 1
 fi
- 
+
 # A little magic
 eval set -- "$ARGS"
- 
+
 # Now go through all the options
 while true;
 do
@@ -84,11 +84,11 @@ do
 	echo $USAGE
 	exit 1
       fi;;
- 
+
     -p|--password)
       needPasswd=true
       shift;;
- 
+
     -w|--mysqlpwd)
       shift
       # Grab the option value:
@@ -171,7 +171,7 @@ COURSE_SUBSTR=$1
 # Strategy: if the COURSE_SUBSTR is a full, clean
 #   course triplet part1/part2/part3, we use part1_part2_part3.
 #   If we cannot create this part2_part3 name, b/c
-#   $COURSE_SUBSTR is of a non-standard form, then 
+#   $COURSE_SUBSTR is of a non-standard form, then
 #   we use all of $COURSE_SUBSTR.
 #   Finally, in either case, All MySQL regex '%' chars
 #   are replaced by '_any'.
@@ -181,9 +181,9 @@ COURSE_SUBSTR=$1
 
 # The following SED expression has three repetitions
 # of \([^/]*\)\/, which means all letters that are
-# not forward slashes (the '[^/]*), followed by a 
+# not forward slashes (the '[^/]*), followed by a
 # forward slash (the '\/'). The forward slash must
-# be escaped b/c it's special in SED. 
+# be escaped b/c it's special in SED.
 # The escaped parentheses pairs form a group,
 # which we then recall later, in the substitution
 # part with \2 and \3 (the '/\2_\3/' part):
@@ -220,7 +220,7 @@ DIR_LEAF=`echo $DIR_LEAF | sed -E s/^[_]*\|[/]//g`
 #echo "DEST_LEAF after third xform: '$DIR_LEAF'<br>"
 #******************
 
-# If destination directory was not explicitly 
+# If destination directory was not explicitly
 # provided, add a leaf directory to the
 # standard directory to hold the result file:
 if ! $destDirGiven
@@ -304,10 +304,10 @@ fi
 #
 # Where the second row contains the table's columns
 # after the colon. We use the sed command to get rid of the
-# '**** 1. row ****' entirely. Then we use sed again to 
-# get rid of the 'GROUP_CONCAT...: 'part. We write the 
+# '**** 1. row ****' entirely. Then we use sed again to
+# get rid of the 'GROUP_CONCAT...: 'part. We write the
 # remaining info, the actual col names, to a tmp file. We
-# do this for each of the three tables. 
+# do this for each of the three tables.
 #
 # Create all tmp files:
 
@@ -342,16 +342,16 @@ fi
 
 # Start the Forum dump file by adding the column name header row:
 FORUM_HEADER=`mysql $MYSQL_AUTH --batch -e "
-              SELECT GROUP_CONCAT(CONCAT('\"',information_schema.COLUMNS.COLUMN_NAME,'\"')) 
-	      FROM information_schema.COLUMNS 
-	      WHERE TABLE_SCHEMA = '$FORUM_DB' 
-	         AND TABLE_NAME = 'contents' 
+              SELECT GROUP_CONCAT(CONCAT('\"',information_schema.COLUMNS.COLUMN_NAME,'\"'))
+	      FROM information_schema.COLUMNS
+	      WHERE TABLE_SCHEMA = '$FORUM_DB'
+	         AND TABLE_NAME = 'contents'
 	      ORDER BY ORDINAL_POSITION\G"`
 # In the following the first 'sed' call removes the
 # line: "********** 1. row *********" (see above).
 # The second 'sed' call removes everything of the second
 # line up to the ': '. The result finally is placed
-# in a tempfile. 
+# in a tempfile.
 
 echo "${FORUM_HEADER}" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $FORUM_HEADER_FILE
 
@@ -399,7 +399,7 @@ fi
 
 # ----------------------------- Create MySQL Command -------------
 
-# Create the MySQL export command that 
+# Create the MySQL export command that
 # will write the table values. Two variants:
 # with or without anon_screen_name filled in:
 
@@ -412,16 +412,16 @@ fi
 # call converts the uid scheme used in the forum
 # table to an equivalent anon_screen_name value.
 #
-# The second sed expression causes MySQL to output the constant 0 
+# The second sed expression causes MySQL to output the constant 0
 # instead of the stored forum_uid. In the resulting table
 # only the anon_screen_name is then usable as an identifier.
 #
-# If the forum output is to remain non-relatable to the rest 
+# If the forum output is to remain non-relatable to the rest
 # of the data, then don't use sed, but retain the existing
 # column names as the col names to output.
 
 if $RELATABLE
-then 
+then
     if $TESTING
     then
 	COLS_TO_PULL=`echo $COL_NAMES | sed s/anon_screen_name/unittest.idForum2Anon\(forum_uid\)/ \
@@ -434,11 +434,12 @@ else
     COLS_TO_PULL=`echo $COL_NAMES | sed s/forum_uid/EdxPrivate.idInt2Forum\(forum_uid\)/`
 fi
 
+# Enclosing delimiter should be '"', no slash needed
 EXPORT_FORUM_CMD=" \
  USE "$FORUM_DB"; \
  SELECT "$COLS_TO_PULL" \
  INTO OUTFILE '"$FORUM_VALUES_FNAME"' \
-  FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \
+  FIELDS TERMINATED BY ',' \
   LINES TERMINATED BY '\r\n' \
  FROM contents \
  WHERE course_display_name LIKE '"$COURSE_SUBSTR"';"
@@ -459,9 +460,9 @@ EXPORT_FORUM_CMD=" \
 
 echo "Creating Forum extract ...<br>"
 
-# Make pipe fail with error code saved: If pipefail is enabled, 
-# the pipeline's return status is the value of the last (rightmost) 
-# command to exit with a non-zero status, or zero if all commands 
+# Make pipe fail with error code saved: If pipefail is enabled,
+# the pipeline's return status is the value of the last (rightmost)
+# command to exit with a non-zero status, or zero if all commands
 # exit successfully:
 set -o pipefail
 # Exit on error:
@@ -469,7 +470,7 @@ set -e
 echo "$EXPORT_FORUM_CMD" | mysql $MYSQL_AUTH
 
 # Concatenate the col name header and the table,
-# 
+#
 #******cat $FORUM_HEADER_FILE $FORUM_VALUES_FNAME > $FORUM_FNAME
 cat $FORUM_HEADER_FILE  > $FORUM_FNAME
 echo -e "\r" >> $FORUM_FNAME
@@ -485,13 +486,13 @@ echo "Done exporting Forum for class $COURSE_SUBSTR to CSV<br>"
 
 # ---------------- Write File Size and Five Sample Lines to $INFO_DEST -------------
 
-# Write path to the encrypted zip file to 
+# Write path to the encrypted zip file to
 # path the caller provided:
 if [ ! -z $INFO_DEST ]
 then
 	echo $ZIP_FNAME > $INFO_DEST
 	echo "Appending number of lines to $INFO_DEST<br>"
-	wc -l $FORUM_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+	wc -l $FORUM_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST
 
 	# Separator between the above table info and the
 	# start of the sample lines. That division could
@@ -513,7 +514,7 @@ then
 	#    head -5: keep only the first five lines:
 	#
 	# The temp storage in $PREVIEW_TMP_FILE, with subsequent extraction
-	# of the first five lines from there is needed because having 
+	# of the first five lines from there is needed because having
 	# head -n5 >> $INFO_DEST the last element of the pipes failed. The
 	# script quietly failed there. Without the >> $INFO_DEST it was OK.
 	cat $FORUM_FNAME | sed 's/"\r/"|/g' | tr -d '[:cntrl:]' | sed 's/|/<br>\n/g' > $PREVIEW_TMP_FILE
