@@ -12,7 +12,7 @@
 #
 # The destination directory in which the tables directory will be placed
 # may be controlled by the -d option.
-# 
+#
 # The default user under which the necessary mysql calls are made is
 # the current user as returned by 'whoami'. Else the user provided
 # in the commandline -u option is the effective user.
@@ -22,8 +22,8 @@
 # If the -w option is given, it provides the MySQL pwd to use.
 #
 # If neither -p nor -w is provided, the script examines the effective user's
-# $HOME/.ssh directory for a file named 'mysql'. If that file exists, 
-# its content is used as a MySQL password, else no password is used 
+# $HOME/.ssh directory for a file named 'mysql'. If that file exists,
+# its content is used as a MySQL password, else no password is used
 # for running MySQL.
 #
 # If running on version MySQL 5.6+ then the scripts tries to access
@@ -31,21 +31,21 @@
 #
 # The -i option, if provided, must be an absolute file path to which
 # the script will write the full path of each table it has produced.
-# This is useful when this script is called from the Web, and the 
+# This is useful when this script is called from the Web, and the
 # caller wishes to check the result tables, e.g. their length.
 #
 # The -x option controls what happens if the target csv files already
 # exist. If the option is present, then existing files will be overwritten,
 # else execution is aborted if any one of the files exists.
 #
-# The infoDest, if provided will hold in its first line 
+# The infoDest, if provided will hold in its first line
 # the absolute path of the .zip file. If PII is requested, then
-# the The second line will hold the number of bytes in the (uncompressed) 
-# Forum file. 
+# the The second line will hold the number of bytes in the (uncompressed)
+# Forum file.
 #
 # Five following lines contain the first five lines of the data file.
 # Those lines can be used by callers to provide a few sample entries
-# to users. 
+# to users.
 #
 # If no PII is requested and infoDest is provided, then
 # that file will contain in the first line the EventXtract's file name,
@@ -66,9 +66,9 @@ USAGE="Usage: "`basename $0`" [-u uid][-p][-w mySqlPwd][-d destDirPath][-x xpung
 # Get MySQL version on this machine
 MYSQL_VERSION=$(mysql --version | sed -ne 's/.*Distrib \([0-9][.][0-9]\).*/\1/p')
 if [[ $MYSQL_VERSION > 5.5 ]]
-then 
+then
     MYSQL_VERSION='5.6+'
-else 
+else
     MYSQL_VERSION='5.5'
 fi
 
@@ -96,16 +96,16 @@ QUARTER=''
 # Execute getopt
 ARGS=`getopt -o "u:pw:q:xd:i:c:n" -l "user:,password,mysqlpwd:,quarter:,xpunge,destDir:infoDest:,cryptoPwd:" \
       -n "getopt.sh" -- "$@"`
- 
+
 #Bad arguments
 if [ $? -ne 0 ];
 then
   exit 1
 fi
- 
+
 # A little magic
 eval set -- "$ARGS"
- 
+
 # Now go through all the options
 while true;
 do
@@ -122,11 +122,11 @@ do
 	echo $USAGE
 	exit 1
       fi;;
- 
+
     -p|--password)
       needPasswd=true
       shift;;
- 
+
     -w|--mysqlpwd)
       shift
       # Grab the option value:
@@ -215,7 +215,7 @@ COURSE_SUBSTR=$1
 # Strategy: if the COURSE_SUBSTR is a full, clean
 #   course triplet part1/part2/part3, we use part1_part2_part3.
 #   If we cannot create this part2_part3 name, b/c
-#   $COURSE_SUBSTR is of a non-standard form, then 
+#   $COURSE_SUBSTR is of a non-standard form, then
 #   we use all of $COURSE_SUBSTR.
 #   Finally, in either case, All MySQL regex '%' chars
 #   are replaced by '_any'.
@@ -225,9 +225,9 @@ COURSE_SUBSTR=$1
 
 # The following SED expression has three repetitions
 # of \([^/]*\)\/, which means all letters that are
-# not forward slashes (the '[^/]*), followed by a 
+# not forward slashes (the '[^/]*), followed by a
 # forward slash (the '\/'). The forward slash must
-# be escaped b/c it's special in SED. 
+# be escaped b/c it's special in SED.
 # The escaped parentheses pairs form a group,
 # which we then recall later, in the substitution
 # part with \2 and \3 (the '/\2_\3/' part):
@@ -264,7 +264,7 @@ DIR_LEAF=`echo $DIR_LEAF | sed -E s/^[_]*\|[/]//g`
 #echo "DEST_LEAF after third xform: '$DIR_LEAF'<br>"
 #******************
 
-# If destination directory was not explicitly 
+# If destination directory was not explicitly
 # provided, add a leaf directory to the
 # standard directory to hold the three .csv
 # files we'll put there as siblings to the
@@ -350,10 +350,10 @@ fi
 #
 # Where the second row contains the table's columns
 # after the colon. We use the sed command to get rid of the
-# '**** 1. row ****' entirely. Then we use sed again to 
-# get rid of the 'GROUP_CONCAT...: 'part. We write the 
+# '**** 1. row ****' entirely. Then we use sed again to
+# get rid of the 'GROUP_CONCAT...: 'part. We write the
 # remaining info, the actual col names, to a tmp file. We
-# do this for each of the three tables. 
+# do this for each of the three tables.
 #
 # Create all tmp files:
 
@@ -391,19 +391,19 @@ fi
 
 
 ACTIVITY_GRADE_HEADER=`mysql $MYSQL_AUTH --batch -e "
-              SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
-	      FROM information_schema.COLUMNS 
-	      WHERE TABLE_SCHEMA = 'Edx' 
-	         AND TABLE_NAME = 'ActivityGrade' 
+              SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\"))
+	      FROM information_schema.COLUMNS
+	      WHERE TABLE_SCHEMA = 'Edx'
+	         AND TABLE_NAME = 'ActivityGrade'
 	      ORDER BY ORDINAL_POSITION\G"`
 # In the following the first 'sed' call removes the
 # line: "********** 1. row *********" (see above).
 # The second 'sed' call removes everything of the second
 # line up to the ': '. The result finally is placed
-# in a tempfile. In case of PII delivery, add the 
+# in a tempfile. In case of PII delivery, add the
 # name and screen_name column header:
 
-if $PII
+if $pii
 then
     echo "$ACTIVITY_GRADE_HEADER"",name,screen_name" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $ActivityGrade_HEADER_FILE
 else
@@ -411,20 +411,20 @@ else
 fi
 
 VIDEO_INTERACTION_HEADER=`mysql $MYSQL_AUTH --batch -e "
-              SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
-	      FROM information_schema.COLUMNS 
-	      WHERE TABLE_SCHEMA = 'Edx' 
-	         AND TABLE_NAME = 'VideoInteraction' 
+              SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\"))
+	      FROM information_schema.COLUMNS
+	      WHERE TABLE_SCHEMA = 'Edx'
+	         AND TABLE_NAME = 'VideoInteraction'
 	      ORDER BY ORDINAL_POSITION\G"`
 # In the following the first 'sed' call removes the
 # line: "********** 1. row *********" (see above).
 # The second 'sed' call removes everything of the second
 # line up to the ': '. The result finally is placed
-# in a tempfile In case of PII delivery, add the 
+# in a tempfile In case of PII delivery, add the
 # name and screen_name column header:
 
 
-if $PII
+if $pii
 then
     echo "$VIDEO_INTERACTION_HEADER"",name,screen_name" | sed '/[*]*\s*1\. row\s*[*]*$/d' | sed 's/[^:]*: //'  | cat > $VideoInteraction_HEADER_FILE
 else
@@ -432,16 +432,16 @@ else
 fi
 
 EVENT_XTRACT_HEADER=`mysql $MYSQL_AUTH --batch -e "
-              SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\")) 
-	      FROM information_schema.COLUMNS 
-	      WHERE TABLE_SCHEMA = 'Edx' 
-	         AND TABLE_NAME = 'EventXtract' 
+              SELECT GROUP_CONCAT(CONCAT(\"'\",information_schema.COLUMNS.COLUMN_NAME,\"'\"))
+	      FROM information_schema.COLUMNS
+	      WHERE TABLE_SCHEMA = 'Edx'
+	         AND TABLE_NAME = 'EventXtract'
 	      ORDER BY ORDINAL_POSITION\G"`
 
 # In the following the first 'sed' call removes the
 # line: "********** 1. row *********" (see above).
 # The second 'sed' call removes everything of the second
-# line up to the ': '. 
+# line up to the ': '.
 # The result finally is placed
 # in a tempfile. In case of PII we also add
 # student name and screen_name to the header:
@@ -558,13 +558,13 @@ fi
 
 # ----------------------------- Create MySQL Commands -------------
 
-# Create the three MySQL export commands that 
+# Create the three MySQL export commands that
 # will write the table values. Two variants for each table:
 # with or without personally identifiable information:
 
 # Get the course quarter in the form summer2014.
 # If the course substring contains wildcards, or
-# if the course does not exist, then result will 
+# if the course does not exist, then result will
 # be an empty string:
 # The following works, but is commented, b/c self-paced
 # courses return somewhat random values. So script was
@@ -576,7 +576,7 @@ then
   EXPORT_EventXtract_CMD=" \
    DROP VIEW IF EXISTS PIITable;
    USE Edx;
-   CREATE VIEW PIITable AS 
+   CREATE VIEW PIITable AS
      SELECT anon_screen_name, name, screen_name, email, goals
      FROM EdxPrivate.Account;
    SELECT DISTINCT EventXtract.*, PIITable.name, PIITable.screen_name, PIITable.email, PIITable.goals \
@@ -628,7 +628,7 @@ then
   EXPORT_ActivityGrade_CMD=" \
    USE Edx;
    DROP VIEW IF EXISTS PIITable;
-   CREATE VIEW PIITable AS 
+   CREATE VIEW PIITable AS
    SELECT anon_screen_name, name, screen_name, email, goals
     FROM EdxPrivate.Account;
    SELECT DISTINCT Edx.ActivityGrade.*, PIITable.name, PIITable.screen_name, PIITable.email, PIITable.goals \
@@ -657,7 +657,7 @@ then
   EXPORT_VideoInteraction_CMD=" \
    USE Edx;
    DROP VIEW IF EXISTS PIITable;
-   CREATE VIEW PIITable AS 
+   CREATE VIEW PIITable AS
    SELECT anon_screen_name, name, screen_name, email, goals
    FROM EdxPrivate.Account;
    SELECT DISTINCT Edx.VideoInteraction.*, PIITable.name, PIITable.screen_name, PIITable.email, PIITable.goals \
@@ -727,11 +727,11 @@ echo "Done exporting class $COURSE_SUBSTR to CSV<br>"
 if [ ! -z $INFO_DEST ]
 then
     echo ${EVENT_EXTRACT_FNAME}    >  $INFO_DEST
-    wc -l $EVENT_EXTRACT_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+    wc -l $EVENT_EXTRACT_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST
     echo ${ACTIVITY_GRADE_FNAME}   >> $INFO_DEST
-    wc -l $ACTIVITY_GRADE_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+    wc -l $ACTIVITY_GRADE_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST
     echo ${VIDEO_FNAME}            >> $INFO_DEST
-    wc -l $VIDEO_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST 
+    wc -l $VIDEO_FNAME | sed -n "s/\([0-9]*\).*/\1/p" >> $INFO_DEST
     echo "Adding sample lines for three basic tables..."
     # Separate all sample lines from the above table names/sizes,
     # and from each other, using a constant token:
