@@ -274,31 +274,51 @@ trap "rm -f $EMAIL_TMP_FILE $PREVIEW_TMP_FILE" EXIT
 # refuse to write to it, unless:
 unlink $EMAIL_TMP_FILE
 
+# Alex edit 25 Janurary 2016: switch over to exporting all emails with country code and last registration
+# EXPORT_EMAIL_CMD=" \
+#  USE "$EMAIL_DB"; \
+#  CREATE TEMPORARY TABLE IF NOT EXISTS CANExclude AS \
+#   SELECT DISTINCT email \
+#   FROM ( \
+# 	 SELECT user_id, Edx.UserCountry.three_letter_country, max(edxprod.student_courseenrollment.created) as last_registration \
+#    FROM edxprod.student_courseenrollment \
+#    INNER JOIN Edx.UserCountry ON idInt2Anon(edxprod.student_courseenrollment.user_id) = Edx.UserCountry.anon_screen_name \
+#    GROUP BY user_id \
+#    ) as regdata \
+#   INNER JOIN edxprod.auth_user ON regdata.user_id = edxprod.auth_user.id \
+#   WHERE last_registration < DATE_SUB(CURDATE(), INTERVAL 20 MONTH) \
+#   AND three_letter_country = 'CAN'; \
+#  SELECT DISTINCT email \
+#    INTO OUTFILE '"$EMAIL_TMP_FILE"' \
+#    FIELDS TERMINATED BY ',' \
+#    LINES TERMINATED BY '\r\n' \
+#    FROM edxprod.student_courseenrollment \
+#           LEFT JOIN edxprod.auth_user ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
+#         Edx.CourseInfo \
+#   WHERE date_joined > '"$DATE_JOINED"' \
+#     AND Edx.CourseInfo.course_display_name = course_id \
+#     AND not Edx.CourseInfo.is_internal \
+#     AND INSTR(email, 'noreply') = 0 \
+#     AND email not in (select * from CANExclude);"
 EXPORT_EMAIL_CMD=" \
- USE "$EMAIL_DB"; \
- CREATE TEMPORARY TABLE IF NOT EXISTS CANExclude AS \
-  SELECT DISTINCT email \
-  FROM ( \
-	 SELECT user_id, Edx.UserCountry.three_letter_country, max(edxprod.student_courseenrollment.created) as last_registration \
-   FROM edxprod.student_courseenrollment \
-   INNER JOIN Edx.UserCountry ON idInt2Anon(edxprod.student_courseenrollment.user_id) = Edx.UserCountry.anon_screen_name \
-   GROUP BY user_id \
-   ) as regdata \
-  INNER JOIN edxprod.auth_user ON regdata.user_id = edxprod.auth_user.id \
-  WHERE last_registration < DATE_SUB(CURDATE(), INTERVAL 20 MONTH) \
-  AND three_letter_country = 'CAN'; \
- SELECT DISTINCT email \
-   INTO OUTFILE '"$EMAIL_TMP_FILE"' \
-   FIELDS TERMINATED BY ',' \
-   LINES TERMINATED BY '\r\n' \
-   FROM edxprod.student_courseenrollment \
-          LEFT JOIN edxprod.auth_user ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
-        Edx.CourseInfo \
-  WHERE date_joined > '"$DATE_JOINED"' \
-    AND Edx.CourseInfo.course_display_name = course_id \
-    AND not Edx.CourseInfo.is_internal \
-    AND INSTR(email, 'noreply') = 0 \
-    AND email not in (select * from CANExclude);"
+  SELECT email, last_enrollment, three_letter_country \
+  INTO OUTFILE '"$EMAIL_TMP_FILE"' \
+    FIELDS TERMINATED BY ',' \
+    LINES TERMINATED BY '\r\n' \
+  FROM Edx.UserCountry uc \
+  RIGHT JOIN ( \
+    SELECT email, user_id, max(created) as last_enrollment \
+    FROM edxprod.student_courseenrollment \
+    LEFT JOIN \
+		  edxprod.auth_user ON edxprod.student_courseenrollment.user_id = edxprod.auth_user.id, \
+		  Edx.CourseInfo \
+	  WHERE date_joined > '"$DATE_JOINED"' \
+	    AND Edx.CourseInfo.course_display_name = course_id \
+	    AND not Edx.CourseInfo.is_internal \
+	    AND not INSTR(email, 'noreply') \
+	  GROUP BY email \
+  ) em \
+  ON uc.anon_screen_name = idInt2Anon(em.user_id);"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
