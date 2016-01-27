@@ -318,7 +318,7 @@ EXPORT_EMAIL_CMD=" \
 	    AND not INSTR(email, 'noreply') \
 	  GROUP BY email \
   ) em \
-  ON uc.anon_screen_name = idInt2Anon(em.user_id);"
+  ON uc.anon_screen_name = edxprod.idInt2Anon(em.user_id);"
 
 # ----------------------------- Execute the Main MySQL Command -------------
 
