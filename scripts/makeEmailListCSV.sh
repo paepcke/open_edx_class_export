@@ -301,6 +301,8 @@ unlink $EMAIL_TMP_FILE
 #     AND INSTR(email, 'noreply') = 0 \
 #     AND email not in (select * from CANExclude);"
 EXPORT_EMAIL_CMD=" \
+  SELECT 'email', 'last_enrollment', 'country'
+  UNION
   SELECT email, last_enrollment, three_letter_country \
   INTO OUTFILE '"$EMAIL_TMP_FILE"' \
     FIELDS TERMINATED BY ',' \
