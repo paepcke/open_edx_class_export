@@ -435,6 +435,7 @@ else
 fi
 
 COLS=`echo $COLS_TO_PULL | tr '\n' '\\n'`
+echo $COLS
 
 # Enclosing delimiter should be '"', no slash needed
 EXPORT_FORUM_CMD=" \
