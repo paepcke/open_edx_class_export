@@ -434,7 +434,7 @@ else
     COLS_TO_PULL=`echo $COL_NAMES | sed s/forum_uid/EdxPrivate.idInt2Forum\(forum_uid\)/`
 fi
 
-COLS=`echo $COLS_TO_PULL | tr '\n' '\\n'`
+COLS=`echo $COLS_TO_PULL | tr 'body' 'replace(body, '\\n', '\\\\n')'`
 echo $COLS
 
 # Enclosing delimiter should be '"', no slash needed
