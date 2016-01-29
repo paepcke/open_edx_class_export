@@ -435,7 +435,7 @@ else
 fi
 
 echo "$COLS_TO_PULL"
-COLS=`echo $COLS_TO_PULL | sed s/body/replace\(body,'
+COLS=`echo $COLS_TO_PULL | sed s/body/replace\(body,'\
 ',''\)/g`
 echo "$COLS"
 
