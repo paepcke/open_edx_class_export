@@ -435,7 +435,8 @@ else
 fi
 
 echo "$COLS_TO_PULL"
-COLS=`echo $COLS_TO_PULL | sed s/body/replace\(body,'\n',''\)/g`
+COLS=`echo $COLS_TO_PULL | sed s/body/replace\(body,'
+',''\)/g`
 echo "$COLS"
 
 # Enclosing delimiter should be '"', no slash needed
