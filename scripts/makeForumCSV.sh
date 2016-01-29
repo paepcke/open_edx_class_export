@@ -435,7 +435,7 @@ else
 fi
 
 COLS=`echo $COLS_TO_PULL | sed s=body=replace\(body,'\n','\\\\n'\)=g`
-echo $COLS
+echo -e $COLS
 
 # Enclosing delimiter should be '"', no slash needed
 EXPORT_FORUM_CMD=" \
@@ -470,7 +470,7 @@ echo "Creating Forum extract ...<br>"
 set -o pipefail
 # Exit on error:
 set -e
-echo "$EXPORT_FORUM_CMD" | mysql $MYSQL_AUTH
+echo -e "$EXPORT_FORUM_CMD" | mysql $MYSQL_AUTH
 
 # Concatenate the col name header and the table,
 #
