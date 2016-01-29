@@ -434,8 +434,9 @@ else
     COLS_TO_PULL=`echo $COL_NAMES | sed s/forum_uid/EdxPrivate.idInt2Forum\(forum_uid\)/`
 fi
 
+echo "$COLS_TO_PULL"
 COLS=`echo $COLS_TO_PULL | sed s=body=replace\(body,'\n','\\\\n'\)=g`
-echo $COLS
+echo "$COLS"
 
 # Enclosing delimiter should be '"', no slash needed
 EXPORT_FORUM_CMD=" \
