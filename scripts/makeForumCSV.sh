@@ -434,15 +434,12 @@ else
     COLS_TO_PULL=`echo $COL_NAMES | sed s/forum_uid/EdxPrivate.idInt2Forum\(forum_uid\)/`
 fi
 
-#COLS=`echo $COLS_TO_PULL | sed s/,body,/,/g`
-
-# Enclosing delimiter should be '"', no slash needed
 EXPORT_FORUM_CMD=" \
  USE "$FORUM_DB"; \
  SELECT "$COLS_TO_PULL" \
  INTO OUTFILE '"$FORUM_VALUES_FNAME"' \
   FIELDS TERMINATED BY ',' \
-  OPTIONALLY ENCLOSED BY '\"' \
+  ENCLOSED BY '\"' \
   LINES TERMINATED BY '\r\n' \
  FROM contents \
  WHERE course_display_name LIKE '"$COURSE_SUBSTR"';"
