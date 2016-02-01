@@ -447,6 +447,7 @@ EXPORT_FORUM_CMD=" \
  FROM contents \
  WHERE course_display_name LIKE '"$COURSE_SUBSTR"';"
 
+echo $EXPORT_FORUM_CMD
 #********************
 # echo "EXPORT_FORUM_CMD: $EXPORT_FORUM_CMD"
 # echo "FORUM_FNAME: $FORUM_FNAME"
