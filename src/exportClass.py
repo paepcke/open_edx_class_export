@@ -1447,16 +1447,29 @@ class DataServer(threading.Thread):
         svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
 
         # Export survey data
-        surveyOutfile = os.path.join(self.fullTargetDir, '%s_survey.csv' % courseNameNoSpaces)
-        surveyQuery =   """
+        questionOutfile = os.path.join(self.fullTargetDir, '%s_question.csv' % courseNameNoSpaces)
+        questionQuery =   """
                         SELECT *
                         INTO OUTFILE '%s'
                         FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
-                        FROM EdxQualtrics.Survey
+                        FROM EdxQualtrics.question
                         WHERE SurveyId IN (%s);
-                        """ % (surveyOutfile, svIDs)
+                        """ % (questionOutfile, svIDs)
         try:
-            self.mysqlDb.query(surveyQuery).next()
+            self.mysqlDb.query(questionQuery).next()
+        except StopIteration:
+            pass
+
+        choiceOutfile = os.path.join(self.fullTargetDir, '%s_choice.csv' % courseNameNoSpaces)
+        choiceQuery = """
+                        SELECT *
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM EdxQualtrics.choice
+                        WHERE SurveyId IN (%s);
+                        """ % (choiceOutfile, svIDs)
+        try:
+            self.mysqlDb.query(choiceQuery).next()
         except StopIteration:
             pass
 
@@ -1492,8 +1505,11 @@ class DataServer(threading.Thread):
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportQualtrics'] = infoXchangeFile
 
-        infoXchangeFile.write(surveyOutfile + '\n')
-        infoXchangeFile.write(str(self.getNumFileLines(surveyOutfile)) + '\n')
+        infoXchangeFile.write(questionOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(questionOutfile)) + '\n')
+
+        infoXchangeFile.write(choiceOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(choiceOutfile)) + '\n')
 
         infoXchangeFile.write(responseOutfile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(responseOutfile)) + '\n')
@@ -1504,7 +1520,15 @@ class DataServer(threading.Thread):
         # Add sample lines:
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
         try:
-            with open(surveyOutfile, 'r') as fd:
+            with open(questionOutfile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+            with open(choiceOutfile, 'r') as fd:
                 head = []
                 for lineNum,line in enumerate(fd):
                     head.append(line)
@@ -1531,7 +1555,7 @@ class DataServer(threading.Thread):
         except IOError as e:
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
-        return (surveyOutfile, responseOutfile, responsemetaOutfile)
+        return (questionOutfile, choiceOutfile, responseOutfile, responsemetaOutfile)
 
 
     def exportGrades(self, detailDict):
