@@ -642,7 +642,8 @@ class DataServer(threading.Thread):
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Demographics'))
 
                 if (action == 'qualtrics'):
-                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*survey.csv')) +\
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*question.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*choice.csv')) +\
                                     glob.glob(os.path.join(self.fullTargetDir,'*responses.csv')) +\
                                     glob.glob(os.path.join(self.fullTargetDir,'*metadata.csv'))
                     if len(existingFiles) > 0:
