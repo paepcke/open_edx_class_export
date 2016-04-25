@@ -2241,8 +2241,10 @@ class DataServer(threading.Thread):
                         tblName = 'ResponseMetadata'
                     elif tableFileName.find('response') > -1:
                         tblName = 'Response'
-                    elif tableFileName.find('survey') > -1:
-                        tblName = 'Survey'
+                    elif tableFileName.find('question') > -1:
+                        tblName = 'Question'
+                    elif tableFileName.find('choice') > -1:
+                        tblName = 'Choice'
                     elif tableFileName.find('FinalGrade') > -1:
                         tblName = 'FinalGrade'
                     elif tableFileName.find('CourseInfo') > -1:
