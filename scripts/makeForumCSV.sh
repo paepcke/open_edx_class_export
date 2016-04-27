@@ -431,7 +431,8 @@ then
 	    | sed s/[^\(]forum_uid/,'null'/`
     fi
 else
-    COLS_TO_PULL=`echo $COL_NAMES | sed s/forum_uid/EdxPrivate.idInt2Forum\(forum_uid\)/`
+    #COLS_TO_PULL=`echo $COL_NAMES | sed s/forum_uid/EdxPrivate.idInt2Forum\(forum_uid\)/`
+    COLS_TO_PULL=`echo $COL_NAMES`
 fi
 
 EXPORT_FORUM_CMD=" \
