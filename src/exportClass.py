@@ -1491,7 +1491,7 @@ class DataServer(threading.Thread):
         # Export response metadata
         responsemetaOutfile = os.path.join(self.fullTargetDir, '%s_survey_response_metadata.csv' % courseNameNoSpaces)
         responsemetaQuery = """
-                            SELECT ResponseID, anon_screen_name, Country, StartDate, EndDate
+                            SELECT SurveyID, ResponseID, anon_screen_name, Country, StartDate, EndDate
                             INTO OUTFILE '%s'
                             FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
                             FROM EdxQualtrics.response_metadata
