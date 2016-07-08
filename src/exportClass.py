@@ -663,7 +663,9 @@ class DataServer(threading.Thread):
                             raise(ExistingOutFile('File(s) for action %s already exist in %s' % (action, self.fullTargetDir), 'Learner grades'))
 
                 if (action == 'metadata'):
-                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*CourseInfo.csv'))
+                    existingFiles = glob.glob(os.path.join(self.fullTargetDir,'*CourseInfo.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*EdxProblem.csv')) +\
+                                    glob.glob(os.path.join(self.fullTargetDir,'*EdxVideo.csv'))
                     if len(existingFiles) > 0:
                         if mayDelete:
                             for fileName in existingFiles:
@@ -1619,7 +1621,7 @@ class DataServer(threading.Thread):
         courseId = detailDict.get('courseId', '')
         courseNameNoSpaces = string.replace(string.replace(courseId,' ',''), '/', '_')
 
-        # Export grades data
+        # Export course info data
         metadataOutfile = os.path.join(self.fullTargetDir, '%s_CourseInfo.csv' % courseNameNoSpaces)
         metadataQuery =   """
                         SELECT *
@@ -1633,12 +1635,46 @@ class DataServer(threading.Thread):
         except StopIteration:
             pass
 
+        # Export problem data
+        problemsOutfile = os.path.join(self.fullTargetDir, '%s_EdxProblem.csv' % courseNameNoSpaces)
+        problemsQuery = """
+                        SELECT *
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM Edx.EdxProblem
+                        WHERE course_display_name = '%s'
+                        """ % (problemsOutfile, courseId)
+        try:
+            self.mysqlDb.query(problemsQuery).next()
+        except StopIteration:
+            pass
+
+        # Export video data
+        videoOutfile = os.path.join(self.fullTargetDir, '%s_EdxVideo.csv' % courseNameNoSpaces)
+        videoQuery = """
+                        SELECT *
+                        INTO OUTFILE '%s'
+                        FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' LINES TERMINATED BY '\n'
+                        FROM Edx.EdxVideo
+                        WHERE course_display_name = '%s'
+                        """ % (videoOutfile, courseId)
+        try:
+            self.mysqlDb.query(videoQuery).next()
+        except StopIteration:
+            pass
+
         # Save information for printTableInfo() method to find:
         infoXchangeFile = tempfile.NamedTemporaryFile()
         self.infoTmpFiles['exportMetadata'] = infoXchangeFile
 
         infoXchangeFile.write(metadataOutfile + '\n')
         infoXchangeFile.write(str(self.getNumFileLines(metadataOutfile)) + '\n')
+
+        infoXchangeFile.write(problemsOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(problemsOutfile)) + '\n')
+
+        infoXchangeFile.write(videoOutfile + '\n')
+        infoXchangeFile.write(str(self.getNumFileLines(videoOutfile)) + '\n')
 
         # Add sample lines:
         infoXchangeFile.write('herrgottzemenschnochamal!\n')
@@ -1651,10 +1687,29 @@ class DataServer(threading.Thread):
                         break
                 infoXchangeFile.write(''.join(head))
             infoXchangeFile.write('herrgottzemenschnochamal!\n')
+
+            with open(problemsOutfile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+
+            with open(videoOutfile, 'r') as fd:
+                head = []
+                for lineNum,line in enumerate(fd):
+                    head.append(line)
+                    if lineNum >= CourseCSVServer.NUM_OF_TABLE_SAMPLE_LINES:
+                        break
+                infoXchangeFile.write(''.join(head))
+            infoXchangeFile.write('herrgottzemenschnochamal!\n')
+
         except IOError as e:
             self.mainThread.logErr('Could not write result sample lines: %s' % `e`)
 
-        return metadataOutfile
+        return (metadataOutfile, problemsOutfile, videoOutfile)
 
 
     def exportLearnerPerf(self, detailDict):
@@ -2250,6 +2305,10 @@ class DataServer(threading.Thread):
                         tblName = 'FinalGrade'
                     elif tableFileName.find('CourseInfo') > -1:
                         tblName = 'CourseInfo'
+                    elif tableFileName.find('EdxProblem') > -1:
+                        tblName = 'EdxProblem'
+                    elif tableFileName.find('EdxVideo') > -1:
+                        tblName = 'EdxVideo'
                     else:
                         tblName = 'unknown table name'
 
