@@ -24,7 +24,6 @@ import re
 import shutil
 import socket
 import string
-from string import Template
 from subprocess import CalledProcessError
 import subprocess
 import sys
@@ -33,7 +32,6 @@ from threading import Timer
 import threading
 import time # @UnusedImport
 import traceback
-import zipfile
 
 from engagement import EngagementComputer
 from pymysql_utils.pymysql_utils import MySQLDB
@@ -49,7 +47,7 @@ sys.path = source_dir
 
 
 import tornado;
-from tornado.ioloop import IOLoop;
+# from tornado.ioloop import IOLoop;
 from tornado.websocket import WebSocketHandler;
 from tornado.httpserver import HTTPServer;
 
@@ -1447,7 +1445,7 @@ class DataServer(threading.Thread):
         # Get list of survey IDs
         idgetter = "SELECT SurveyId FROM EdxQualtrics.survey_meta WHERE course_display_name = '%s' AND responses_actual is not NULL" % courseId
         svGen = list(self.mysqlDb.query(idgetter))
-        svIDs = "'" + "', '".join(svID[0] for svID in svGen) + "'"
+        svIDs = "'" + "', '".join(svID for svID in svGen) + "'"
 
         # Export survey data
         questionOutfile = os.path.join(self.fullTargetDir, '%s_question.csv' % courseNameNoSpaces)
