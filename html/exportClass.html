@@ -117,9 +117,17 @@ server will refuse to overwrite those exports, unless this box is checked.">
 	  Remove any previous exports of same type
 	</label>
 	<br><br>
+
+        <input type="text" id="folderID" size="35">
+        <label class="long" for="folderID" title="Names of folder to export to. Will overwrite.">
+    	  Name of folder to export to. Will overwrite if folder already exists.<br>
+          May only contain letters, numbers, underscores and dashes ([a-Z], [0-9], _, -).
+    	</label>
+        <br><br>
+
 	<input type="checkbox" id="basicData" value="basicData" checked>
 	<label class="long" for="basicData" title="Three tables: user actions, video-only subset of all actions, and assignment solution submissions.">
-	  Prepare basic course info
+	  Basic course info (ActivityGrade, EventXTract, VideoInteraction)
 	</label>
 	<br>
           <div class="formIndentation">
@@ -149,7 +157,7 @@ server will refuse to overwrite those exports, unless this box is checked.">
 	  </div>
 	<input type="checkbox" id="engagementData" value="engagementData">
 	<label class="long" for="engagementData" title="Computes contiguous time on task, session lengths, and week-by-week engagement numbers for a single course.">
-	  Prepare time on task data
+	  Time on task
 	</label>
 	<input type="checkbox" id="engageVideoOnly"
 	       name="engageVideoOnly" value="engageVideoOnly">
@@ -158,7 +166,7 @@ server will refuse to overwrite those exports, unless this box is checked.">
 
 	<input type="checkbox" id="demographics" value="demographics">
 	<label class="long" for="demographics" title="Basic, self-reported demographics across one course. Does not include personally identifiable information">
-	  Demographics for all learners in one course
+	  Demographics
 	</label>
 	<br>
 
@@ -171,8 +179,8 @@ server will refuse to overwrite those exports, unless this box is checked.">
 	-->
 
   <input type="checkbox" id="abtest" value="abtest">
-  <label for="abtest" title="A/B test information">
-    A/B test information
+  <label for="abtest" title="A/B test results">
+    A/B test results
   </label>
   <br>
 
@@ -189,8 +197,8 @@ server will refuse to overwrite those exports, unless this box is checked.">
   <br>
 
   <input type="checkbox" id="metadata" value="metadata">
-  <label for="metadata" title="Course metadata">
-    Course metadata
+  <label for="metadata" title="Course metadata, problems, video">
+    Course metadata, problems, video
   </label>
   <br>
 
