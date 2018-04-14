@@ -735,12 +735,14 @@ then
     echo "Adding sample lines for three basic tables..."
     # Separate all sample lines from the above table names/sizes,
     # and from each other, using a constant token:
+
     echo 'herrgottzemenschnochamal!' >> $INFO_DEST
     head -5 ${EVENT_EXTRACT_FNAME} >> $INFO_DEST
     echo 'herrgottzemenschnochamal!' >> $INFO_DEST
     head -5 ${ACTIVITY_GRADE_FNAME} >> $INFO_DEST
     echo 'herrgottzemenschnochamal!' >> $INFO_DEST
     head -5 ${VIDEO_FNAME} >> $INFO_DEST
+
 fi
 
 if $pii
@@ -750,7 +752,7 @@ then
     # the zip, not all the directories on their
     # path from root to leaf:
     zip --junk-paths --password $ENCRYPT_PWD $ZIP_FNAME $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
-#**********    rm $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
+    rm $EVENT_EXTRACT_FNAME $ACTIVITY_GRADE_FNAME $VIDEO_FNAME
     exit 0
 fi
 
