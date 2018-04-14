@@ -282,10 +282,14 @@ class CourseCSVServer(WebSocketHandler):
 
         '''
         homeDir = os.path.expanduser("~")
-        sslDir = '%s/.ssl/' % homeDir
+        sslDir = '%s/.ssl' % homeDir
         try:
             certFileName = next(fileName for fileName in os.listdir(sslDir)
-	                               if fileName.endswith('.cer') or fileName.endswith('.crt'))
+            if (fileName.endswith('.cer') or
+               fileName.endswith('.crt')) and
+               fileName.find('bundle') == -1 and
+               fileName.find('interm') == -1
+               )
         except StopIteration:
             raise(ValueError("Could not find ssl certificate file in %s" % sslDir))
 
@@ -2544,6 +2548,10 @@ class DataServer(threading.Thread):
 
 
 if __name__ == '__main__':
+
+    #******************
+    print("Export file: %s" % __file__)
+    #******************
 
     application = tornado.web.Application([(r"/exportClass", CourseCSVServer),])
     #application.listen(8080)
