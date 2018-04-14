@@ -9,8 +9,7 @@ currScriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $currScriptsDir/..
 ME=`whoami`
 
-export PYTHONPATH=/home/$ME/.virtualenvs/open_edx_class_export/lib/python2.7/site-packages/online_learning_computations-0.34-py2.7.egg/src:$PYTHONPATH
-export PYTHONPATH=/home/$ME/.virtualenvs/open_edx_class_export/lib/python2.7/site-packages/pymysql_utils-0.51-py2.7.egg:$PYTHONPATH
+export PYTHONPATH=/lfs/datastage2/0/home/$ME/anaconda2/lib/python2.7/site-packages/online_learning_computations-0.35-py2.7.egg/src:$PYTHONPATH
 
 if [ ! -f $LOG_FILE ]
 then
@@ -20,4 +19,6 @@ then
     touch $LOG_FILE
 fi
 
-/usr/bin/python src/exportClass.py | tee --append $LOG_FILE
+# Make sure we use Python 2.7, and not
+# the system-wide 2.6:
+/home/dataman/anaconda2/bin/python src/exportClass.py | tee --append $LOG_FILE
